@@ -1,0 +1,439 @@
+/* ========================================
+   ОСНОВНЫЕ СТИЛИ
+   ======================================== */
+
+.bookings-section {
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.bookings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.bookings-header h2 {
+    color: #333;
+    font-size: 20px;
+}
+
+/* ========================================
+   ПОИСК (поле + крестик + кнопка)
+   ======================================== */
+
+.search-box {
+    margin-bottom: 20px;
+}
+
+.search-input-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Контейнер для поля ввода и крестика */
+.input-container {
+    flex: 1;
+    position: relative;
+}
+
+.input-container input {
+    width: 100%;
+    padding: 12px 40px 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.input-container input:focus {
+    outline: none;
+    border-color: #0066CC;
+}
+
+/* Крестик очистки (внутри поля) */
+.search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #333;
+    padding: 4px;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-clear:hover {
+    color: #dc2626;
+    background: #f1f5f9;
+}
+
+/* Кнопка "Найти" */
+.search-submit {
+    padding: 12px 24px;
+    background: #0066CC;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.search-submit:hover {
+    background: #0052a3;
+}
+
+/* ========================================
+   ВКЛАДКИ (Активные / История)
+   ======================================== */
+
+.tabs {
+    display: flex;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.tab-btn {
+    padding: 10px 24px;
+    border-radius: 24px;
+    border: none;
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn.active {
+    background: #0066CC;
+    color: white;
+}
+
+/* ========================================
+   ВЫБОР ПЕРИОДА (для истории)
+   ======================================== */
+
+.period-selector {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.period-clear-btn {
+    background: none;
+    border: none;
+    color: #dc2626;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.period-dates {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.period-date-input {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 14px;
+    background: white;
+}
+
+.period-date-input:focus {
+    outline: none;
+    border-color: #0066CC;
+}
+
+.period-apply-btn {
+    padding: 10px 20px;
+    background: #0066CC;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.period-apply-btn:hover {
+    background: #0052a3;
+}
+
+.period-hint {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #64748b;
+    text-align: center;
+}
+
+/* ========================================
+   ТАБЛИЦА БРОНИРОВАНИЙ
+   ======================================== */
+
+.bookings-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.bookings-table th {
+    background: #f8fafc;
+    padding: 14px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.bookings-table td {
+    padding: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.bookings-table tr:hover {
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+/* Кнопка действий (три точки) */
+.action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    background: #e2e8f0;
+}
+
+/* ========================================
+   СТАТУСЫ
+   ======================================== */
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.completed {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-badge.cancelled {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* ========================================
+   ПАГИНАЦИЯ
+   ======================================== */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    margin-top: 20px;
+}
+
+.pagination button {
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.pagination button.active {
+    background: #0066CC;
+    color: white;
+    border-color: #0066CC;
+}
+
+.pagination button:hover:not(.active) {
+    background: #f0f0f0;
+}
+
+/* ========================================
+   МОДАЛЬНОЕ ОКНО (детали бронирования)
+   ======================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-container {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.modal-close:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #eee;
+    text-align: right;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    width: 140px !important;
+    font-weight: 500;
+    color: #666;
+}
+
+.detail-value {
+    color: #333;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* ========================================
+   МОБИЛЬНАЯ ВЕРСИЯ
+   ======================================== */
+
+@media (max-width: 768px) {
+    .bookings-section {
+        padding: 10px;
+    }
+    
+    /* Поиск на мобильных */
+    .search-input-wrapper {
+        flex-wrap: wrap;
+    }
+    
+    .input-container {
+        width: 100%;
+    }
+    
+    .search-submit {
+        width: 100%;
+    }
+    
+    /* Период на мобильных */
+    .period-dates {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .period-dates span {
+        text-align: center;
+    }
+    
+    .period-date-input {
+        min-width: auto;
+    }
+    
+    .period-apply-btn {
+        width: 100%;
+    }
+    
+    /* Таблица на мобильных */
+    .bookings-table {
+        display: block;
+        overflow-x: auto;
+    }
+}

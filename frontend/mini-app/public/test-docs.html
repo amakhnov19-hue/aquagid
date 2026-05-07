@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Тест Documentation</title>
+    <script src="/js/components/ui/DesignSystem.js?v=20260223_01"></script>
+    <script src="/js/components/ui/SupportChat.js?v=20260223_01"></script>
+    <script src="/js/components/ui/Documentation.js?v=20260223_01"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .button {
+            background: #0066CC;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        
+        .info {
+            background: #f5f5f5;
+            border-left: 4px solid #4A5568;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .status {
+            background: #f0f9ff;
+            border: 1px solid #0066CC;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Тест компонента Documentation</h1>
+        
+        <div class="info">
+            <strong>📌 Инструкция:</strong>
+            <ul>
+                <li>Кнопка "Документация" появится в левом нижнем углу</li>
+                <li>Справа внизу - чат поддержки (проверяем совместную работу)</li>
+                <li>В модалке есть вкладки с разными документами</li>
+                <li>Можно принять все согласия</li>
+            </ul>
+        </div>
+        
+        <div class="status" id="status">
+            Статус: ожидание...
+        </div>
+        
+        <div>
+            <button class="button" onclick="testToggle()">📚 Открыть документацию</button>
+            <button class="button" onclick="testAccept()">✅ Имитировать принятие</button>
+            <button class="button" onclick="testCheck()">🔍 Проверить статус</button>
+        </div>
+        
+        <div id="support-chat-container"></div>
+        <div id="documentation-container"></div>
+    </div>
+    
+    <script>
+        // Загружаем стили
+        AquaGid.DesignSystem.injectStyles();
+        
+        // Инициализируем компоненты
+        window.addEventListener('load', function() {
+            AquaGid.SupportChat.render('support-chat-container');
+            AquaGid.Documentation.render('documentation-container');
+            
+            updateStatus();
+        });
+        
+        function updateStatus() {
+            const status = document.getElementById('status');
+            const accepted = AquaGid.Documentation.isAccepted();
+            
+            if (accepted) {
+                const data = JSON.parse(localStorage.getItem('aquagid-docs-accepted'));
+                status.innerHTML = `
+                    ✅ Документы приняты<br>
+                    Дата: ${new Date(data.date).toLocaleString()}
+                `;
+                status.style.background = '#f0fff4';
+                status.style.borderColor = '#00A884';
+            } else {
+                status.innerHTML = '⏳ Документы ещё не приняты';
+                status.style.background = '#fff5f5';
+                status.style.borderColor = '#DC3545';
+            }
+        }
+        
+        function testToggle() {
+            AquaGid.Documentation.toggle();
+        }
+        
+        function testAccept() {
+            AquaGid.Documentation.acceptAll();
+            setTimeout(updateStatus, 1100);
+        }
+        
+        function testCheck() {
+            updateStatus();
+        }
+    </script>
+</body>
+</html>

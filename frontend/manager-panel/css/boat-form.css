@@ -1,0 +1,420 @@
+/* Модальное окно */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Контент формы */
+.modal-content {
+    background: linear-gradient(135deg, #fff 0%, #f8faff 100%);
+    border-radius: 24px;
+    width: 90%;
+    max-width: 650px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Шапка формы */
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    border-bottom: 2px solid #eef2ff;
+    position: sticky;
+    top: 0;
+    background: inherit;
+    z-index: 1;
+    border-radius: 24px 24px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #0066CC, #0099FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.close-btn {
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    transform: rotate(90deg);
+}
+
+/* Форма */
+.boat-form {
+    padding: 0;
+}
+
+form {
+    padding: 24px 28px 32px;
+}
+
+/* Группы полей */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+}
+
+.form-group.half {
+    flex: 1;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #1e293b;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+label::before {
+    content: "✨ ";
+    opacity: 0.6;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: white;
+    box-sizing: border-box;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #0066CC;
+    box-shadow: 0 0 0 3px rgba(0,102,204,0.1);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Счетчик символов */
+.counter {
+    text-align: right;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 6px;
+}
+
+/* Блок фото */
+.photo-upload {
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 20px;
+    background: #fafcff;
+    transition: all 0.2s;
+}
+
+.photo-upload:hover {
+    border-color: #0066CC;
+    background: #f8fafc;
+}
+
+.photo-hint {
+    display: flex;
+    gap: 20px;
+    margin: 12px 0;
+    font-size: 12px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 10px 14px;
+    border-radius: 10px;
+}
+
+.photo-hint span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.photo-counter {
+    text-align: right;
+    font-size: 13px;
+    color: #475569;
+    margin: 10px 0;
+    font-weight: 500;
+}
+
+#currentPhotoCount {
+    color: #0066CC;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.photo-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.photo-thumb {
+    position: relative;
+    width: 90px;
+    height: 90px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.photo-thumb:hover {
+    transform: scale(1.05);
+}
+
+.photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.remove-photo {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.remove-photo:hover {
+    background: #dc2626;
+    transform: scale(1.1);
+}
+
+/* Кнопки геокодинга */
+.btn-geocode, .btn-check-map {
+    background: linear-gradient(135deg, #f1f5f9, #e6edf5);
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #1e293b;
+}
+
+.btn-geocode:hover, .btn-check-map:hover {
+    background: linear-gradient(135deg, #e2e8f0, #d9e2ef);
+    transform: translateY(-1px);
+}
+
+.address-hint {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+/* Карта */
+#mapContainer {
+    margin-top: 16px;
+}
+
+#map {
+    height: 280px;
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid #e2e8f0;
+}
+
+.map-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 8px;
+    text-align: center;
+}
+
+.btn-save-coords {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.2s;
+}
+
+.btn-save-coords:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+
+/* Кнопки действий */
+.form-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 2px solid #eef2ff;
+}
+
+.btn-cancel {
+    flex: 1;
+    padding: 14px;
+    background: #f1f5f9;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.btn-save {
+    flex: 1;
+    padding: 14px;
+    background: linear-gradient(135deg, #0066CC, #0099FF);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0,102,204,0.3);
+}
+
+.btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,102,204,0.4);
+}
+
+/* Сообщение о максимальном количестве фото */
+#maxPhotosMessage {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    padding: 12px;
+    border-radius: 12px;
+    margin-top: 12px;
+    text-align: center;
+    font-weight: 500;
+    font-size: 13px;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 18px 20px;
+    }
+    
+    form {
+        padding: 20px;
+    }
+    
+    .photo-thumb {
+        width: 75px;
+        height: 75px;
+    }
+    
+    .photo-hint {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Чекбоксы — убираем звёздочку и лишние отступы */
+.form-group.half label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0;
+    font-weight: normal;
+    white-space: nowrap;
+}
+
+.form-group.half label::before {
+    content: none;
+}
+
+.form-group.half input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+}

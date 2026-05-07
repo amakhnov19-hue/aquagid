@@ -1,0 +1,33 @@
+/* ========== ФАКТУРЫ ========== */
+/* Подключается отдельно, можно легко отключить */
+
+/* Общий фон - ткань кремового цвета */
+body.texture-bg {
+    background-color: #f5efe6;  /* кремовый базовый */
+    background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0 0 L100 100 M100 0 L0 100" stroke="%23e0d5c8" stroke-width="0.5" opacity="0.3"/><circle cx="50" cy="50" r="30" fill="none" stroke="%23e0d5c8" stroke-width="0.5" opacity="0.3"/></svg>');
+    background-size: 200px 200px;
+    background-blend-mode: overlay;
+}
+
+/* Контейнер - папирус */
+body.texture-bg .welcome-screen .container {
+    background-color: #fcf9f2;
+    background-image: 
+        linear-gradient(45deg, rgba(200, 180, 150, 0.1) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(200, 180, 150, 0.1) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(200, 180, 150, 0.1) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(200, 180, 150, 0.1) 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    box-shadow: 0 10px 30px rgba(120, 80, 50, 0.2);
+    border: 1px solid rgba(150, 120, 80, 0.2);
+}
+
+/* Альтернативный вариант папируса (более мягкий) */
+body.texture-bg.soft-papyrus .welcome-screen .container {
+    background-color: #fbf7e9;
+    background-image: 
+        repeating-linear-gradient(45deg, rgba(170, 140, 100, 0.08) 0px, rgba(170, 140, 100, 0.08) 2px, 
+                                  transparent 2px, transparent 8px);
+    box-shadow: 0 5px 20px rgba(100, 70, 40, 0.15);
+}

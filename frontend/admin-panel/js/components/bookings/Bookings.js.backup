@@ -1,0 +1,486 @@
+/**
+ * Bookings.js
+ * Управление бронированиями (с фокусом на предоплаты)
+ * Версия: 1.0.0
+ */
+
+if (!window.AquaGid) window.AquaGid = {};
+
+AquaGid.Bookings = class {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) {
+            console.error('Container not found:', containerId);
+            return;
+        }
+        
+        // Мок-данные бронирований
+        this.bookings = [
+            {
+                id: 1001,
+                date: '2026-03-03',
+                time: '15:00',
+                boatName: 'Марина',
+                boatId: 101,
+                managerName: 'Иванов Иван',
+                managerId: 1,
+                clientName: 'Алексей Петров',
+                clientPhone: '+7 (999) 111-22-33',
+                totalAmount: 5000,
+                prepaymentPercent: 25,
+                prepaymentAmount: 1250,
+                status: 'confirmed', // confirmed, cancelled, completed
+                created: '2026-02-20T10:30:00'
+            },
+            {
+                id: 1002,
+                date: '2026-03-03',
+                time: '18:00',
+                boatName: 'Ветерок',
+                boatId: 102,
+                managerName: 'Петров Петр',
+                managerId: 2,
+                clientName: 'Елена Смирнова',
+                clientPhone: '+7 (999) 222-33-44',
+                totalAmount: 3500,
+                prepaymentPercent: 15,
+                prepaymentAmount: 525,
+                status: 'confirmed',
+                created: '2026-02-21T14:15:00'
+            },
+            {
+                id: 1003,
+                date: '2026-03-02',
+                time: '12:00',
+                boatName: 'Буря',
+                boatId: 103,
+                managerName: 'Иванов Иван',
+                managerId: 1,
+                clientName: 'Дмитрий Козлов',
+                clientPhone: '+7 (999) 333-44-55',
+                totalAmount: 7000,
+                prepaymentPercent: 20,
+                prepaymentAmount: 1400,
+                status: 'cancelled',
+                created: '2026-02-19T09:45:00'
+            },
+            {
+                id: 1004,
+                date: '2026-03-04',
+                time: '10:00',
+                boatName: 'Чайка',
+                boatId: 104,
+                managerName: 'Сидоров Сидор',
+                managerId: 3,
+                clientName: 'Ольга Николаева',
+                clientPhone: '+7 (999) 444-55-66',
+                totalAmount: 4500,
+                prepaymentPercent: 20,
+                prepaymentAmount: 900,
+                status: 'confirmed',
+                created: '2026-02-22T16:20:00'
+            },
+            {
+                id: 1005,
+                date: '2026-03-04',
+                time: '15:00',
+                boatName: 'Шторм',
+                boatId: 105,
+                managerName: 'Петров Петр',
+                managerId: 2,
+                clientName: 'Игорь Васильев',
+                clientPhone: '+7 (999) 555-66-77',
+                totalAmount: 6000,
+                prepaymentPercent: 15,
+                prepaymentAmount: 900,
+                status: 'confirmed',
+                created: '2026-02-23T11:10:00'
+            },
+            {
+                id: 1006,
+                date: '2026-03-01',
+                time: '19:00',
+                boatName: 'Марина',
+                boatId: 101,
+                managerName: 'Иванов Иван',
+                managerId: 1,
+                clientName: 'Татьяна Морозова',
+                clientPhone: '+7 (999) 666-77-88',
+                totalAmount: 5000,
+                prepaymentPercent: 25,
+                prepaymentAmount: 1250,
+                status: 'completed',
+                created: '2026-02-18T13:25:00'
+            }
+        ];
+        
+        this.filteredBookings = [...this.bookings];
+        this.currentFilter = 'all'; // all, confirmed, cancelled, completed
+        this.searchQuery = '';
+        this.selectedManager = 'all';
+        this.dateFrom = '';
+        this.dateTo = '';
+        
+        // Уникальные менеджеры для фильтра
+        this.managers = [...new Set(this.bookings.map(b => b.managerName))];
+        
+        // Для поиска
+        this.searchHandler = null;
+        
+        this.render();
+    }
+    
+    render() {
+        this.container.innerHTML = `
+            <div style="max-width: 1400px; margin: 0 auto;">
+                <!-- Заголовок -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h1 style="font-size: 28px; font-weight: 600; color: #111827;">Бронирования</h1>
+                    <button id="refresh-bookings" style="
+                        padding: 8px 16px;
+                        background: white;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    ">
+                        🔄 Обновить
+                    </button>
+                </div>
+
+                <!-- Сводка по предоплатам -->
+                ${this.renderPrepaymentSummary()}
+
+                <!-- Фильтры -->
+                <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    ${this.renderStatusFilters()}
+                    
+                    <select id="manager-filter" style="
+                        padding: 8px 16px;
+                        border: 2px solid #e5e7eb;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        min-width: 200px;
+                    ">
+                        <option value="all">Все менеджеры</option>
+                        ${this.managers.map(m => `
+                            <option value="${m}" ${this.selectedManager === m ? 'selected' : ''}>${m}</option>
+                        `).join('')}
+                    </select>
+                    
+                    <div style="display: flex; gap: 8px;">
+                        <input type="date" 
+                               id="date-from" 
+                               value="${this.dateFrom}"
+                               style="
+                                   padding: 8px 12px;
+                                   border: 2px solid #e5e7eb;
+                                   border-radius: 8px;
+                                   font-size: 14px;
+                               ">
+                        <span style="align-self: center;">—</span>
+                        <input type="date" 
+                               id="date-to" 
+                               value="${this.dateTo}"
+                               style="
+                                   padding: 8px 12px;
+                                   border: 2px solid #e5e7eb;
+                                   border-radius: 8px;
+                                   font-size: 14px;
+                               ">
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 300px;">
+                        <input type="text" 
+                               id="search-booking" 
+                               placeholder="🔍 Поиск по клиенту, катеру, менеджеру..."
+                               value="${this.searchQuery}"
+                               style="
+                                   width: 100%;
+                                   padding: 10px 16px;
+                                   border: 2px solid #e5e7eb;
+                                   border-radius: 8px;
+                                   font-size: 14px;
+                               ">
+                    </div>
+                </div>
+
+                <!-- Таблица бронирований -->
+                <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                                <th style="padding: 16px; text-align: left;">Дата</th>
+                                <th style="padding: 16px; text-align: left;">Время</th>
+                                <th style="padding: 16px; text-align: left;">Катер</th>
+                                <th style="padding: 16px; text-align: left;">Менеджер</th>
+                                <th style="padding: 16px; text-align: left;">Клиент</th>
+                                <th style="padding: 16px; text-align: right;">Сумма</th>
+                                <th style="padding: 16px; text-align: right;">Предоплата</th>
+                                <th style="padding: 16px; text-align: left;">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.filteredBookings.map(booking => this.renderBookingRow(booking)).join('')}
+                        </tbody>
+                    </table>
+                    
+                    ${this.filteredBookings.length === 0 ? this.renderEmptyState() : ''}
+                </div>
+                
+                <!-- Итоги по странице -->
+                ${this.renderTotals()}
+            </div>
+        `;
+        
+        this.attachEvents();
+    }
+    
+    renderPrepaymentSummary() {
+        const totalPrepayments = this.bookings.reduce((sum, b) => sum + b.prepaymentAmount, 0);
+        const avgPercent = Math.round(this.bookings.reduce((sum, b) => sum + b.prepaymentPercent, 0) / this.bookings.length);
+        
+        return `
+            <div style="
+                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                border-radius: 16px;
+                padding: 24px;
+                margin-bottom: 24px;
+                color: white;
+            ">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                    <div>
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">Всего предоплат</div>
+                        <div style="font-size: 32px; font-weight: 600;">${this.formatMoney(totalPrepayments)}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">Средний процент</div>
+                        <div style="font-size: 32px; font-weight: 600;">${avgPercent}%</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">Бронирований</div>
+                        <div style="font-size: 32px; font-weight: 600;">${this.bookings.length}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    renderStatusFilters() {
+        const filters = [
+            { id: 'all', label: 'Все', count: this.bookings.length },
+            { id: 'confirmed', label: 'Подтвержденные', count: this.bookings.filter(b => b.status === 'confirmed').length },
+            { id: 'completed', label: 'Завершенные', count: this.bookings.filter(b => b.status === 'completed').length },
+            { id: 'cancelled', label: 'Отмененные', count: this.bookings.filter(b => b.status === 'cancelled').length }
+        ];
+        
+        return filters.map(f => `
+            <button class="filter-btn" data-filter="${f.id}" style="
+                padding: 8px 16px;
+                background: ${this.currentFilter === f.id ? '#4f46e5' : 'white'};
+                color: ${this.currentFilter === f.id ? 'white' : '#374151'};
+                border: 1px solid ${this.currentFilter === f.id ? '#4f46e5' : '#e5e7eb'};
+                border-radius: 20px;
+                cursor: pointer;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            ">
+                ${f.label}
+                <span style="
+                    background: ${this.currentFilter === f.id ? 'rgba(255,255,255,0.2)' : '#f3f4f6'};
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                ">${f.count}</span>
+            </button>
+        `).join('');
+    }
+    
+    renderBookingRow(booking) {
+        const statusColors = {
+            confirmed: { bg: '#d1fae5', color: '#065f46', label: 'Подтверждено' },
+            cancelled: { bg: '#fee2e2', color: '#991b1b', label: 'Отменено' },
+            completed: { bg: '#dbeafe', color: '#1e40af', label: 'Завершено' }
+        };
+        
+        const status = statusColors[booking.status];
+        
+        return `
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 16px;">${new Date(booking.date).toLocaleDateString()}</td>
+                <td style="padding: 16px;">${booking.time}</td>
+                <td style="padding: 16px;">
+                    <div>${booking.boatName}</div>
+                    <div style="font-size: 12px; color: #6b7280;">ID: ${booking.boatId}</div>
+                </td>
+                <td style="padding: 16px;">${booking.managerName}</td>
+                <td style="padding: 16px;">
+                    <div>${booking.clientName}</div>
+                    <div style="font-size: 12px; color: #6b7280;">${booking.clientPhone}</div>
+                </td>
+                <td style="padding: 16px; text-align: right; font-weight: 500;">
+                    ${this.formatMoney(booking.totalAmount)}
+                </td>
+                <td style="padding: 16px; text-align: right;">
+                    <div style="font-weight: 600; color: #4f46e5;">
+                        ${this.formatMoney(booking.prepaymentAmount)}
+                    </div>
+                    <div style="font-size: 12px; color: #6b7280;">
+                        ${booking.prepaymentPercent}%
+                    </div>
+                </td>
+                <td style="padding: 16px;">
+                    <span style="
+                        background: ${status.bg};
+                        color: ${status.color};
+                        padding: 4px 12px;
+                        border-radius: 20px;
+                        font-size: 13px;
+                        font-weight: 500;
+                    ">${status.label}</span>
+                </td>
+            </tr>
+        `;
+    }
+    
+    renderEmptyState() {
+        return `
+            <tr>
+                <td colspan="8" style="padding: 48px; text-align: center; color: #6b7280;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+                    <h3 style="margin-bottom: 8px;">Бронирования не найдены</h3>
+                    <p>Попробуйте изменить параметры фильтрации</p>
+                </td>
+            </tr>
+        `;
+    }
+    
+    renderTotals() {
+        const filteredTotal = this.filteredBookings.reduce((sum, b) => sum + b.totalAmount, 0);
+        const filteredPrepayments = this.filteredBookings.reduce((sum, b) => sum + b.prepaymentAmount, 0);
+        
+        return `
+            <div style="
+                margin-top: 24px;
+                padding: 16px 24px;
+                background: white;
+                border-radius: 12px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 500;
+            ">
+                <div>Показано: ${this.filteredBookings.length} из ${this.bookings.length} бронирований</div>
+                <div style="display: flex; gap: 32px;">
+                    <div>Сумма: <span style="font-weight: 600;">${this.formatMoney(filteredTotal)}</span></div>
+                    <div>Предоплаты: <span style="font-weight: 600; color: #4f46e5;">${this.formatMoney(filteredPrepayments)}</span></div>
+                </div>
+            </div>
+        `;
+    }
+    
+    attachEvents() {
+        // Фильтры по статусу
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.currentFilter = e.currentTarget.dataset.filter;
+                this.filterBookings();
+            });
+        });
+        
+        // Фильтр по менеджеру
+        const managerFilter = document.getElementById('manager-filter');
+        if (managerFilter) {
+            managerFilter.addEventListener('change', (e) => {
+                this.selectedManager = e.target.value;
+                this.filterBookings();
+            });
+        }
+        
+        // Фильтр по датам
+        const dateFrom = document.getElementById('date-from');
+        const dateTo = document.getElementById('date-to');
+        
+        if (dateFrom) {
+            dateFrom.addEventListener('change', (e) => {
+                this.dateFrom = e.target.value;
+                this.filterBookings();
+            });
+        }
+        
+        if (dateTo) {
+            dateTo.addEventListener('change', (e) => {
+                this.dateTo = e.target.value;
+                this.filterBookings();
+            });
+        }
+        
+        // Поиск
+        const searchInput = document.getElementById('search-booking');
+        if (searchInput) {
+            if (this.searchHandler) {
+                searchInput.removeEventListener('input', this.searchHandler);
+            }
+            
+            this.searchHandler = (e) => {
+                this.searchQuery = e.target.value;
+                this.filterBookings();
+            };
+            
+            searchInput.addEventListener('input', this.searchHandler);
+        }
+        
+        // Кнопка обновления
+        const refreshBtn = document.getElementById('refresh-bookings');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                alert('🔄 Данные обновлены (тестовый режим)');
+            });
+        }
+    }
+    
+    filterBookings() {
+        this.filteredBookings = this.bookings.filter(booking => {
+            // Фильтр по статусу
+            if (this.currentFilter !== 'all' && booking.status !== this.currentFilter) return false;
+            
+            // Фильтр по менеджеру
+            if (this.selectedManager !== 'all' && booking.managerName !== this.selectedManager) return false;
+            
+            // Фильтр по дате
+            if (this.dateFrom && booking.date < this.dateFrom) return false;
+            if (this.dateTo && booking.date > this.dateTo) return false;
+            
+            // Поиск по тексту
+            if (this.searchQuery) {
+                const searchString = `${booking.clientName} ${booking.boatName} ${booking.managerName} ${booking.clientPhone}`.toLowerCase();
+                return searchString.includes(this.searchQuery.toLowerCase());
+            }
+            
+            return true;
+        });
+        
+        // Сохраняем позицию и фокус
+        const scrollPos = window.scrollY;
+        const searchValue = this.searchQuery;
+        
+        this.render();
+        
+        // Восстанавливаем
+        window.scrollTo(0, scrollPos);
+        const searchInput = document.getElementById('search-booking');
+        if (searchInput) {
+            searchInput.value = searchValue;
+            searchInput.focus();
+            searchInput.setSelectionRange(searchValue.length, searchValue.length);
+        }
+    }
+    
+    formatMoney(amount) {
+        return new Intl.NumberFormat('ru-RU').format(amount) + ' ₽';
+    }
+}

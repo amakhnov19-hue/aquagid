@@ -1,0 +1,412 @@
+/* Основные стили для ЛК менеджера */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5;
+}
+
+.manager-app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f5f5;
+}
+
+/* ===== ШАПКА ===== */
+.manager-header {
+    background: white;
+    padding: 8px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    position: relative;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.date {
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.time {
+    color: #333;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.title-block h1 {
+    color: #0066CC;
+    font-size: 20px;
+    margin: 0 0 2px 0;
+    font-weight: 600;
+}
+
+.welcome-message {
+    color: #333;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.avatar-container {
+    cursor: pointer;
+}
+
+.avatar {
+    width: 44px;
+    height: 44px;
+    background: #0066CC;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,102,204,0.3);
+}
+
+.avatar.login {
+    background: #00A884;
+}
+
+.avatar-id {
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* Строка меню */
+.menu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.menu-icon, .settings-icon {
+    width: 44px;
+    height: 44px;
+    background: #f0f7ff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #0066CC;
+}
+
+.calendar-icon {
+    background: #0066CC;
+    color: white;
+    padding: 0 20px;
+    height: 40px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 100px;
+}
+
+.menu-icon:hover, .settings-icon:hover {
+    background: #0066CC;
+    color: white;
+}
+
+.calendar-icon:hover {
+    background: #0052a3;
+}
+
+/* Чат */
+.chat-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background: #0066CC;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,102,204,0.3);
+    z-index: 100;
+    transition: all 0.2s;
+    opacity: 0.3;
+}
+
+.chat-button:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+/* ===== МЕНЮ ===== */
+#side-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+    z-index: 1000;
+    padding: 20px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.menu-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.menu-item {
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-bottom: 5px;
+    transition: all 0.2s;
+}
+
+.menu-item:hover {
+    background: #f0f7ff;
+    color: #0066CC;
+}
+
+/* ===== КОНТЕНТ ===== */
+.manager-content {
+    flex: 1;
+    padding: 20px 20px;
+    position: relative;
+}
+
+/* Заглушки для разделов */
+.section-placeholder {
+    background: white;
+    border-radius: 12px;
+    padding: 60px;
+    text-align: center;
+    color: #666;
+    font-size: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Кнопка закрытия экрана (возврат на дашборд) */
+.btn-close-screen {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    transition: all 0.2s;
+    z-index: 1000;
+}
+
+.btn-close-screen:hover {
+    background: #0066CC;
+    color: white;
+}
+
+/* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
+@media (max-width: 768px) {
+    .manager-header {
+        padding: 6px 12px;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .title-block h1 {
+        font-size: 18px;
+    }
+    
+    .menu-icon, .settings-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+    
+    .calendar-icon {
+        padding: 0 16px;
+        font-size: 14px;
+        height: 36px;
+        min-width: 85px;
+    }
+    
+    .manager-content {
+        padding: 0;
+    }
+    
+    #side-menu {
+        width: 100%;
+    }
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО АВТОРИЗАЦИИ ===== */
+.auth-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.auth-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    width: 400px;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.auth-content h2 {
+    margin: 0 0 20px 0;
+    color: #333;
+    text-align: center;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: #0066CC;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 12px;
+    background: #0066CC;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 5px;
+}
+
+.auth-btn:hover {
+    background: #0052a3;
+}
+
+.auth-link {
+    text-align: center;
+    margin-top: 15px;
+    color: #0066CC;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+.close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #999;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .auth-content {
+        width: 90%;
+        padding: 20px;
+    }
+}
+
+.btn-request-cancel {
+    background: #ff9800;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.btn-request-cancel:hover {
+    background: #e68900;
+}

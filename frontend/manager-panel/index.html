@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚤 AquaGid - Панель менеджера</title>
+    
+    <!-- Общие компоненты AquaGid -->
+    <script src="/shared/js/core/events.js"></script>
+    <script src="/shared/js/core/event-types.js"></script>
+
+    <script src="js/config/yandex_config.js"></script>
+    <link rel="stylesheet" href="/css/manager.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/boats.css">
+    <link rel="stylesheet" href="css/bookings.css">
+    <link rel="stylesheet" href="css/calendar.css?v=20260429b">
+    <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/profile.css">
+    <link rel="stylesheet" href="css/boat-form.css">
+</head>
+<body>
+    <div id="manager-app"></div>
+    
+    <!-- Подключаем компоненты -->
+    <script src="js/services/TokenService.js"></script>
+    <script src="js/services/MessengerService.js"></script>
+    <script src="js/config/domains.js"></script>
+    <script src="js/config/api_config.js"></script>
+    <script src="js/ManagerApp.js"></script>
+    <script src="js/components/dashboard/Dashboard.js"></script>
+    <script src="js/components/boats/Boats.js"></script>
+    <script src="js/components/calendar/Calendar.js?v=20260429b"></script>
+    <script src="js/components/bookings/Bookings.js"></script>
+    <script src="js/components/settings/Settings.js"></script>
+    <script src="js/components/boats/PricingSimple.js"></script>
+    <script src="js/components/boats/BoatForm.js"></script>
+    <script src="js/components/profile/Profile.js"></script>
+    <script src="js/components/WeatherWidget.js"></script>
+
+
+
+    <script>
+        // Ждем полной загрузки всех скриптов
+        window.addEventListener('load', function() {
+            console.log('Все ресурсы загружены, запускаем приложение');
+            console.log('📡 Event Bus:', window.AquaGid?.events ? '✅ готов' : '❌ не загружен');
+            AquaGid.ManagerApp.init('manager-app');
+        });
+    </script>
+
+</body>
+</html>

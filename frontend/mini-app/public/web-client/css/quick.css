@@ -1,0 +1,177 @@
+/* Экран быстрого бронирования */
+.quick-screen {
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding-bottom: 20px;
+}
+
+.quick-screen .screen-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    padding: 16px;
+    margin: 0;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Кнопка В начало */
+.home-button-container {
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.btn-home {
+    width: 100%;
+    padding: 12px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-home:hover {
+    background: #e0e0e0;
+}
+
+/* Контент */
+#quick-content {
+    padding: 16px;
+}
+
+.loading {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    font-size: 16px;
+}
+
+.error {
+    background: #fee;
+    color: #c33;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.info-message {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.info-message h3 {
+    margin: 0 0 15px 0;
+    font-size: 20px;
+}
+
+.info-message p {
+    margin: 0 0 20px 0;
+    color: #555;
+}
+
+/* Список катеров */
+.quick-boats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.quick-boat-card {
+    display: flex;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.quick-boat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.quick-boat-image {
+    flex: 0 0 100px;
+    height: 100px;
+    overflow: hidden;
+}
+
+.quick-boat-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.quick-boat-info {
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-boat-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.quick-boat-info p {
+    margin: 2px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.walk-time {
+    color: #4caf50 !important;
+    font-weight: 500;
+    margin-top: 4px !important;
+}
+
+/* Заголовок списка */
+.quick-boats-list h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.distance {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+}
+
+.address-input-container {
+    padding: 20px;
+    text-align: center;
+}
+
+.address-input-container input {
+    width: 100%;
+    padding: 12px;
+    margin: 15px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+.address-input-container button {
+    padding: 12px 24px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+}

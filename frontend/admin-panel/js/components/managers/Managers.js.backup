@@ -1,0 +1,552 @@
+/**
+ * Managers.js
+ * Управление менеджерами (модерация, блокировка)
+ * Версия: 1.0.0
+ */
+
+if (!window.AquaGid) window.AquaGid = {};
+
+AquaGid.Managers = class {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) {
+            console.error('Container not found:', containerId);
+            return;
+        }
+        
+        // Мок-данные менеджеров
+        this.managers = [
+            {
+                id: 1,
+                name: 'Иванов Иван Петрович',
+                company: 'ООО "Морские прогулки"',
+                phone: '+7 (999) 123-45-67',
+                phoneVerified: true,
+                email: 'ivan@example.com',
+                emailVerified: true,
+                telegram: '@ivan_boats',
+                vk: 'https://vk.com/ivan',
+                status: 'active', // active, pending, blocked
+                boatsCount: 3,
+                complaints: 0,
+                prepayment: 25,
+                lastActive: '2026-03-02T15:30:00',
+                registeredAt: '2026-01-15'
+            },
+            {
+                id: 2,
+                name: 'Петров Петр Петрович',
+                company: 'ИП Петров',
+                phone: '+7 (999) 234-56-78',
+                phoneVerified: false,
+                email: 'petr@example.com',
+                emailVerified: false,
+                telegram: '@petr_boats',
+                vk: '',
+                status: 'pending',
+                boatsCount: 1,
+                complaints: 0,
+                prepayment: 20,
+                lastActive: null,
+                registeredAt: '2026-03-01'
+            },
+            {
+                id: 3,
+                name: 'Сидоров Сидор Сидорович',
+                company: 'ООО "Волна"',
+                phone: '+7 (999) 345-67-89',
+                phoneVerified: true,
+                email: 'sidor@example.com',
+                emailVerified: true,
+                telegram: '',
+                vk: 'https://vk.com/sidor',
+                status: 'blocked',
+                boatsCount: 2,
+                complaints: 5,
+                prepayment: 15,
+                lastActive: '2026-02-28T10:15:00',
+                registeredAt: '2026-01-20'
+            }
+        ];
+        
+        this.filteredManagers = [...this.managers];
+        this.currentFilter = 'all'; // all, active, pending, blocked
+        this.searchQuery = '';
+        this.searchHandler = null; // для обработчика поиска
+        
+        this.render();
+    }
+    
+    render() {
+        this.container.innerHTML = `
+            <div style="max-width: 1400px; margin: 0 auto;">
+                <!-- Заголовок -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h1 style="font-size: 28px; font-weight: 600; color: #111827;">Менеджеры</h1>
+                    <div style="display: flex; gap: 12px;">
+                        <button id="refresh-managers" style="
+                            padding: 8px 16px;
+                            background: white;
+                            border: 1px solid #e5e7eb;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 8px;
+                        ">
+                            🔄 Обновить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Фильтры и поиск -->
+                <div style="display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;">
+                    ${this.renderFilters()}
+                    <div style="flex: 1; min-width: 300px;">
+                        <input type="text" 
+                               id="search-manager" 
+                               placeholder="🔍 Поиск по имени, компании, телефону..."
+                               value="${this.searchQuery}"
+                               style="
+                                   width: 100%;
+                                   padding: 10px 16px;
+                                   border: 2px solid #e5e7eb;
+                                   border-radius: 8px;
+                                   font-size: 14px;
+                               ">
+                    </div>
+                </div>
+
+                <!-- Статистика по менеджерам -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                    ${this.renderManagerStats()}
+                </div>
+
+                <!-- Список менеджеров -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    ${this.filteredManagers.map(m => this.renderManagerCard(m)).join('')}
+                </div>
+                
+                ${this.filteredManagers.length === 0 ? this.renderEmptyState() : ''}
+            </div>
+        `;
+        
+        this.attachEvents();
+    }
+    
+    renderFilters() {
+        const filters = [
+            { id: 'all', label: 'Все', count: this.managers.length },
+            { id: 'active', label: 'Активные', count: this.managers.filter(m => m.status === 'active').length },
+            { id: 'pending', label: 'На проверке', count: this.managers.filter(m => m.status === 'pending').length },
+            { id: 'blocked', label: 'Заблокированные', count: this.managers.filter(m => m.status === 'blocked').length }
+        ];
+        
+        return filters.map(f => `
+            <button class="filter-btn" data-filter="${f.id}" style="
+                padding: 8px 16px;
+                background: ${this.currentFilter === f.id ? '#4f46e5' : 'white'};
+                color: ${this.currentFilter === f.id ? 'white' : '#374151'};
+                border: 1px solid ${this.currentFilter === f.id ? '#4f46e5' : '#e5e7eb'};
+                border-radius: 20px;
+                cursor: pointer;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            ">
+                ${f.label}
+                <span style="
+                    background: ${this.currentFilter === f.id ? 'rgba(255,255,255,0.2)' : '#f3f4f6'};
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                ">${f.count}</span>
+            </button>
+        `).join('');
+    }
+    
+    renderManagerStats() {
+        const stats = {
+            total: this.managers.length,
+            verified: this.managers.filter(m => m.phoneVerified && m.emailVerified).length,
+            withBoats: this.managers.filter(m => m.boatsCount > 0).length,
+            withComplaints: this.managers.filter(m => m.complaints > 0).length
+        };
+        
+        return `
+            <div style="background: white; padding: 16px; border-radius: 12px;">
+                <div style="font-size: 13px; color: #6b7280;">Всего</div>
+                <div style="font-size: 24px; font-weight: 600;">${stats.total}</div>
+            </div>
+            <div style="background: white; padding: 16px; border-radius: 12px;">
+                <div style="font-size: 13px; color: #6b7280;">Верифицировано</div>
+                <div style="font-size: 24px; font-weight: 600; color: #10b981;">${stats.verified}</div>
+            </div>
+            <div style="background: white; padding: 16px; border-radius: 12px;">
+                <div style="font-size: 13px; color: #6b7280;">С катерами</div>
+                <div style="font-size: 24px; font-weight: 600;">${stats.withBoats}</div>
+            </div>
+            <div style="background: white; padding: 16px; border-radius: 12px;">
+                <div style="font-size: 13px; color: #6b7280;">С жалобами</div>
+                <div style="font-size: 24px; font-weight: 600; color: #ef4444;">${stats.withComplaints}</div>
+            </div>
+        `;
+    }
+    
+    renderManagerCard(manager) {
+        const statusColors = {
+            active: { bg: '#d1fae5', text: '#065f46', label: 'Активен' },
+            pending: { bg: '#fef3c7', text: '#92400e', label: 'На проверке' },
+            blocked: { bg: '#fee2e2', text: '#991b1b', label: 'Заблокирован' }
+        };
+        
+        const status = statusColors[manager.status];
+        
+        return `
+            <div style="
+                background: white;
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                border-left: 4px solid ${status.text};
+            ">
+                <!-- Верхняя часть с именем и статусом -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <h3 style="font-size: 18px; font-weight: 600;">${manager.name}</h3>
+                            <span style="
+                                background: ${status.bg};
+                                color: ${status.text};
+                                padding: 4px 12px;
+                                border-radius: 20px;
+                                font-size: 13px;
+                                font-weight: 500;
+                            ">${status.label}</span>
+                        </div>
+                        <div style="color: #4b5563; margin-top: 4px;">${manager.company}</div>
+                    </div>
+                    <div style="color: #6b7280; font-size: 14px;">
+                        ID: ${manager.id} • Зарегистрирован: ${new Date(manager.registeredAt).toLocaleDateString()}
+                    </div>
+                </div>
+                
+                <!-- Контакты -->
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; background: #f9fafb; padding: 12px; border-radius: 8px;">
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Телефон</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>${manager.phone}</span>
+                            ${manager.phoneVerified ? '<span style="color: #10b981;">✅</span>' : '<span style="color: #f59e0b;">⏳</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Email</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>${manager.email}</span>
+                            ${manager.emailVerified ? '<span style="color: #10b981;">✅</span>' : '<span style="color: #f59e0b;">⏳</span>'}
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">Telegram</div>
+                        <div>${manager.telegram || '—'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">VK</div>
+                        <div>${manager.vk || '—'}</div>
+                    </div>
+                </div>
+                
+                <!-- Статистика -->
+                <div style="display: flex; gap: 24px; margin-bottom: 16px;">
+                    <div>
+                        <span style="font-size: 13px; color: #6b7280;">Катера:</span>
+                        <span style="font-weight: 600; margin-left: 4px;">${manager.boatsCount}</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: #6b7280;">Жалобы:</span>
+                        <span style="font-weight: 600; margin-left: 4px; color: ${manager.complaints > 0 ? '#ef4444' : '#111827'};">${manager.complaints}</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: #6b7280;">Предоплата:</span>
+                        <span style="font-weight: 600; margin-left: 4px;">${manager.prepayment}%</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 13px; color: #6b7280;">Последняя активность:</span>
+                        <span style="margin-left: 4px;">${manager.lastActive ? new Date(manager.lastActive).toLocaleString() : '—'}</span>
+                    </div>
+                </div>
+                
+                <!-- Кнопки действий -->
+                <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid #f3f4f6; padding-top: 16px;">
+                    ${this.renderActionButtons(manager)}
+                </div>
+            </div>
+        `;
+    }
+    
+    renderActionButtons(manager) {
+        const buttons = [];
+        
+        // Кнопки верификации (только если не верифицировано)
+        if (!manager.phoneVerified) {
+            buttons.push(`
+                <button class="verify-phone" data-id="${manager.id}" style="
+                    padding: 6px 12px;
+                    background: white;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    📱 Подтвердить телефон
+                </button>
+            `);
+        }
+        
+        if (!manager.emailVerified) {
+            buttons.push(`
+                <button class="verify-email" data-id="${manager.id}" style="
+                    padding: 6px 12px;
+                    background: white;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 13px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    ✉️ Подтвердить email
+                </button>
+            `);
+        }
+        
+        // Кнопка блокировки/разблокировки
+        if (manager.status === 'blocked') {
+            buttons.push(`
+                <button class="unblock-manager" data-id="${manager.id}" style="
+                    padding: 6px 12px;
+                    background: #10b981;
+                    border: none;
+                    border-radius: 6px;
+                    color: white;
+                    cursor: pointer;
+                    font-size: 13px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    🔓 Разблокировать
+                </button>
+            `);
+        } else {
+            buttons.push(`
+                <button class="block-manager" data-id="${manager.id}" style="
+                    padding: 6px 12px;
+                    background: #ef4444;
+                    border: none;
+                    border-radius: 6px;
+                    color: white;
+                    cursor: pointer;
+                    font-size: 13px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    🔒 Заблокировать
+                </button>
+            `);
+        }
+        
+        // Кнопка настроек предоплаты
+        buttons.push(`
+            <button class="set-prepayment" data-id="${manager.id}" style="
+                padding: 6px 12px;
+                background: #4f46e5;
+                border: none;
+                border-radius: 6px;
+                color: white;
+                cursor: pointer;
+                font-size: 13px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            ">
+                💰 Предоплата ${manager.prepayment}%
+            </button>
+        `);
+        
+        return buttons.join('');
+    }
+    
+    renderEmptyState() {
+        return `
+            <div style="
+                background: white;
+                border-radius: 12px;
+                padding: 48px;
+                text-align: center;
+                color: #6b7280;
+            ">
+                <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+                <h3 style="margin-bottom: 8px;">Менеджеры не найдены</h3>
+                <p>Попробуйте изменить параметры поиска</p>
+            </div>
+        `;
+    }
+    
+    attachEvents() {
+        // Фильтры
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.currentFilter = e.currentTarget.dataset.filter;
+                this.filterManagers();
+            });
+        });
+        
+        // Поиск
+        const searchInput = document.getElementById('search-manager');
+        if (searchInput) {
+            // Убираем старый обработчик, если был
+            searchInput.removeEventListener('input', this.searchHandler);
+            
+            // Создаем новый обработчик
+            this.searchHandler = (e) => {
+                this.searchQuery = e.target.value;
+                this.filterManagers();
+            };
+            
+            searchInput.addEventListener('input', this.searchHandler);
+        }
+        
+        // Кнопки действий (примеры)
+        document.querySelectorAll('.verify-phone').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.verifyPhone(id);
+            });
+        });
+        
+        document.querySelectorAll('.verify-email').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.verifyEmail(id);
+            });
+        });
+        
+        document.querySelectorAll('.block-manager').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.blockManager(id);
+            });
+        });
+        
+        document.querySelectorAll('.unblock-manager').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.unblockManager(id);
+            });
+        });
+        
+        document.querySelectorAll('.set-prepayment').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.currentTarget.dataset.id;
+                this.showPrepaymentDialog(id);
+            });
+        });
+        
+        // Кнопка обновления
+        const refreshBtn = document.getElementById('refresh-managers');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                alert('🔄 Данные обновлены (тестовый режим)');
+            });
+        }
+    }
+    
+    filterManagers() {
+        this.filteredManagers = this.managers.filter(manager => {
+            // Фильтр по статусу
+            if (this.currentFilter !== 'all' && manager.status !== this.currentFilter) {
+                return false;
+            }
+            
+            // Поиск по тексту
+            if (this.searchQuery) {
+                const searchString = `${manager.name} ${manager.company} ${manager.phone} ${manager.email}`.toLowerCase();
+                return searchString.includes(this.searchQuery.toLowerCase());
+            }
+            
+            return true;
+        });
+        
+        // Сохраняем позицию скролла и фокус
+        const scrollPos = window.scrollY;
+        const searchValue = this.searchQuery;
+        
+        this.render();
+        
+        // Восстанавливаем поиск и фокус
+        window.scrollTo(0, scrollPos);
+        const searchInput = document.getElementById('search-manager');
+        if (searchInput) {
+            searchInput.value = searchValue;
+            searchInput.focus();
+            // Ставим курсор в конец
+            searchInput.setSelectionRange(searchValue.length, searchValue.length);
+        }
+    }
+    
+    // Методы-заглушки для действий
+    verifyPhone(id) {
+        alert(`📱 Запрос на подтверждение телефона для менеджера ${id} (тестовый режим)`);
+    }
+    
+    verifyEmail(id) {
+        alert(`✉️ Запрос на подтверждение email для менеджера ${id} (тестовый режим)`);
+    }
+    
+    blockManager(id) {
+        if (confirm('Заблокировать менеджера?')) {
+            const manager = this.managers.find(m => m.id == id);
+            if (manager) {
+                manager.status = 'blocked';
+                this.filterManagers();
+                alert('🔒 Менеджер заблокирован');
+            }
+        }
+    }
+    
+    unblockManager(id) {
+        if (confirm('Разблокировать менеджера?')) {
+            const manager = this.managers.find(m => m.id == id);
+            if (manager) {
+                manager.status = 'active';
+                this.filterManagers();
+                alert('🔓 Менеджер разблокирован');
+            }
+        }
+    }
+    
+    showPrepaymentDialog(id) {
+        const manager = this.managers.find(m => m.id == id);
+        if (!manager) return;
+        
+        const newPercent = prompt(`Введите процент предоплаты для ${manager.name} (0-30):`, manager.prepayment);
+        if (newPercent !== null) {
+            const percent = parseInt(newPercent);
+            if (!isNaN(percent) && percent >= 0 && percent <= 30) {
+                manager.prepayment = percent;
+                this.filterManagers();
+                alert(`💰 Предоплата установлена: ${percent}%`);
+            } else {
+                alert('❌ Процент должен быть от 0 до 30');
+            }
+        }
+    }
+}

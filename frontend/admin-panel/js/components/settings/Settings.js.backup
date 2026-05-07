@@ -1,0 +1,460 @@
+/**
+ * Settings.js
+ * Настройки системы (сезон, предоплата, рабочий день, сортировка)
+ * Версия: 1.0.0
+ */
+
+if (!window.AquaGid) window.AquaGid = {};
+
+AquaGid.Settings = class {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        if (!this.container) {
+            console.error('Container not found:', containerId);
+            return;
+        }
+        
+        // Настройки по умолчанию
+        this.settings = {
+            // Сезон
+            season: {
+                start: '2026-05-01',
+                end: '2026-09-30'
+            },
+            // Рабочий день
+            workDay: {
+                start: '11:00',
+                end: '23:30',
+                lastRide: '22:00',
+                step: 30
+            },
+            // Предоплата
+            prepayment: {
+                default: 20,
+                min: 0,
+                max: 30,
+                reminderEnabled: true
+            },
+            // Сортировка катеров (из твоего файла)
+            sorting: {
+                weights: {
+                    subscription: 100,
+                    rating: 10,
+                    popularity: 5,
+                    newBoat: 3,
+                    random: 1
+                },
+                newBoatDays: 30,
+                enableRandom: true
+            },
+            // Индивидуальные настройки менеджеров (для предоплаты)
+            managerPrepayments: {
+                1: 25, // Иванов
+                2: 15, // Петров
+                3: 20  // Сидоров
+            }
+        };
+        
+        this.render();
+    }
+    
+    render() {
+        this.container.innerHTML = `
+            <div style="max-width: 1000px; margin: 0 auto;">
+                <!-- Заголовок -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <h1 style="font-size: 28px; font-weight: 600; color: #111827;">Настройки системы</h1>
+                    <button id="save-all-settings" style="
+                        padding: 10px 24px;
+                        background: #4f46e5;
+                        border: none;
+                        border-radius: 8px;
+                        color: white;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    ">
+                        💾 Сохранить все
+                    </button>
+                </div>
+
+                <!-- СЕЗОН -->
+                <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">📅</span> Сезон работы
+                    </h2>
+                    
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Начало сезона</label>
+                            <input type="date" id="season-start" value="${this.settings.season.start}" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 200px;
+                            ">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Конец сезона</label>
+                            <input type="date" id="season-end" value="${this.settings.season.end}" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 200px;
+                            ">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- РАБОЧИЙ ДЕНЬ -->
+                <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">⏰</span> Рабочий день
+                    </h2>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Начало</label>
+                            <input type="time" id="work-start" value="${this.settings.workDay.start}" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 100%;
+                            ">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Конец</label>
+                            <input type="time" id="work-end" value="${this.settings.workDay.end}" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 100%;
+                            ">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Последний рейс</label>
+                            <input type="time" id="work-last" value="${this.settings.workDay.lastRide}" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 100%;
+                            ">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">Шаг (мин)</label>
+                            <select id="work-step" style="
+                                padding: 10px 16px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                width: 100%;
+                            ">
+                                <option value="15" ${this.settings.workDay.step === 15 ? 'selected' : ''}>15 мин</option>
+                                <option value="30" ${this.settings.workDay.step === 30 ? 'selected' : ''}>30 мин</option>
+                                <option value="60" ${this.settings.workDay.step === 60 ? 'selected' : ''}>60 мин</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ПРЕДОПЛАТА -->
+                <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">💰</span> Предоплата
+                    </h2>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 6px;">
+                            Процент по умолчанию (0-30%)
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="prepayment-default" 
+                                   min="0" max="30" value="${this.settings.prepayment.default}"
+                                   style="width: 300px;">
+                            <input type="number" id="prepayment-default-input" 
+                                   value="${this.settings.prepayment.default}" min="0" max="30"
+                                   style="
+                                       padding: 8px 12px;
+                                       border: 2px solid #e5e7eb;
+                                       border-radius: 8px;
+                                       font-size: 14px;
+                                       width: 80px;
+                                   "> %
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="prepayment-reminder" ${this.settings.prepayment.reminderEnabled ? 'checked' : ''}>
+                            <span style="font-size: 14px;">Напоминать о настройке предоплаты на новый сезон</span>
+                        </label>
+                    </div>
+                    
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 16px; font-weight: 500;">Индивидуальные настройки менеджеров</h3>
+                            <div>
+                                <button id="set-all-prepayment" style="
+                                    padding: 6px 12px;
+                                    background: #f3f4f6;
+                                    border: 1px solid #d1d5db;
+                                    border-radius: 6px;
+                                    cursor: pointer;
+                                    font-size: 13px;
+                                ">✅ Установить всем</button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; gap: 10px;">
+                            ${this.renderManagerPrepaymentRows()}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- СОРТИРОВКА КАТЕРОВ (из твоего файла) -->
+                <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">⚡</span> Сортировка катеров
+                    </h2>
+                    
+                    <div style="display: grid; gap: 15px; max-width: 500px;">
+                        <div style="display: flex; align-items: center;">
+                            <label style="width: 150px; font-size: 14px;">Подписка:</label>
+                            <input type="number" id="weight-subscription" value="${this.settings.sorting.weights.subscription}" 
+                                   min="0" max="1000" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <label style="width: 150px; font-size: 14px;">Рейтинг (за звезду):</label>
+                            <input type="number" id="weight-rating" value="${this.settings.sorting.weights.rating}" 
+                                   min="0" max="100" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <label style="width: 150px; font-size: 14px;">Популярность (за бронь):</label>
+                            <input type="number" id="weight-popularity" value="${this.settings.sorting.weights.popularity}" 
+                                   min="0" max="50" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <label style="width: 150px; font-size: 14px;">Новый катер:</label>
+                            <input type="number" id="weight-new" value="${this.settings.sorting.weights.newBoat}" 
+                                   min="0" max="50" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <label style="width: 150px; font-size: 14px;">Случайность:</label>
+                            <input type="number" id="weight-random" value="${this.settings.sorting.weights.random}" 
+                                   min="0" max="10" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 30px; align-items: center;">
+                        <div>
+                            <label style="font-size: 14px; margin-right: 10px;">Дней считать новым:</label>
+                            <input type="number" id="new-boat-days" value="${this.settings.sorting.newBoatDays}" 
+                                   min="1" max="365" style="width: 80px; padding: 5px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                        </div>
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="checkbox" id="enable-random" ${this.settings.sorting.enableRandom ? 'checked' : ''}>
+                                <span style="font-size: 14px;">Включить случайность</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ДИАГНОСТИКА (настройки уведомлений) -->
+                <div style="background: white; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">🔔</span> Уведомления
+                    </h2>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <label style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="sound-alerts" checked>
+                            <span style="font-size: 14px;">Звук при критических ошибках</span>
+                        </label>
+                        
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 14px;">Проверка API каждые:</span>
+                            <select id="check-interval" style="padding: 8px; border: 2px solid #e5e7eb; border-radius: 6px;">
+                                <option value="1">1 минута</option>
+                                <option value="5" selected>5 минут</option>
+                                <option value="15">15 минут</option>
+                                <option value="30">30 минут</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; font-size: 14px; margin-bottom: 4px;">Email для оповещений</label>
+                            <input type="email" id="alert-email" value="admin@aquagid.ru" style="
+                                padding: 8px 12px;
+                                border: 2px solid #e5e7eb;
+                                border-radius: 6px;
+                                width: 300px;
+                            ">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.attachEvents();
+    }
+    
+    renderManagerPrepaymentRows() {
+        const managers = [
+            { id: 1, name: 'Иванов Иван' },
+            { id: 2, name: 'Петров Петр' },
+            { id: 3, name: 'Сидоров Сидор' }
+        ];
+        
+        return managers.map(m => `
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 8px;">
+                <span style="width: 150px; font-size: 14px;">${m.name}</span>
+                <input type="range" class="manager-prepayment" data-id="${m.id}" 
+                       min="0" max="30" value="${this.settings.managerPrepayments[m.id] || this.settings.prepayment.default}"
+                       style="width: 200px;">
+                <input type="number" class="manager-prepayment-input" data-id="${m.id}"
+                       value="${this.settings.managerPrepayments[m.id] || this.settings.prepayment.default}" 
+                       min="0" max="30" style="width: 70px; padding: 6px; border: 2px solid #e5e7eb; border-radius: 6px;"> %
+                <button class="reset-manager-prepayment" data-id="${m.id}" style="
+                    padding: 4px 8px;
+                    background: none;
+                    border: 1px solid #d1d5db;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">↺ Сброс</button>
+            </div>
+        `).join('');
+    }
+    
+    attachEvents() {
+        // Синхронизация ползунка и поля ввода для предоплаты по умолчанию
+        const defaultRange = document.getElementById('prepayment-default');
+        const defaultInput = document.getElementById('prepayment-default-input');
+        
+        if (defaultRange && defaultInput) {
+            defaultRange.addEventListener('input', (e) => {
+                defaultInput.value = e.target.value;
+            });
+            
+            defaultInput.addEventListener('input', (e) => {
+                let val = parseInt(e.target.value);
+                if (isNaN(val)) val = 0;
+                if (val < 0) val = 0;
+                if (val > 30) val = 30;
+                defaultRange.value = val;
+                e.target.value = val;
+            });
+        }
+        
+        // Синхронизация для индивидуальных настроек
+        document.querySelectorAll('.manager-prepayment').forEach(range => {
+            const id = range.dataset.id;
+            const input = document.querySelector(`.manager-prepayment-input[data-id="${id}"]`);
+            
+            if (range && input) {
+                range.addEventListener('input', (e) => {
+                    input.value = e.target.value;
+                });
+                
+                input.addEventListener('input', (e) => {
+                    let val = parseInt(e.target.value);
+                    if (isNaN(val)) val = 0;
+                    if (val < 0) val = 0;
+                    if (val > 30) val = 30;
+                    range.value = val;
+                    e.target.value = val;
+                });
+            }
+        });
+        
+        // Кнопка "Установить всем"
+        const setAllBtn = document.getElementById('set-all-prepayment');
+        if (setAllBtn) {
+            setAllBtn.addEventListener('click', () => {
+                const defaultVal = parseInt(document.getElementById('prepayment-default-input').value);
+                document.querySelectorAll('.manager-prepayment').forEach(range => {
+                    range.value = defaultVal;
+                });
+                document.querySelectorAll('.manager-prepayment-input').forEach(input => {
+                    input.value = defaultVal;
+                });
+            });
+        }
+        
+        // Кнопки сброса для каждого менеджера
+        document.querySelectorAll('.reset-manager-prepayment').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.dataset.id;
+                const defaultVal = parseInt(document.getElementById('prepayment-default-input').value);
+                const range = document.querySelector(`.manager-prepayment[data-id="${id}"]`);
+                const input = document.querySelector(`.manager-prepayment-input[data-id="${id}"]`);
+                
+                if (range && input) {
+                    range.value = defaultVal;
+                    input.value = defaultVal;
+                }
+            });
+        });
+        
+        // Кнопка сохранения
+        const saveBtn = document.getElementById('save-all-settings');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveSettings());
+        }
+    }
+    
+    saveSettings() {
+        // Собираем все настройки
+        const settings = {
+            season: {
+                start: document.getElementById('season-start')?.value,
+                end: document.getElementById('season-end')?.value
+            },
+            workDay: {
+                start: document.getElementById('work-start')?.value,
+                end: document.getElementById('work-end')?.value,
+                lastRide: document.getElementById('work-last')?.value,
+                step: parseInt(document.getElementById('work-step')?.value)
+            },
+            prepayment: {
+                default: parseInt(document.getElementById('prepayment-default-input')?.value),
+                reminderEnabled: document.getElementById('prepayment-reminder')?.checked,
+                managerPrepayments: {}
+            },
+            sorting: {
+                weights: {
+                    subscription: parseInt(document.getElementById('weight-subscription')?.value),
+                    rating: parseInt(document.getElementById('weight-rating')?.value),
+                    popularity: parseInt(document.getElementById('weight-popularity')?.value),
+                    newBoat: parseInt(document.getElementById('weight-new')?.value),
+                    random: parseInt(document.getElementById('weight-random')?.value)
+                },
+                newBoatDays: parseInt(document.getElementById('new-boat-days')?.value),
+                enableRandom: document.getElementById('enable-random')?.checked
+            },
+            notifications: {
+                soundAlerts: document.getElementById('sound-alerts')?.checked,
+                checkInterval: parseInt(document.getElementById('check-interval')?.value),
+                alertEmail: document.getElementById('alert-email')?.value
+            }
+        };
+        
+        // Собираем индивидуальные настройки предоплаты
+        document.querySelectorAll('.manager-prepayment-input').forEach(input => {
+            const id = input.dataset.id;
+            settings.prepayment.managerPrepayments[id] = parseInt(input.value);
+        });
+        
+        // TODO: отправить на бэкенд
+        console.log('Сохраненные настройки:', settings);
+        alert('✅ Настройки сохранены (тестовый режим)');
+    }
+}

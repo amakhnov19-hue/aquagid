@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | АкваГид</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/manager-card.css">
+</head>
+<body>
+    <div id="app" class="app">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>⚓ AquaGid</h1>
+                <p>Админ-панель</p>
+            </div>
+            <div class="nav">
+                <div class="nav-item" data-view="dashboard">📊 Дашборд</div>
+                <div class="nav-item" data-view="managers">👥 Менеджеры</div>
+                <div class="nav-item" data-view="invites">✉️ Приглашения</div>
+                <div class="nav-item" data-view="settings">⚙️ Настройки</div>
+                <div class="nav-item" data-view="diagnostics">🩺 Диагностика</div>
+            </div>
+            <div style="padding: 20px; margin-top: auto;">
+                <button id="logoutBtn" class="btn" style="background: #374151; color: white; width: 100%;">🚪 Выйти</button>
+            </div>
+        </div>
+        <div class="content" id="content">
+            <div class="loading">Загрузка...</div>
+        </div>
+    </div>
+    
+    <script src="js/config/domains.js"></script>
+    <script src="js/services/TokenService.js"></script>
+    <script src="js/config/api_config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/components/ManagerCard.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

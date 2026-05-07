@@ -1,0 +1,264 @@
+/* Экран подтверждения */
+.confirmation-screen {
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding-bottom: 20px;
+}
+
+.confirmation-screen .screen-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    padding: 16px;
+    margin: 0;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Карточка с деталями */
+.booking-details-card {
+    background: white;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.booking-details-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.detail-label {
+    color: #666;
+    font-size: 15px;
+}
+
+.detail-value {
+    color: #333;
+    font-weight: 500;
+    text-align: right;
+}
+
+.detail-row.total {
+    border-top: 2px solid #667eea;
+    margin-top: 10px;
+    padding-top: 12px;
+    font-weight: 600;
+}
+
+.detail-row.prepayment .detail-value {
+    color: #4caf50;
+}
+
+.detail-row.remaining .detail-value {
+    color: #f44336;
+}
+
+/* Карточка с данными клиента */
+.client-data-card {
+    background: white;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.client-data-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.input-group {
+    margin-bottom: 16px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+}
+
+.client-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.2s;
+}
+
+.client-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.agreement-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.agreement-checkbox input[type="checkbox"] {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.agreement-checkbox label {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+/* Кнопки действий */
+.confirmation-actions {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    margin-top: 10px;
+}
+
+.btn-back {
+    flex: 1;
+    padding: 16px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+}
+
+.btn-confirm {
+    flex: 2;
+    padding: 16px;
+    background: #4caf50;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+}
+
+.btn-back:hover {
+    background: #e0e0e0;
+}
+
+.btn-confirm:hover {
+    background: #45a049;
+}
+
+/* Платежный блок */
+.payment-block {
+    background: white;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 2px solid #4caf50;
+}
+
+.payment-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    color: #333;
+    text-align: center;
+}
+
+.payment-amount {
+    background: #f0f7f0;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.amount-label {
+    font-size: 16px;
+    color: #333;
+    font-weight: 500;
+}
+
+.amount-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #4caf50;
+}
+
+.payment-methods {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.payment-method {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #666;
+}
+
+.payment-note {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+.payment-note .small {
+    font-size: 12px;
+    color: #999;
+    margin-top: 5px;
+}
+
+.payment-button {
+    width: 100%;
+    padding: 18px;
+    background: #4caf50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.payment-button:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+.payment-status {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 14px;
+}

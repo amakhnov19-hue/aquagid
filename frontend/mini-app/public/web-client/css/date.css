@@ -1,0 +1,152 @@
+/* Календарь */
+.calendar-navigation {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.calendar-navigation .btn-secondary {
+    padding: 8px 12px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.calendar-navigation .page-info {
+    font-weight: 600;
+    color: #333;
+}
+
+.weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 8px 16px;
+    background: white;
+}
+
+.weekday {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    padding: 4px;
+}
+
+.dates-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    padding: 16px;
+    background: #f5f5f5;
+}
+
+.date-item {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: default;
+}
+
+/* Активные даты (доступные) */
+.date-item.available {
+    background: white;
+    border: 2px solid #e0e0e0;
+    color: #333;
+}
+
+.date-item.available:hover {
+    background: #e6f0ff;
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+
+/* Выбранная дата */
+.date-item.available.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.date-item.available.selected:hover {
+    background: #5a67d8;
+}
+
+.date-item.disabled {
+    background: #f8f9fa;
+    color: #999;
+    border: 1px solid #f0f0f0;
+}
+
+.date-item.empty {
+    background: transparent;
+}
+
+/* Заголовок экрана */
+.screen-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    padding: 16px;
+    margin: 0;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Кнопка В начало */
+.home-button-container {
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.btn-home {
+    width: 100%;
+    padding: 12px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-home:hover {
+    background: #e0e0e0;
+}
+
+/* Подсветка сегодняшнего дня */
+.date-item.available.today {
+    background: #4caf50;
+    color: white;
+    border-color: #4caf50;
+}
+
+.date-item.available.today:hover {
+    background: #45a049;
+}
+
+/* Активные даты (доступные) */
+.date-item.available {
+    background: white;
+    border: 1px solid #e0e0e0;
+    color: #333;
+}
+
+.date-item.available.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}

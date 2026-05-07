@@ -1,0 +1,158 @@
+/* Мобильная адаптация для всех экранов */
+@media (max-width: 768px) {
+    
+    /* Общие */
+    .screen {
+        padding: 16px !important;
+    }
+    
+    .screen-title {
+        font-size: 22px !important;
+        text-align: center !important;
+    }
+    
+    /* Кнопки */
+    .main-actions {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .btn-primary {
+        width: 100% !important;
+        padding: 14px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Карточки катеров */
+    .boat-card {
+        flex-direction: column !important;
+        padding: 12px !important;
+    }
+    
+    .boat-image-container {
+        width: 100% !important;
+        height: 180px !important;
+    }
+    
+    .boat-info {
+        width: 100% !important;
+        padding: 12px 0 0 0 !important;
+    }
+    
+    .boat-name {
+        font-size: 18px !important;
+    }
+    
+    .boat-features {
+        flex-direction: row !important;
+        gap: 16px !important;
+        margin-top: 8px !important;
+    }
+    
+    /* Выбор даты */
+    .date-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+        gap: 8px !important;
+    }
+    
+    .date-item {
+        padding: 10px 8px !important;
+        font-size: 13px !important;
+    }
+    
+    /* Выбор времени */
+    .time-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    .time-slot {
+        padding: 12px !important;
+        font-size: 14px !important;
+    }
+    
+    /* Выбор длительности */
+    .duration-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+    
+    .duration-item {
+        padding: 14px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Экран подтверждения */
+    .booking-details-card,
+    .client-data-card {
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    .detail-row {
+        flex-direction: column !important;
+        gap: 4px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .detail-label {
+        font-size: 13px !important;
+        color: #666 !important;
+    }
+    
+    .detail-value {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Платежный блок */
+    .payment-block {
+        padding: 16px !important;
+    }
+    
+    .payment-button {
+        width: 100% !important;
+        padding: 14px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Экран успеха */
+    .success-card {
+        padding: 24px 16px !important;
+    }
+    
+    .success-title {
+        font-size: 24px !important;
+    }
+    
+    /* Мои бронирования */
+    .booking-card {
+        padding: 12px !important;
+    }
+    
+    .booking-header {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+    
+    .booking-status {
+        align-self: flex-start !important;
+    }
+    
+    /* Модальные окна */
+    .modal-content {
+        width: 95% !important;
+        margin: 16px !important;
+        padding: 16px !important;
+    }
+    
+    /* Навигация */
+    .home-button-container {
+        margin-bottom: 16px !important;
+    }
+    
+    .btn-home {
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+    }
+}

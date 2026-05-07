@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Терминал | АкваГид</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:12px}
+        .header{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #1e293b;margin-bottom:12px}
+        .header h1{font-size:18px;color:#38bdf8}
+        .status-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+        .status-dot{display:flex;align-items:center;gap:4px;padding:6px 10px;border-radius:8px;font-size:12px;background:#1e293b}
+        .status-dot.ok{color:#4ade80}.status-dot.err{color:#f87171}
+        .card{background:#1e293b;border-radius:10px;padding:12px;margin-bottom:10px}
+        .card h2{font-size:14px;color:#94a3b8;margin-bottom:8px}
+        .boat-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #334155}
+        .boat-row:last-child{border-bottom:none}
+        .boat-name{font-size:14px;flex:1}
+        .boat-status{font-size:11px;padding:4px 8px;border-radius:12px}
+        .boat-status.active{background:#14532d;color:#4ade80}
+        .boat-status.blocked{background:#7f1d1d;color:#f87171}
+        .toggle-btn{padding:6px 12px;border-radius:6px;border:none;font-size:12px;cursor:pointer;margin-left:8px}
+        .toggle-btn.block{background:#7f1d1d;color:#f87171}
+        .toggle-btn.unblock{background:#14532d;color:#4ade80}
+        .actions{display:flex;gap:8px;flex-wrap:wrap}
+        .btn{flex:1;min-width:100px;padding:10px;border:none;border-radius:8px;font-size:13px;cursor:pointer;text-align:center;color:white}
+        .btn-refresh{background:#0369a1}
+        .btn-restart{background:#b91c1c}
+        .btn-logs{background:#334155}
+        .pin-list{font-size:12px}
+        .pin-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #334155}
+        .pin-row:last-child{border-bottom:none}
+        .revoke-btn{background:#7f1d1d;color:#f87171;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px}
+        .create-pin-form{display:flex;gap:6px;margin-bottom:10px}
+        .create-pin-form input{flex:1;padding:8px;border-radius:6px;border:none;background:#334155;color:#e2e8f0;font-size:13px}
+        .create-pin-form button{padding:8px 14px;border-radius:6px;border:none;background:#0369a1;color:white;cursor:pointer;font-size:13px}
+        .pin-screen{text-align:center;margin-top:40px}
+        .pin-screen input{padding:12px;font-size:18px;border-radius:8px;border:none;background:#1e293b;color:#e2e8f0;text-align:center;letter-spacing:4px;width:140px;margin:10px 0}
+        .pin-screen button{padding:12px 24px;border-radius:8px;border:none;background:#0369a1;color:white;font-size:16px;cursor:pointer}
+        .error-msg{color:#f87171;font-size:13px;margin-top:8px}
+        .refresh-time{text-align:center;font-size:10px;color:#64748b;margin-top:8px}
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- ЭКРАН ВВОДА ПИНА -->
+        <div id="pinScreen" class="pin-screen" style="display:none">
+            <h1>🔐 Введите пин</h1>
+            <input type="text" id="pinInput" placeholder="******" maxlength="6">
+            <br>
+            <button onclick="checkPin()">Войти</button>
+            <div class="error-msg" id="pinError"></div>
+        </div>
+
+        <!-- ГЛАВНЫЙ ЭКРАН -->
+        <div id="mainScreen" style="display:none">
+            <div class="header">
+                <span>📱</span>
+                <h1 id="terminalTitle">Терминал AquaGid</h1>
+            </div>
+
+            <div class="status-bar">
+                <div class="status-dot" id="backendStatus">⏳</div>
+                <div class="status-dot" id="dbStatus">⏳</div>
+                <div class="status-dot" id="uvStatus">⏳</div>
+            </div>
+
+            <!-- БЛОК ПИНОВ (только для главного) -->
+            <div class="card" id="pinManager" style="display:none">
+                <h2>🔑 Управление доступом</h2>
+                <div class="create-pin-form">
+                    <input type="text" id="pinDescription" placeholder="Кому доступ">
+                    <button onclick="createPin()">+ Создать</button>
+                </div>
+                <div class="pin-list" id="pinList">Загрузка...</div>
+            </div>
+
+            <div class="card">
+                <h2>🚤 Катера</h2>
+                <div id="boatsList">Загрузка...</div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-refresh" onclick="loadAll()">🔄 Обновить</button>
+                <button class="btn btn-restart" onclick="restartBackend()">⚡ Перезапуск</button>
+                <button class="btn btn-logs" onclick="window.open('/diagnostics','_blank')">📋 Диагностика</button>
+            </div>
+            <div class="refresh-time" id="refreshTime"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'https://admin.experimental.24aquabooking.ru';
+        let isAdmin = false;
+        let checkedPin = null;
+
+        // При загрузке проверяем, есть ли пин в URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlPin = urlParams.get('pin');
+
+        if (urlPin) {
+            // Вход по пину
+            document.getElementById('pinScreen').style.display = 'block';
+            document.getElementById('pinInput').value = urlPin;
+            checkPin();
+        } else {
+            // Попытка входа как главный (по IP)
+            checkAdminAccess();
+        }
+
+        async function checkAdminAccess() {
+            try {
+                // Создаём тестовый пин и сразу проверяем — если создался, значит админ
+                const r = await fetch(API + '/api/admin/terminal-pins', { method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({description: 'auto-check'})
+                });
+                if (r.ok) {
+                    isAdmin = true;
+                    document.getElementById('pinManager').style.display = 'block';
+                    document.getElementById('terminalTitle').textContent = '⚡ Главный терминал';
+                    // Удаляем тестовый пин (по ID из ответа)
+                    const data = await r.json();
+                    // Не удаляем — пусть останется, потом отозвать можно
+                }
+                showMainScreen();
+            } catch(e) {
+                // Не админ — показываем ввод пина
+                document.getElementById('pinScreen').style.display = 'block';
+            }
+        }
+
+        async function checkPin() {
+            const pin = document.getElementById('pinInput').value.trim();
+            if (!pin) return;
+            
+            try {
+                const r = await fetch(API + '/api/admin/terminal-pins/check/' + pin);
+                if (r.ok) {
+                    isAdmin = false;
+                    checkedPin = pin;
+                    document.getElementById('terminalTitle').textContent = '📱 Подчинённый терминал';
+                    showMainScreen();
+                } else {
+                    document.getElementById('pinError').textContent = 'Неверный или отозванный пин';
+                }
+            } catch(e) {
+                document.getElementById('pinError').textContent = 'Ошибка соединения';
+            }
+        }
+
+        function showMainScreen() {
+            document.getElementById('pinScreen').style.display = 'none';
+            document.getElementById('mainScreen').style.display = 'block';
+            loadAll();
+            if (isAdmin) loadPins();
+        }
+
+        async function loadAll() {
+            await Promise.all([loadStatus(), loadBoats()]);
+        }
+
+        async function loadStatus() {
+            try {
+                const r = await fetch(API + '/admin/diagnostics');
+                const d = await r.json();
+                setDot('backendStatus', d.backend);
+                setDot('dbStatus', d.database);
+                setDot('uvStatus', d.uvicorn);
+            } catch(e) {
+                setDot('backendStatus', 'Ошибка', true);
+            }
+            document.getElementById('refreshTime').textContent =
+                'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+        }
+
+        function setDot(id, text, error = false) {
+            const el = document.getElementById(id);
+            el.textContent = text;
+            el.className = 'status-dot ' + (text.includes('✅') ? 'ok' : 'err');
+        }
+
+        async function loadBoats() {
+            const container = document.getElementById('boatsList');
+            try {
+                const r = await fetch(API + '/api/boats');
+                const boats = await r.json();
+                if (!boats.length) {
+                    container.innerHTML = '<p style="color:#64748b;">Нет катеров</p>';
+                    return;
+                }
+                container.innerHTML = boats.map(b => `
+                    <div class="boat-row">
+                        <span class="boat-name">${b.name}</span>
+                        <span class="boat-status ${b.is_active ? 'active' : 'blocked'}">
+                            ${b.is_active ? 'Активен' : 'Блок'}
+                        </span>
+                        <button class="toggle-btn ${b.is_active ? 'block' : 'unblock'}"
+                                onclick="toggleBoat(${b.id}, ${!b.is_active})">
+                            ${b.is_active ? 'Блок' : 'Разблок'}
+                        </button>
+                    </div>
+                `).join('');
+            } catch(e) {
+                container.innerHTML = '<p style="color:#f87171;">Ошибка</p>';
+            }
+        }
+
+        async function toggleBoat(boatId, activate) {
+            try {
+                const token = localStorage.getItem('admin_token');
+                await fetch(API + '/api/admin/boats/' + boatId, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({ is_active: activate })
+                });
+                loadBoats();
+            } catch(e) {
+                alert('Ошибка');
+            }
+        }
+
+        async function restartBackend() {
+            if (!confirm('⚠️ Перезапустить бэкенд?')) return;
+            try {
+                await fetch(API + '/admin/restart-backend', { method: 'POST' });
+                alert('✅ Перезапущен');
+                setTimeout(loadAll, 3000);
+            } catch(e) {
+                alert('❌ Ошибка');
+            }
+        }
+
+        async function loadPins() {
+            const container = document.getElementById('pinList');
+            try {
+                const r = await fetch(API + '/api/admin/terminal-pins');
+                const pins = await r.json();
+                if (!pins.length) {
+                    container.innerHTML = '<p style="color:#64748b;">Нет активных пинов</p>';
+                    return;
+                }
+                container.innerHTML = pins.map(p => `
+                    <div class="pin-row">
+                        <span>${p.description || 'Без описания'}</span>
+                        <code style="color:#38bdf8;">${p.pin_code}</code>
+                        <span style="font-size:10px;color:#64748b;">${p.allowed_ip || 'не активирован'}</span>
+                        <button class="revoke-btn" onclick="revokePin(${p.id})">✕</button>
+                    </div>
+                `).join('');
+            } catch(e) {
+                container.innerHTML = '<p style="color:#f87171;">Ошибка</p>';
+            }
+        }
+
+                async function createPin() {
+            const desc = document.getElementById('pinDescription').value.trim();
+            if (!desc) return;
+            try {
+                const r = await fetch(API + '/api/admin/terminal-pins', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({description: desc})
+                });
+                const data = await r.json();
+                const url = `${API}/terminal.html?pin=${data.pin_code}`;
+                
+                // Показываем ссылку в интерфейсе
+                const resultDiv = document.createElement('div');
+                resultDiv.style.cssText = 'margin-top:8px;padding:8px;background:#0f172a;border-radius:6px;word-break:break-all';
+                resultDiv.innerHTML = `
+                    <p style="color:#4ade80;margin-bottom:4px;">✅ Доступ создан</p>
+                    <code style="color:#38bdf8;font-size:12px;">${url}</code>
+                    <button onclick="navigator.clipboard.writeText('${url}').then(()=>this.textContent='✅ Скопировано')" 
+                            style="display:block;margin-top:6px;padding:6px 12px;background:#0369a1;color:white;border:none;border-radius:4px;cursor:pointer;font-size:12px;">
+                        📋 Копировать ссылку
+                    </button>
+                    <button onclick="this.parentElement.remove()" 
+                            style="margin-top:4px;padding:4px 8px;background:#334155;color:#94a3b8;border:none;border-radius:4px;cursor:pointer;font-size:11px;">
+                        ✕ Закрыть
+                    </button>
+                `;
+                const form = document.querySelector('.create-pin-form');
+                form.after(resultDiv);
+                
+                document.getElementById('pinDescription').value = '';
+                loadPins();
+            } catch(e) {
+                alert('Ошибка создания');
+            }
+        }
+
+        async function revokePin(id) {
+            if (!confirm('Отозвать доступ?')) return;
+            await fetch(API + '/api/admin/terminal-pins/' + id, { method: 'DELETE' });
+            loadPins();
+        }
+    </script>
+</body>
+</html>

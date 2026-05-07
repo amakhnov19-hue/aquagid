@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚤 AquaGid Experimental - Панель разработчика</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .version-badge {
+            display: inline-block;
+            background: #764ba2;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .dashboard {
+            background: #f5f5f5;
+            border-radius: 0 0 20px 20px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .section h2 {
+            color: #444;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section h2 .badge {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.7em;
+        }
+        
+        .components-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .component-card {
+            background: #f8f9fa;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .component-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+        
+        .component-card.core { border-left: 4px solid #4299e1; }
+        .component-card.business { border-left: 4px solid #48bb78; }
+        .component-card.ui { border-left: 4px solid #ed8936; }
+        
+        .component-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .component-card p {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .component-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .status-ready { background: #c6f6d5; color: #22543d; }
+        .status-dev { background: #feebc8; color: #744210; }
+        .status-test { background: #bee3f8; color: #2c5282; }
+        
+        .button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .button:hover {
+            background: #5a67d8;
+        }
+        
+        .button.secondary {
+            background: #48bb78;
+        }
+        
+        .button.secondary:hover {
+            background: #38a169;
+        }
+        
+        .button.outline {
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        
+        .button.outline:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .test-area {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .link-list {
+            list-style: none;
+        }
+        
+        .link-list li {
+            margin-bottom: 10px;
+        }
+        
+        .link-list a {
+            color: #667eea;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .link-list a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: white;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 AquaGid Experimental</h1>
+            <p>Панель разработчика компонентной архитектуры v2.0</p>
+            <span class="version-badge">Версия ядра: 0.1.0</span>
+        </div>
+        
+        <div class="dashboard">
+            <!-- Быстрые действия -->
+            <div class="section">
+                <h2>⚡ Быстрые действия</h2>
+                <div class="quick-actions">
+                    <button class="button" onclick="loadDesignSystem()">
+                        🎨 Загрузить DesignSystem
+                    </button>
+                    <button class="button secondary" onclick="testNotification()">
+                        🔔 Тест уведомлений
+                    </button>
+                    <button class="button outline" onclick="openTestPage()">
+                        🧪 Открыть тестовую страницу
+                    </button>
+                </div>
+                <div id="test-output" class="test-area">
+                    Готов к тестированию. Нажми на любую кнопку...
+                </div>
+            </div>
+            
+            <!-- Состояние компонентов -->
+            <div class="section">
+                <h2>📦 Компоненты <span class="badge">6 готово</span></h2>
+                
+                <h3 style="margin: 15px 0 10px; color: #4299e1;">🎯 Ядро (core/)</h3>
+                <div class="components-grid">
+                    <div class="component-card core">
+                        <h3>StateManager.js</h3>
+                        <p>Управление состоянием, подписки, localStorage</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                    <div class="component-card core">
+                        <h3>Router.js</h3>
+                        <p>Навигация между экранами, история</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                    <div class="component-card core">
+                        <h3>APIClient.js</h3>
+                        <p>Работа с API, кэширование, retry</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 15px 0 10px; color: #48bb78;">🚀 Бизнес-логика (business/)</h3>
+                <div class="components-grid">
+                    <div class="component-card business">
+                        <h3>BookingEngine.js</h3>
+                        <p>3 ветки бронирования, расчёт цены</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                    <div class="component-card business">
+                        <h3>BoatCatalog.js</h3>
+                        <p>Загрузка и кэширование катеров</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                    <div class="component-card business">
+                        <h3>AvailabilityService.js</h3>
+                        <p>Проверка доступности слотов</p>
+                        <span class="component-status status-ready">✅ Готов</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 15px 0 10px; color: #ed8936;">🎨 UI (ui/)</h3>
+                <div class="components-grid">
+                    <div class="component-card ui">
+                        <h3>DesignSystem.js</h3>
+                        <p>Стили, цвета, UI-кит (только что создан)</p>
+                        <span class="component-status status-test">🧪 Тестируется</span>
+                    </div>
+                    <div class="component-card ui">
+                        <h3>ComponentFactory.js</h3>
+                        <p>Фабрика UI-компонентов</p>
+                        <span class="component-status status-dev">🚧 В разработке</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Навигация по тестовым страницам -->
+            <div class="section">
+                <h2>🧭 Тестовые страницы</h2>
+                <ul class="link-list">
+                    <li>
+                        <a href="/test.html" target="_blank">
+                            ▶️ test.html - Базовый тест DesignSystem
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/debug.html" target="_blank">
+                            🔍 debug.html - Полная отладка компонентов
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/unified-screens.html" target="_blank">
+                            🖥️ unified-screens.html - Тест универсальных экранов
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/manager-panel/" target="_blank">
+                            👨‍💼 manager-panel/ - Панель менеджера
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Информация об окружении -->
+            <div class="section">
+                <h2>ℹ️ Информация об окружении</h2>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px; color: #666;">Путь:</td>
+                        <td style="padding: 8px; font-family: monospace;">/var/www/aquagid-experimental/</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; color: #666;">Ссылка на разработку:</td>
+                        <td style="padding: 8px; font-family: monospace;">/home/developer/projects/aquagid-experimental</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; color: #666;">Статус nginx:</td>
+                        <td style="padding: 8px; color: #48bb78;">✅ Активен</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px; color: #666;">Cache-buster:</td>
+                        <td style="padding: 8px; font-family: monospace;">20260223_01</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div class="footer">
+            AquaGid 2.0 | Компонентная архитектура | 🚧 Экспериментальная версия
+        </div>
+    </div>
+    
+    <script>
+        // Глобальный cache-buster
+        window.CACHE_BUSTER = '20260223_01';
+        
+        function loadDesignSystem() {
+            try {
+                // Загружаем скрипт
+                const script = document.createElement('script');
+                script.src = `/js/components/ui/DesignSystem.js?v=${window.CACHE_BUSTER}`;
+                script.onload = function() {
+                    // Инъекция стилей
+                    if (window.AquaGid && window.AquaGid.DesignSystem) {
+                        window.AquaGid.DesignSystem.injectStyles();
+                        document.getElementById('test-output').innerHTML = 
+                            '✅ DesignSystem загружен! Стили применены.\n' +
+                            `📦 Версия: ${window.AquaGid.DesignSystem.version}`;
+                    } else {
+                        document.getElementById('test-output').innerText = 
+                            '❌ Ошибка: DesignSystem не найден в window.AquaGid';
+                    }
+                };
+                script.onerror = function() {
+                    document.getElementById('test-output').innerText = 
+                        '❌ Ошибка загрузки DesignSystem.js\n' +
+                        'Проверь путь: /js/components/ui/DesignSystem.js';
+                };
+                document.head.appendChild(script);
+            } catch (e) {
+                document.getElementById('test-output').innerText = '❌ Ошибка: ' + e.message;
+            }
+        }
+        
+        function testNotification() {
+            if (window.AquaGid && window.AquaGid.DesignSystem) {
+                window.AquaGid.DesignSystem.ui.showNotification('🧪 Тестовое уведомление', 'success');
+                document.getElementById('test-output').innerText = '✅ Уведомление показано';
+            } else {
+                document.getElementById('test-output').innerText = 
+                    '❌ Сначала загрузи DesignSystem (кнопка слева)';
+            }
+        }
+        
+        function openTestPage() {
+            window.open('/test.html', '_blank');
+        }
+        
+        // Автоматическая проверка при загрузке
+        window.addEventListener('load', function() {
+            if (window.AquaGid && window.AquaGid.DesignSystem) {
+                document.getElementById('test-output').innerText = 
+                    '✅ DesignSystem уже загружен';
+            }
+        });
+    </script>
+</body>
+</html>

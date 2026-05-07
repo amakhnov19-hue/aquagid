@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Тест AquaGid Experimental</title>
+    <script src="/js/components/ui/DesignSystem.js?v=20260223_01"></script>
+    <style>
+        body { padding: 20px; font-family: sans-serif; }
+        .test-card { 
+            border: 1px solid #ddd; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            cursor: pointer; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Тест DesignSystem</h1>
+    
+    <div class="test-card">
+        <h2>Тест 1: Инъекция стилей</h2>
+        <button onclick="AquaGid.DesignSystem.injectStyles()">
+            Загрузить стили
+        </button>
+        <p>После нажатия появятся стили для карточек катеров</p>
+    </div>
+
+    <div class="test-card">
+        <h2>Тест 2: Тестовые уведомления</h2>
+        <button onclick="AquaGid.DesignSystem.ui.showNotification('Успех!', 'success')">
+            ✅ Успех
+        </button>
+        <button onclick="AquaGid.DesignSystem.ui.showNotification('Ошибка!', 'error')">
+            ❌ Ошибка
+        </button>
+        <button onclick="AquaGid.DesignSystem.ui.showNotification('Инфо', 'info')">
+            ℹ️ Инфо
+        </button>
+    </div>
+
+    <div class="test-card">
+        <h2>Тест 3: Показать карточку катера</h2>
+        <button onclick="showBoatCard()">
+            🚤 Создать карточку
+        </button>
+        <div id="boat-card-container"></div>
+    </div>
+
+    <script>
+        function showBoatCard() {
+            // Инъекция стилей
+            AquaGid.DesignSystem.injectStyles();
+            
+            // Создаём тестовую карточку
+            const container = document.getElementById('boat-card-container');
+            container.innerHTML = `
+                <div class="boat-card">
+                    <img src="https://via.placeholder.com/400x200" alt="Катер" class="boat-card__image">
+                    <div class="boat-card__content">
+                        <h3 class="boat-card__title">Тестовый катер</h3>
+                        <div class="boat-card__owner">Владелец: ООО "Морские прогулки"</div>
+                        <p class="boat-card__description">Отличный катер для прогулок по воде. Вместимость до 8 человек.</p>
+                        <div class="boat-card__footer">
+                            <span class="boat-card__price">5000 ₽/час</span>
+                            <div>
+                                <button class="boat-card__button boat-card__button--details">Подробнее</button>
+                                <button class="boat-card__button">Выбрать</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

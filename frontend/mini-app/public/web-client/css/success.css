@@ -1,0 +1,150 @@
+/* Экран успеха */
+.success-screen {
+    min-height: 100vh;
+    background: #f5f5f5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.success-card {
+    max-width: 400px;
+    width: 100%;
+    background: white;
+    border-radius: 24px;
+    padding: 28px 24px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon {
+    font-size: 56px;
+    margin-bottom: 12px;
+}
+
+.success-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 20px 0;
+}
+
+.booking-number-box {
+    background: #f0f7ff;
+    border-radius: 16px;
+    padding: 12px;
+    margin-bottom: 20px;
+}
+
+.booking-label {
+    font-size: 14px;
+    color: #666;
+    display: block;
+}
+
+.booking-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0066CC;
+    letter-spacing: 1px;
+}
+
+.booking-info {
+    background: #fafafa;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.booking-info p {
+    margin: 8px 0;
+    color: #444;
+    line-height: 1.4;
+}
+
+.booking-info strong {
+    color: #0066CC;
+}
+
+.payment-summary {
+    background: #e8f5e9;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #2e7d32;
+    text-align: center;
+}
+
+.owner-contact {
+    background: #fff8e7;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 20px;
+    border-left: 3px solid #FF8C00;
+    text-align: left;
+}
+
+.owner-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.owner-phone {
+    color: #0066CC;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.owner-note {
+    font-size: 11px;
+    color: #999;
+    margin-top: 6px;
+}
+
+.btn-route {
+    width: 100%;
+    padding: 14px;
+    background: #FF8C00;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+}
+
+.btn-route:hover {
+    background: #E67E00;
+    transform: translateY(-2px);
+}
+
+.btn-home {
+    width: 100%;
+    padding: 14px;
+    background: #4A5568;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s;
+}
+
+.btn-home:hover {
+    background: #2D3748;
+    transform: translateY(-2px);
+}
+
+.team-signature {
+    font-size: 12px;
+    color: #aaa;
+    text-align: center;
+}

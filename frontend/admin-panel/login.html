@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в админ-панель | АкваГид</title>
+    <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+    <div class="login-container">
+        <h1>🔐 Вход в админ-панель</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" id="username" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" id="password" required>
+            </div>
+            <div class="stay-logged">
+                <input type="checkbox" id="remember" checked>
+                <label>Запомнить меня</label>
+            </div>
+            <div class="error" id="loginError"></div>
+            <button type="submit">Войти</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Ошибка входа');
+                }
+                
+                const data = await response.json();
+                
+                if (remember) {
+                    localStorage.setItem('admin_token', data.token);
+                } else {
+                    sessionStorage.setItem('admin_token', data.token);
+                }
+                
+                window.location.href = '/';
+            } catch (error) {
+                const errorEl = document.getElementById('loginError');
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

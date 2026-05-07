@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🩺 Диагностика AquaGid</title>
+    <link rel="stylesheet" href="css/diagnostics.css">
+    <style>
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+        .tab { padding: 8px 16px; background: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        .tab.active { background: #0066CC; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .log-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+        .log-table th { background: #f1f5f9; padding: 6px 8px; text-align: left; }
+        .log-table td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+        .ok { color: #2e7d32; } .error { color: #c62828; } .fixed { color: #e65100; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🩺 Диагностика AquaGid</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('status')">📊 Статус</button>
+            <button class="tab" onclick="switchTab('test-logs')">🧪 Тест-логи</button>
+            <button class="tab" onclick="switchTab('system')">📋 Системные логи</button>
+        </div>
+        
+        <!-- Вкладка Статус -->
+        <div id="tab-status" class="tab-content active">
+            <div class="card">
+                <div class="card-title">📊 Статус системы</div>
+                <div id="status-container">Загрузка...</div>
+            </div>
+            <div class="card">
+                <div class="card-title">🔧 Управление</div>
+                <button class="btn btn-primary" onclick="refreshStatus()">🔄 Обновить</button>
+                <button class="btn btn-danger" onclick="restartBackend()">⚡ Перезапустить бэкенд</button>
+                <button class="btn btn-primary" onclick="loadDailyReport()">📊 Суточная сводка</button>
+            </div>
+        </div>
+        
+        <!-- Вкладка Тест-логи -->
+        <div id="tab-test-logs" class="tab-content">
+            <div class="card">
+                <div class="card-title">🧪 Результаты тестирования <span id="test-stats" style="font-size:13px;color:#666;"></span></div>
+                <div id="test-logs-container">Загрузка...</div>
+            </div>
+        </div>
+        
+        <!-- Вкладка Системные логи -->
+        <div id="tab-system" class="tab-content">
+            <div class="card">
+                <div class="card-title">📋 Последние логи сервера</div>
+                <div class="logs" id="logs">Загрузка...</div>
+            </div>
+        </div>
+        
+        <div class="refresh-time" id="refresh-time"></div>
+    </div>
+    
+    <script>
+        const API_BASE = 'https://admin.experimental.24aquabooking.ru';
+        
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${name}')"]`).classList.add('active');
+            document.getElementById(`tab-${name}`).classList.add('active');
+            if (name === 'test-logs') loadTestLogs();
+            if (name === 'system') refreshStatus();
+        }
+        
+        async function refreshStatus() {
+            const container = document.getElementById('status-container');
+            const logsEl = document.getElementById('logs');
+            container.innerHTML = 'Загрузка...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/diagnostics`);
+                const data = await response.json();
+                const backendOk = data.backend.includes('✅');
+                const dbOk = data.database.includes('✅');
+                
+                container.innerHTML = `
+                    <div class="status-row"><span class="status-label">Бэкенд</span><span class="status-value ${backendOk ? 'status-ok' : 'status-error'}">${data.backend}</span></div>
+                    <div class="status-row"><span class="status-label">БД</span><span class="status-value ${dbOk ? 'status-ok' : 'status-error'}">${data.database}</span></div>
+                    <div class="status-row"><span class="status-label">Uvicorn</span><span class="status-value">${data.uvicorn}</span></div>
+                `;
+                logsEl.textContent = data.logs || 'Нет логов';
+            } catch (e) {
+                container.innerHTML = '<div class="status-row"><span class="status-value status-error">Ошибка загрузки</span></div>';
+            }
+            document.getElementById('refresh-time').textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+        }
+        
+        async function loadTestLogs() {
+            const container = document.getElementById('test-logs-container');
+            container.innerHTML = 'Загрузка...';
+            try {
+                const response = await fetch(`${API_BASE}/api/test-logs`);
+                const data = await response.json();
+                
+                document.getElementById('test-stats').innerHTML = 
+                    `Всего: ${data.total} | ✅ ${data.stats?.ok || 0} | ❌ ${data.stats?.error || 0} | 🔧 ${data.stats?.fixed || 0}`;
+                
+                if (!data.logs.length) {
+                    container.innerHTML = '<p style="color:#999;">Нет записей</p>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <table class="log-table">
+                        <thead><tr><th>Время</th><th>Тестер</th><th>Тип</th><th>Описание</th><th>Статус</th></tr></thead>
+                        <tbody>${data.logs.map(l => `
+                            <tr>
+                                <td>${new Date(l.created_at).toLocaleString('ru-RU')}</td>
+                                <td>${l.tester_name}</td>
+                                <td>${l.action_type}</td>
+                                <td>${l.description}</td>
+                                <td class="${l.status}">${l.status === 'ok' ? '✅' : l.status === 'error' ? '❌' : '🔧'}</td>
+                            </tr>`).join('')}</tbody>
+                    </table>`;
+            } catch (e) {
+                container.innerHTML = '<p class="error">Ошибка загрузки</p>';
+            }
+        }
+        
+        async function restartBackend() {
+            if (!confirm('⚠️ Перезапустить бэкенд?')) return;
+            try {
+                await fetch(`${API_BASE}/api/restart-backend`, { method: 'POST' });
+                alert('✅ Перезапущен');
+                setTimeout(refreshStatus, 3000);
+            } catch (e) {
+                alert('❌ Ошибка');
+            }
+        }
+        
+        refreshStatus();
+        setInterval(refreshStatus, 60000);
+
+        async function loadDailyReport() {
+            try {
+                const r = await fetch(`${API_BASE}/api/test-logs/daily-report`);
+                const d = await r.json();
+                alert(`
+📊 СВОДКА ЗА ${d.date}
+🚤 Катера: ${d.boats.total} всего, ${d.boats.active} активных
+📋 Бронирования: ${d.bookings.total} за сутки
+  ├─ Активных: ${d.bookings.active_now}
+  └─ Завершено: ${d.bookings.completed}
+🧪 Тест-логи: ${d.test_logs.total}
+  ├─ ✅ OK: ${d.test_logs.ok}
+  └─ ❌ Ошибок: ${d.test_logs.error}
+${d.errors.length ? '\\nОШИБКИ:\\n' + d.errors.map(e => '• ' + e.tester + ': ' + e.description).join('\\n') : ''}
+                `);
+            } catch(e) { alert('Ошибка загрузки сводки'); }
+        }
+    </script>
+</body>
+</html>

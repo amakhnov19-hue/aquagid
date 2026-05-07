@@ -1,0 +1,22 @@
+# Секреты и пароли
+.env
+*.env
+
+# Виртуальное окружение Python
+venv/
+__pycache__/
+*.pyc
+
+# Загрузки пользователей
+shared-uploads/
+
+# Логи
+*.log
+
+# Временные файлы
+*.swp
+*.swo
+*~
+
+# node_modules (если появится)
+node_modules/

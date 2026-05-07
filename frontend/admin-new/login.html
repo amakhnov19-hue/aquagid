@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход в админ-панель | АкваГид</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        h1 { text-align: center; margin-bottom: 30px; color: #1e293b; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #334155; }
+        input { width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 16px; }
+        input:focus { outline: none; border-color: #667eea; }
+        .checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+        .checkbox input { width: auto; }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .error { color: #dc2626; font-size: 14px; margin-top: 8px; display: none; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <h1>🔐 Вход в админ-панель</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Логин</label>
+                <input type="text" id="username" required>
+            </div>
+            <div class="form-group">
+                <label>Пароль</label>
+                <input type="password" id="password" required>
+            </div>
+            <div class="checkbox">
+                <input type="checkbox" id="remember" checked>
+                <label>Запомнить меня</label>
+            </div>
+            <div class="error" id="loginError"></div>
+            <button type="submit">Войти</button>
+        </form>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Проверка, авторизован ли уже
+        if (isAuthenticated()) {
+            window.location.href = '/';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+            
+            try {
+                await login(username, password, remember);
+                window.location.href = '/';
+            } catch (error) {
+                const errorEl = document.getElementById('loginError');
+                errorEl.textContent = error.message;
+                errorEl.style.display = 'block';
+                setTimeout(() => {
+                    errorEl.style.display = 'none';
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>

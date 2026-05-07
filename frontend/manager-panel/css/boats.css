@@ -1,0 +1,210 @@
+.boats-section {
+    padding: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    color: #333;
+    font-size: 20px;
+}
+
+.btn-primary {
+    background: #0066CC;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #0052a3;
+}
+
+.boats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.boat-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.boat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.boat-card.maintenance {
+    opacity: 0.8;
+    border-left: 4px solid #DC3545;
+}
+
+.boat-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.boat-content {
+    padding: 15px;
+}
+
+.boat-content h3 {
+    margin: 0 0 8px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.boat-status {
+    margin-bottom: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.maintenance {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.boat-price {
+    font-size: 20px;
+    font-weight: 600;
+    color: #0066CC;
+    margin-bottom: 10px;
+}
+
+.boat-desc {
+    color: #666;
+    font-size: 13px;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+.boat-stats {
+    margin: 12px 0;
+    padding: 0;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.boat-stats span {
+    font-size: 14px;
+    color: #666;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.boat-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f0f0f0;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: #0066CC;
+    color: white;
+}
+
+.btn-icon.delete:hover {
+    background: #DC3545;
+    color: white;
+}
+
+/* Мобильная версия */
+@media (max-width: 768px) {
+    .boats-section {
+        padding: 10px;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .btn-primary {
+        width: 100%;
+    }
+    
+    .boats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .boat-card {
+        margin-bottom: 0;
+    }
+    
+    .boat-image {
+        height: 150px;
+    }
+    
+    .boat-actions {
+        gap: 12px;
+    }
+    
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 20px;
+    }
+}
+
+/* Заголовок карточки катера */
+.boat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.boat-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.boat-header .boat-status {
+    margin: 0;
+}

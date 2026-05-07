@@ -1,0 +1,152 @@
+/* Экран длительности */
+.duration-screen {
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding-bottom: 20px;
+}
+
+.duration-screen .screen-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+    padding: 16px;
+    margin: 0;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Кнопка В начало */
+.home-button-container {
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.btn-home {
+    width: 100%;
+    padding: 12px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-home:hover {
+    background: #e0e0e0;
+}
+
+/* Секции */
+.popular-section, .custom-section {
+    background: white;
+    margin: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 16px 0;
+}
+
+/* Сетка популярных длительностей */
+.durations-grid.popular {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+/* Карточка популярной длительности */
+.duration-item.popular {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 8px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.duration-item.popular:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.duration-item.popular.selected {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Своя продолжительность */
+.custom-duration-picker {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.time-selector {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.time-select {
+    padding: 12px 20px;
+    border: 1px solid #667eea;
+    border-radius: 10px;
+    font-size: 16px;
+    background: white;
+    color: #333;
+    cursor: pointer;
+    flex: 1;
+    min-width: 120px;
+    max-width: 150px;
+}
+
+.time-select:hover {
+    border-color: #5a67d8;
+}
+
+.time-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.range-hint {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    margin: 12px 0;
+}
+
+.btn-select-custom {
+    width: 100%;
+    padding: 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-select-custom:hover {
+    background: #5a67d8;
+    transform: translateY(-2px);
+}

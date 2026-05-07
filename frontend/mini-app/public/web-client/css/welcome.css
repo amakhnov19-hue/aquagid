@@ -1,0 +1,166 @@
+/* Экран приветствия */
+.welcome-screen {
+    min-height: 100vh;
+    background: #f5f5f5;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+}
+
+.welcome-screen .container {
+    max-width: 400px;
+    width: 100%;
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.welcome-screen h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+.welcome-screen p {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #666;
+}
+
+/* Основные действия */
+.main-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.main-actions .btn-primary {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.main-actions .btn-primary:first-child {
+    background: #0066CC; /* синий */
+    color: white;
+}
+
+.main-actions .btn-primary:first-child:hover {
+    background: #0052a3;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,102,204,0.3);
+}
+
+.main-actions .btn-primary:nth-child(2) {
+    background: #F5F5DC; /* слоновая кость */
+    color: #333;
+}
+
+.main-actions .btn-primary:nth-child(2):hover {
+    background: #E8E8C0;
+    color: #000;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.main-actions .btn-primary:nth-child(3) {
+    background: #FF8C00 !important; /* оранжевый для ближайшего катера */
+    color: white;
+}
+
+.main-actions .btn-primary:nth-child(3):hover {
+    background: #E67E00 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255,140,0,0.3);
+}
+
+.main-actions .btn-primary:nth-child(4) {
+    background: #2d2e30; /* для развода мостов */
+    color: white;
+}
+
+.main-actions .btn-primary:nth-child(4):hover {
+    background: #3a5a84;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(74,111,165,0.3);
+}
+
+/* Кнопка Мои бронирования */
+.btn-bookings {
+    background: #4CAF50; /* зелёный */
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    color: white;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+.btn-bookings:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Кнопка документации */
+.btn-documentation {
+    background: #28292c; /* тёмно-серый */
+    color: white;
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.2s;
+}
+
+.btn-documentation:hover {
+    background: #4B5563;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(107,114,128,0.3);
+}
+
+.info-block p {
+    font-size: 12px;
+    color: #888;
+    text-align: center;
+    margin-top: 20px;
+    line-height: 1.5;
+}
+
+/* Переопределение для Мои бронирования */
+button.btn-home.btn-bookings {
+    background: #4CAF50 !important;
+    color: white !important;
+}
+
+button.btn-home.btn-bookings:hover {
+    background: #45a049 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Переопределение для документации */
+button.btn-home.btn-documentation {
+    background: #4a6fa5 !important;
+    color: white !important;
+}
+
+button.btn-home.btn-documentation:hover {
+    background: #4B5563 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(107, 114, 128, 0.3);
+}

@@ -1,0 +1,316 @@
+/* Profile.css - стили для профиля менеджера */
+
+.profile-container {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.profile-container.modal {
+    width: 90%;
+    max-width: 480px;
+}
+
+.profile-container:not(.modal) {
+    max-width: 600px;
+    margin: 20px auto;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px 24px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.profile-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.profile-header p {
+    margin: 5px 0 0;
+    opacity: 0.9;
+}
+
+.profile-header .close-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-content {
+    padding: 24px;
+}
+
+.status-card {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.status-card .status-icon {
+    font-size: 24px;
+}
+
+.status-card .status-title {
+    font-weight: 600;
+    color: #92400e;
+}
+
+.status-card .status-desc {
+    font-size: 13px;
+    color: #b45309;
+}
+
+.chat-support-btn {
+    margin-left: auto;
+    padding: 12px;
+    background: white;
+    border: 2px solid #fde68a;
+    border-radius: 10px;
+    font-weight: 500;
+    color: #92400e;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.chat-support-btn:hover {
+    background: #fef3c7;
+}
+
+.form-section {
+    margin-bottom: 28px;
+}
+
+.form-section h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section h3 span {
+    width: 4px;
+    height: 18px;
+    background: #667eea;
+    border-radius: 2px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 6px;
+}
+
+.form-group .required {
+    color: #ef4444;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.2s;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    border-color: #667eea;
+}
+
+.phone-group, .email-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.phone-group input, .email-group input {
+    flex: 1;
+}
+
+.phone-group button, .email-group button {
+    padding: 0 20px;
+    background: #667eea;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.phone-group button:hover, .email-group button:hover {
+    background: #764ba2;
+}
+
+.phone-group button.verified-badge,
+.email-group button.verified-badge {
+    background: #10b981;
+    opacity: 0.7;
+    cursor: default;
+}
+
+.status-hint {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.verification-container {
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    margin-top: 10px;
+}
+
+.verification-container p {
+    margin: 0 0 12px;
+    font-size: 14px;
+    color: #374151;
+}
+
+.code-group {
+    display: flex;
+    gap: 10px;
+}
+
+.code-group input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 16px;
+    font-family: monospace;
+    text-align: center;
+    letter-spacing: 4px;
+    outline: none;
+}
+
+.code-group button {
+    padding: 0 24px;
+    background: #10b981;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.code-group button:hover {
+    background: #059669;
+}
+
+.verification-container .hint {
+    margin: 12px 0 0;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.test-hint {
+    margin-top: 10px;
+    padding: 8px;
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #856404;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    border-top: 2px solid #f3f4f6;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.btn-cancel {
+    padding: 12px 24px;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+}
+
+.btn-logout {
+    padding: 12px 24px;
+    background: #ef4444;
+    border: none;
+    border-radius: 10px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .profile-container.modal {
+        width: 95%;
+        max-width: 95%;
+    }
+    
+    .profile-content {
+        padding: 16px;
+    }
+    
+    .phone-group, .email-group {
+        flex-direction: column;
+    }
+    
+    .phone-group button, .email-group button {
+        padding: 10px;
+        width: 100%;
+    }
+    
+    .code-group {
+        flex-direction: column;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .form-actions button {
+        width: 100%;
+    }
+    
+}
