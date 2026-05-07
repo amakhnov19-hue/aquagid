@@ -74,3 +74,15 @@ async def daily_report(db: AsyncSession = Depends(get_db)):
         "errors": error_list
     }
 
+@router.post("/mark-viewed")
+async def mark_viewed(db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE test_logs SET status = 'viewed' WHERE status = 'ok' OR status = 'error'"))
+    await db.commit()
+    return {"success": True}
+
+@router.delete("/history")
+async def delete_history(db: AsyncSession = Depends(get_db)):
+    await db.execute(text("DELETE FROM test_logs WHERE status = 'viewed'"))
+    await db.commit()
+    return {"success": True}
+

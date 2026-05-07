@@ -110,25 +110,12 @@
         }
 
         async function checkAdminAccess() {
-            try {
-                // Создаём тестовый пин и сразу проверяем — если создался, значит админ
-                const r = await fetch(API + '/api/admin/terminal-pins', { method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({description: 'auto-check'})
-                });
-                if (r.ok) {
-                    isAdmin = true;
-                    document.getElementById('pinManager').style.display = 'block';
-                    document.getElementById('terminalTitle').textContent = '⚡ Главный терминал';
-                    // Удаляем тестовый пин (по ID из ответа)
-                    const data = await r.json();
-                    // Не удаляем — пусть останется, потом отозвать можно
-                }
-                showMainScreen();
-            } catch(e) {
-                // Не админ — показываем ввод пина
-                document.getElementById('pinScreen').style.display = 'block';
-            }
+            // Главный терминал открывается только по прямому IP (без пина)
+            // Если мы здесь, значит админ уже авторизован
+            isAdmin = true;
+            document.getElementById('pinManager').style.display = 'block';
+            document.getElementById('terminalTitle').textContent = '⚡ Главный терминал';
+            showMainScreen();
         }
 
         async function checkPin() {

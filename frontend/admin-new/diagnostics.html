@@ -45,6 +45,12 @@
         <div id="tab-test-logs" class="tab-content">
             <div class="card">
                 <div class="card-title">🧪 Результаты тестирования <span id="test-stats" style="font-size:13px;color:#666;"></span></div>
+                <div style="display:flex;gap:6px;margin-bottom:10px;">
+                    <button onclick="switchTestFilter('new')" id="btn-new" class="tab active">🆕 Новые</button>
+                    <button onclick="switchTestFilter('history')" id="btn-history" class="tab">📋 История</button>
+                    <button onclick="markAllRead()" style="margin-left:auto;padding:4px 10px;background:#14532d;color:#4ade80;border:none;border-radius:4px;cursor:pointer;font-size:12px;">✅ Просмотрено</button>
+                    <button onclick="clearHistory()" style="padding:4px 10px;background:#7f1d1d;color:#f87171;border:none;border-radius:4px;cursor:pointer;font-size:12px;">🗑️ Очистить</button>
+                </div>
                 <div id="test-logs-container">Загрузка...</div>
             </div>
         </div>
@@ -95,17 +101,29 @@
             document.getElementById('refresh-time').textContent = 'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
         }
         
+        let testFilter = 'new';
+
+        function switchTestFilter(filter) {
+            testFilter = filter;
+            document.getElementById('btn-new').className = 'tab' + (filter === 'new' ? ' active' : '');
+            document.getElementById('btn-history').className = 'tab' + (filter === 'history' ? ' active' : '');
+            loadTestLogs();
+        }
+
         async function loadTestLogs() {
             const container = document.getElementById('test-logs-container');
             container.innerHTML = 'Загрузка...';
             try {
                 const response = await fetch(`${API_BASE}/api/test-logs`);
                 const data = await response.json();
+                const logs = testFilter === 'new' 
+                    ? data.logs.filter(l => l.status !== 'viewed')
+                    : data.logs.filter(l => l.status === 'viewed');
                 
                 document.getElementById('test-stats').innerHTML = 
-                    `Всего: ${data.total} | ✅ ${data.stats?.ok || 0} | ❌ ${data.stats?.error || 0} | 🔧 ${data.stats?.fixed || 0}`;
+                    `Всего: ${data.total} | ✅ ${data.stats?.ok || 0} | ❌ ${data.stats?.error || 0}`;
                 
-                if (!data.logs.length) {
+                if (!logs.length) {
                     container.innerHTML = '<p style="color:#999;">Нет записей</p>';
                     return;
                 }
@@ -113,13 +131,13 @@
                 container.innerHTML = `
                     <table class="log-table">
                         <thead><tr><th>Время</th><th>Тестер</th><th>Тип</th><th>Описание</th><th>Статус</th></tr></thead>
-                        <tbody>${data.logs.map(l => `
+                        <tbody>${logs.map(l => `
                             <tr>
                                 <td>${new Date(l.created_at).toLocaleString('ru-RU')}</td>
                                 <td>${l.tester_name}</td>
                                 <td>${l.action_type}</td>
                                 <td>${l.description}</td>
-                                <td class="${l.status}">${l.status === 'ok' ? '✅' : l.status === 'error' ? '❌' : '🔧'}</td>
+                                <td class="${l.status === 'viewed' ? '' : l.status}">${l.status === 'ok' ? '✅' : l.status === 'error' ? '❌' : l.status === 'viewed' ? '👁️' : '🔧'}</td>
                             </tr>`).join('')}</tbody>
                     </table>`;
             } catch (e) {
@@ -170,6 +188,21 @@ ${d.errors.length ? '\\nОШИБКИ:\\n' + d.errors.map(e => '• ' + e.tester 
             };
             document.body.appendChild(btn);
         })();
+
+        async function markAllRead() {
+            try {
+                await fetch(`${API_BASE}/api/test-logs/mark-viewed`, { method: 'POST' });
+                loadTestLogs();
+            } catch(e) { alert('Ошибка'); }
+        }
+
+        async function clearHistory() {
+            if (!confirm('Удалить все просмотренные записи?')) return;
+            try {
+                await fetch(`${API_BASE}/api/test-logs/history`, { method: 'DELETE' });
+                loadTestLogs();
+            } catch(e) { alert('Ошибка'); }
+        }
     </script>
 </body>
 </html>
