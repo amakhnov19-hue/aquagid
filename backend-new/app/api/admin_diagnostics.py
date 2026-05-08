@@ -20,16 +20,15 @@ async def diagnostics(db: AsyncSession = Depends(get_db)):
     database = "✅ Подключена" if db_ok else "❌ Ошибка подключения"
 
     try:
-        result = subprocess.run(["/usr/bin/pgrep", "-f", "uvicorn.*8083"], capture_output=True)
+        result = subprocess.run(["/usr/bin/pgrep", "-f", "uvicorn.*8082"], capture_output=True)
         uvicorn = "✅ Запущен" if result.returncode == 0 else "❌ Не найден"
     except:
         uvicorn = "❌ Не найден"
 
-    # Читаем логи НАПРЯМУЮ через open() — надёжно и без subprocess
     logs_text = "Нет логов"
     try:
-        if os.path.exists("/var/log/aquagid-beta.log"):
-            with open("/var/log/aquagid-beta.log", "r") as f:
+        if os.path.exists("/var/log/aquagid-backend.log"):
+            with open("/var/log/aquagid-backend.log", "r") as f:
                 lines = f.readlines()
                 last_lines = lines[-30:] if len(lines) >= 30 else lines
                 logs_text = "".join(last_lines)
@@ -38,8 +37,8 @@ async def diagnostics(db: AsyncSession = Depends(get_db)):
 
     errors_text = "Нет ошибок"
     try:
-        if os.path.exists("/var/log/aquagid-beta-error.log"):
-            with open("/var/log/aquagid-beta-error.log", "r") as f:
+        if os.path.exists("/var/log/aquagid-backend-error.log"):
+            with open("/var/log/aquagid-backend-error.log", "r") as f:
                 lines = f.readlines()
                 last_lines = lines[-30:] if len(lines) >= 30 else lines
                 errors_text = "".join(last_lines)
@@ -59,7 +58,7 @@ async def diagnostics(db: AsyncSession = Depends(get_db)):
 @router.post("/restart-backend")
 async def restart_backend():
     try:
-        subprocess.run(["sudo", "systemctl", "restart", "aquagid-beta"], capture_output=True)
+        subprocess.run(["sudo", "systemctl", "restart", "aquagid-backend"], capture_output=True)
         return {"success": True, "message": "Бэкенд перезапущен"}
     except:
         return {"success": False, "message": "Ошибка перезапуска"}
