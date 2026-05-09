@@ -50,6 +50,20 @@
             }
         }
 
+        async loadManagerProfile() {
+            if (!this.managerId) return;
+            try {
+                const response = await fetch(`/api/managers/${this.managerId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    this.manager.name = data.full_name || this.manager.name;
+                    localStorage.setItem('managerName', this.manager.name);
+                }
+            } catch (e) {
+                console.warn('Не удалось загрузить профиль менеджера');
+            }
+        }
+
         connectWebSocket() {
             const managerId = this.managerId || window.managerId;
             if (!managerId) {
@@ -163,6 +177,9 @@
 
                     // Подключаем WebSocket
                     this.connectWebSocket();
+                    
+                    // Загружаем профиль с сервера (имя и другие данные)
+                    this.loadManagerProfile();                    
                 } catch (e) {
                     console.error('❌ Ошибка парсинга токена:', e);
                 }
