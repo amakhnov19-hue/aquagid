@@ -32,7 +32,7 @@
             if (this.isAuthenticated) {
                 this.manager = {
                     id: localStorage.getItem('managerId') || 19,
-                    name: localStorage.getItem('managerName') || 'Петр Петров',
+                    name: localStorage.getItem('managerName') || 'Менеджер',
                     company: localStorage.getItem('managerCompany') || 'ООО "Морские прогулки"',
                     telegram: localStorage.getItem('managerTelegram') || '',
                     email: localStorage.getItem('managerEmail') || '',

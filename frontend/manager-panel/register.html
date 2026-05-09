@@ -263,6 +263,7 @@
                 const loginResult = await loginResponse.json();
                 localStorage.setItem('token', loginResult.token);
                 localStorage.setItem('managerId', loginResult.id);
+                localStorage.setItem('managerName', fullName);
 
                 // Успех!
                 document.getElementById('registerFormContainer').style.display = 'none';
