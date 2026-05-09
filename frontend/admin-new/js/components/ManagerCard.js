@@ -369,7 +369,7 @@ class ManagerCard {
                 
                 if (method === 'percent') {
                     data.price_per_hour = parseFloat(document.getElementById('editBoatPricePerHour')?.value) || null;
-                    data.prepayment_percent = parseInt(document.getElementById('editBoatPrepaymentPercent')?.value) || 20;
+                    data.approved_prepayment_percent = parseInt(document.getElementById('editBoatPrepaymentPercent')?.value) || 20;
                 } else {
                     data.open_price = parseFloat(document.getElementById('editBoatOpenPrice')?.value) || null;
                     data.agent_price = parseFloat(document.getElementById('editBoatAgentPrice')?.value) || null;
