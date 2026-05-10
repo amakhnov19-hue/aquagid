@@ -60,6 +60,10 @@
             <div class="card">
                 <div class="card-title">📋 Последние логи сервера</div>
                 <div class="logs" id="logs">Загрузка...</div>
+                <div style="margin-top:16px;">
+                    <h3 style="color:#f87171;">⚠️ Ошибки</h3>
+                    <div class="logs" id="errors-log" style="color:#f87171;">Загрузка...</div>
+                </div>
             </div>
         </div>
         
@@ -95,6 +99,8 @@
                     <div class="status-row"><span class="status-label">Uvicorn</span><span class="status-value">${data.uvicorn}</span></div>
                 `;
                 logsEl.textContent = data.logs || 'Нет логов';
+                const errorsEl = document.getElementById('errors-log');
+                if (errorsEl) errorsEl.textContent = data.errors || 'Нет ошибок';
             } catch (e) {
                 container.innerHTML = '<div class="status-row"><span class="status-value status-error">Ошибка загрузки</span></div>';
             }

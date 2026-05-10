@@ -19,8 +19,8 @@ class SuccessScreen extends ScreenBase {
         const booking = options.booking || window.AquaGid.UnifiedScreens.booking;
         const boat = booking.boat;
         
-        // Берём готовые суммы из БД (если их нет — используем старый расчёт как fallback)
-        const totalPrice = booking.total_price || (parseFloat(boat.price_per_hour) * (booking.duration_minutes / 60));
+        // Берём готовые суммы из БД 
+        const totalPrice = booking.total_price || 0;
         const prepaymentAmount = booking.prepayment_amount || 0;
         const remainingAmount = totalPrice - prepaymentAmount;
 

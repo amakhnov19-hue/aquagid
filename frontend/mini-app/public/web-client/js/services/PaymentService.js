@@ -1,13 +1,10 @@
 /**
- * Единый сервис для работы с платежами
- * Абстрагирует конкретный платёжный шлюз
+ * PaymentService — единый сервис для работы с платежами.
+ * Только обрабатывает платёж, НЕ создаёт бронирование.
+ * Бронирование уже создано бэкендом до оплаты (статус pending).
  */
 class PaymentService {
     constructor() {
-        // ТЕСТОВЫЙ РЕЖИМ: используем DummyGateway
-        // Для перехода на реальный шлюз (Т-Банк, Сбер и т.д.):
-        // 1. Создать класс RealGateway extends PaymentGateway
-        // 2. Заменить строку ниже на new RealGateway(config)
         this.gateway = new DummyGateway({
             successRate: 100,
             delay: 1500
@@ -17,9 +14,9 @@ class PaymentService {
     }
     
     /**
-     * Основной метод оплаты + создания бронирования
+     * Обработка платежа
      * @param {number} amount - сумма предоплаты
-     * @param {Object} bookingData - данные бронирования
+     * @param {Object} bookingData - данные бронирования (уже созданного)
      * @param {Object} clientData - данные клиента
      * @returns {Promise<Object>} - результат {success, bookingId, paymentId}
      */
@@ -27,7 +24,6 @@ class PaymentService {
         console.log('💳 [PaymentService] Начало обработки платежа', { amount, bookingData, clientData });
         
         try {
-            // ШАГ 1: Обработка платежа через шлюз
             const paymentResult = await this.gateway.processPayment(amount, clientData, bookingData);
             
             if (!paymentResult.success) {
@@ -43,39 +39,15 @@ class PaymentService {
             console.log('✅ [PaymentService] Платёж успешен:', paymentResult);
             this.currentPaymentId = paymentResult.paymentId;
             
-            // ШАГ 2: Создаём бронирование на сервере (передаём статус из результата оплаты)
-            const bookingResult = await this.createBooking(
-                bookingData, 
-                clientData, 
-                paymentResult.paymentId,
-                'active'  // <-- вместо 'confirmed'
-            );
-            
-            if (!bookingResult.success) {
-                console.error('❌ [PaymentService] Ошибка создания бронирования:', bookingResult.error);
-                return {
-                    success: false,
-                    error: 'Бронирование не создано: ' + bookingResult.error,
-                    paymentId: paymentResult.paymentId,
-                    bookingId: null
-                };
-            }
-            
-            console.log('✅ [PaymentService] Бронирование создано:', bookingResult.bookingId);
-            
-            // ШАГ 3: Сохраняем данные в localStorage и глобальный объект
-            if (window.AquaGid?.UnifiedScreens?.booking) {
-                window.AquaGid.UnifiedScreens.booking.bookingId = bookingResult.bookingId;
-                window.AquaGid.UnifiedScreens.booking.paymentId = paymentResult.paymentId;
-            }
+            // Бронь уже создана в confirmBooking(), здесь только возвращаем результат
+            const bookingId = bookingData.bookingId || (window.AquaGid?.UnifiedScreens?.booking?.bookingId);
             
             return {
                 success: true,
-                bookingId: bookingResult.bookingId,
+                bookingId: bookingId,
                 paymentId: paymentResult.paymentId,
                 amount: amount,
-                transactionId: paymentResult.transactionId,
-                bookingData: bookingResult.bookingData
+                transactionId: paymentResult.transactionId
             };
             
         } catch (error) {
@@ -88,74 +60,15 @@ class PaymentService {
             };
         }
     }
-    
+
     /**
-     * Создание бронирования на сервере
-     */
-    async createBooking(bookingData, clientData, paymentId) {
-        try {
-            const payload = {
-                boat_id: bookingData.boatId,
-                booking_date: bookingData.date,
-                start_time: bookingData.time,
-                duration_minutes: bookingData.duration * 60,
-                client_name: clientData.name,
-                client_phone: clientData.phone,
-                client_email: clientData.email || '',
-                client_telegram: clientData.telegram || '',
-                client_messenger_type: clientData.messengerType || '',
-                client_messenger_contact: clientData.messengerContact || '',
-                payment_id: paymentId,
-                prepayment_amount: bookingData.prepaymentAmount || 0,
-                status: 'active'
-            };
-            
-            console.log('📡 [PaymentService] Отправка запроса на создание бронирования:', payload);
-            
-            const response = await fetch('/api/bookings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            
-            const result = await response.json();
-            
-            return {
-                success: true,
-                bookingId: result.id,
-                bookingData: result
-            };
-            
-        } catch (error) {
-            console.error('❌ [PaymentService] Ошибка создания бронирования:', error);
-            return {
-                success: false,
-                error: error.message
-            };
-        }
-    }
-    
-    /**
-     * Получить текущий платёжный шлюз
+     * Получить название платёжного шлюза
      */
     getGatewayName() {
-        return this.gateway.getName ? this.gateway.getName() : 'Unknown';
-    }
-    
-    /**
-     * Проверить статус платежа (для будущих доработок)
-     */
-    async checkPaymentStatus(paymentId) {
-        if (this.gateway.checkPaymentStatus) {
-            return await this.gateway.checkPaymentStatus(paymentId);
-        }
-        return { success: false, error: 'Метод не поддерживается' };
+        return this.gateway?.constructor?.name || 'DummyGateway';
     }
 }
 
-window.PaymentService = PaymentService;
+if (typeof window !== 'undefined') {
+    window.PaymentService = PaymentService;
+}

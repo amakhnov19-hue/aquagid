@@ -66,13 +66,21 @@ async def create_booking(
                 detail="Это время уже занято"
             )
     
-    # Определяем цену в зависимости от метода расчёта
-    if boat.pricing_method == 'margin' and boat.open_price:
-        price_per_hour = float(boat.open_price)
-    else:
-        price_per_hour = float(boat.price_per_hour) if boat.price_per_hour else None
+    # Единый калькулятор цен
+    from app.services.price_calculator import calculate
     
-    total_price = price_per_hour * (booking.duration_minutes / 60) if price_per_hour else None
+    price_per_hour = float(boat.price_per_hour) if boat.price_per_hour else 0
+    hours = booking.duration_minutes / 60
+    
+    # Процент предоплаты ТОЛЬКО из глобальных настроек
+    from sqlalchemy import text
+    global_result = await db.execute(text("SELECT default_prepayment_percent FROM global_settings LIMIT 1"))
+    global_row = global_result.fetchone()
+    prepayment_percent = global_row[0] if global_row and global_row[0] else 15
+
+    print(f"🔍 DEBUG CALC: price_per_hour={price_per_hour}, hours={hours}, prepayment_percent={prepayment_percent}, result_total={price_per_hour * hours}, result_prepayment={price_per_hour * hours * prepayment_percent / 100}", flush=True)
+    
+    result = calculate(price_per_hour, hours, prepayment_percent)
     
     # Создаем бронирование
     db_booking = BookingModel(
@@ -87,8 +95,8 @@ async def create_booking(
         client_messenger_contact=booking.client_messenger_contact,
         client_user_id=booking.client_user_id,
         status=booking.status if booking.status else "active",
-        total_price=total_price,
-        prepayment_amount=booking.prepayment_amount,
+        total_price=result["total_price"],
+        prepayment_amount=result["prepayment_amount"],
         source="client"
     )
     
@@ -260,7 +268,6 @@ async def get_client_bookings(
             "start_time": booking.start_time,
             "duration_minutes": booking.duration_minutes,
             "status": booking.status,
-            "total_price": booking.total_price,
             "created_at": booking.created_at,
             "client_name": booking.client_name,
             "client_phone": booking.client_phone,
@@ -269,6 +276,7 @@ async def get_client_bookings(
             "client_messenger_contact": booking.client_messenger_contact,
             "cancellation_requested": booking.cancellation_requested,
             "prepayment_amount": booking.prepayment_amount,
+            "total_price": booking.total_price,
             "boat": {
                 "id": boat.id,
                 "name": boat.name,

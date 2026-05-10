@@ -382,15 +382,15 @@
             const hasCancellationRequest = booking.cancellation_requested === true && !isCompleted;
             
             return `
-                <div class="booking-card ${displayStatus}" data-booking-id="${booking.id}" onclick="AquaGid.MyBookings.showDetails(${booking.id})">
-                    <div class="booking-header">
+                <div class="booking-card ${displayStatus}" data-booking-id="${booking.id}">
+                    <div class="booking-header" onclick="AquaGid.MyBookings.showDetails(${booking.id})" style="cursor:pointer;">
                         <h3>🚤 ${booking.boat_name}</h3>
                         <span class="booking-status ${booking.status}">
                             ${this.getStatusLabel(displayStatus)}
                         </span>
                     </div>
                     
-                    <div class="booking-details">
+                    <div class="booking-details" onclick="AquaGid.MyBookings.showDetails(${booking.id})" style="cursor:pointer;">
                         <div class="detail-row">
                             <span class="detail-label">📅 Дата:</span>
                             <span class="detail-value">${bookingDate.toLocaleDateString()}</span>
@@ -404,12 +404,16 @@
                             <span class="detail-value">${booking.duration} ч</span>
                         </div>
                         <div class="detail-row">
-                            <span class="detail-label">💰 Предоплата 20%:</span>
-                            <span class="detail-value">${Math.round(booking.total_amount * 0.2)} ₽</span>
+                            <span class="detail-label">💰 Полная стоимость:</span>
+                            <span class="detail-value">${(booking.total_price || booking.total_amount || 0).toLocaleString()} ₽</span>
+                        </div>
+                        <div class="detail-row">
+                            <span class="detail-label">💳 Предоплата:</span>
+                            <span class="detail-value">${(booking.prepayment_amount || 0).toLocaleString()} ₽</span>
                         </div>
                         <div class="detail-row">
                             <span class="detail-label">💵 Остаток на месте:</span>
-                            <span class="detail-value">${Math.round(booking.total_amount * 0.8)} ₽</span>
+                            <span class="detail-value">${((booking.total_price || booking.total_amount || 0) - (booking.prepayment_amount || 0)).toLocaleString()} ₽</span>
                         </div>
                     </div>
                     
@@ -418,7 +422,7 @@
                             <div class="warning-message">
                                 ⚠️ Вам поступило предложение аннулировать бронирование
                             </div>
-                            <button class="btn-confirm-cancel" data-booking-id="${booking.id}">
+                            <button class="btn-confirm-cancel" data-booking-id="${booking.id}" onclick="event.stopPropagation()">
                                 ✅ Подтвердить отмену
                             </button>
                             <div class="cancel-hint">

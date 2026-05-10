@@ -10,10 +10,6 @@ class ConfirmationScreen extends ScreenBase {
      * Показывает экран подтверждения
      */
     show() {
-        console.log('📅 booking.date:', this.app.booking.date);
-        console.log('⏰ booking.time:', this.app.booking.time);
-        console.log('🚤 booking.boat:', this.app.booking.boat);
-
         console.log('✅ ConfirmationScreen.show START');
         
         if (!this.container) return;
@@ -21,16 +17,8 @@ class ConfirmationScreen extends ScreenBase {
         
         const booking = window.AquaGid.UnifiedScreens.booking;
         const boat = booking.boat;
-        
-        // Рассчитываем стоимость через PricingService
-        const durationMinutes = booking.duration_minutes || (booking.duration || 0) * 60;
         const fullBoat = this.app.booking.boat || boat;
-        const { totalPrice, prepaymentAmount } = PricingService.calculate(fullBoat, durationMinutes);
-        console.log('💰 DEBUG totalPrice:', totalPrice, 'prepaymentAmount:', prepaymentAmount);
-        console.log('💰 DEBUG fullBoat:', fullBoat?.name, 'open_price:', fullBoat?.open_price, 'agent_price:', fullBoat?.agent_price, 'pricing_method:', fullBoat?.pricing_method);
-
-        const remainingAmount = totalPrice - prepaymentAmount;
-
+        
         // Копируем manager_* из полного объекта катера
         if (fullBoat) {
             window.AquaGid.UnifiedScreens.booking.boat.manager_name = fullBoat.manager_name;
@@ -39,71 +27,33 @@ class ConfirmationScreen extends ScreenBase {
             window.AquaGid.UnifiedScreens.booking.boat.manager_messengers = fullBoat.manager_messengers;
         }
 
-        // Сохраняем правильную предоплату для PaymentService
-        if (window.AquaGid?.UnifiedScreens?.booking) {
-            window.AquaGid.UnifiedScreens.booking.totalPrice = totalPrice;
-            window.AquaGid.UnifiedScreens.booking.prepaymentAmount = prepaymentAmount;
-            window.AquaGid.UnifiedScreens.booking.prepayment_amount = prepaymentAmount;
-        }
-
+        // Шаг 1: Форма ввода данных клиента
         const html = `
             <div class="screen confirmation-screen">
-                <!-- Заголовок -->
-                <h2 class="screen-title">✅ Подтверждение бронирования</h2>
+                <h2 class="screen-title">📋 Данные для бронирования</h2>
                 
-                <!-- Кнопка В начало -->
                 <div class="home-button-container">
                     <button class="btn-home" onclick="window.AquaGid.UnifiedScreens.showWelcomeScreen()">
                         🏠 В начало
                     </button>
                 </div>
                 
-                <!-- Детали бронирования -->
                 <div class="booking-details-card">
-                    <h3>📋 Детали бронирования</h3>
-                    
-                    <div class="detail-row">
-                        <span class="detail-label">🚤 Катер:</span>
-                        <span class="detail-value">${boat.name}</span>
-                    </div>
-                    
+                    <h3>🚤 ${boat.name}</h3>
                     <div class="detail-row">
                         <span class="detail-label">📅 Дата:</span>
                         <span class="detail-value">${new Date(booking.date).toLocaleDateString('ru-RU')}</span>
                     </div>
-                    
                     <div class="detail-row">
                         <span class="detail-label">⏰ Время:</span>
                         <span class="detail-value">${booking.time}</span>
                     </div>
-                    
                     <div class="detail-row">
                         <span class="detail-label">⏱️ Длительность:</span>
                         <span class="detail-value">${booking.duration} ч</span>
                     </div>
-                    
-                    <div class="detail-row">
-                        <span class="detail-label">👥 Вместимость:</span>
-                        <span class="detail-value">до ${boat.capacity} чел</span>
-                    </div>
-                    
-                    <div class="detail-row total">
-                        <span class="detail-label">💰 Полная стоимость:</span>
-                        <span class="detail-value">${totalPrice.toLocaleString()} ₽</span>
-                    </div>
-                    
-                    <div class="detail-row prepayment">
-                        <span class="detail-label">💳 Предоплата:</span>
-                        <span class="detail-value">${prepaymentAmount.toLocaleString()} ₽</span>
-                    </div>
-                    
-                    <div class="detail-row remaining">
-                        <span class="detail-label">💵 Остаток на месте:</span>
-                        <span class="detail-value">${remainingAmount.toLocaleString()} ₽</span>
-                    </div>
                 </div>
                 
-                <!-- Данные клиента -->
                 <div class="client-data-card">
                     <h3>👤 Ваши данные</h3>
                     
@@ -142,48 +92,19 @@ class ConfirmationScreen extends ScreenBase {
                             <a href="/docs/privacy.html" target="_blank">политикой обработки данных</a>
                         </label>
                     </div>
+                    
+                    <div style="display: flex; justify-content: center; margin-top: 16px;">
+                        <button class="btn-confirm" onclick="window.currentConfirmationScreen.confirmBooking()">
+                            ✅ Подтвердить и перейти к оплате
+                        </button>
+                    </div>
                 </div>
-                
-                <!-- БЛОК ОПЛАТЫ (через платежный модуль) -->
-                ${window.paymentUI?.renderPaymentBlock(prepaymentAmount, {
-                    onSuccess: (result) => {
-                        console.log('💰 ОПЛАТА УСПЕШНА, result:', result);
-                        console.log('💰 window.currentConfirmationScreen:', window.currentConfirmationScreen);
-                        console.log('💰 Вызываем confirmBooking()...');
-                        if (window.currentConfirmationScreen) {
-                            window.currentConfirmationScreen.confirmBooking();
-                        } else {
-                            console.error('❌ currentConfirmationScreen не найден!');
-                        }
-                    },
-                    onError: (error) => console.log('Ошибка оплаты', error)
-                }) || '<div class="error">Платежный модуль не загружен</div>'}
-                
             </div>
         `;
         
         this.container.innerHTML = html;
-
-        // Восстанавливаем сохранённые данные
-        setTimeout(() => {
-            this.loadSavedData();
-            
-            const fields = ['client-name', 'client-phone', 'client-email', 'client-messenger-contact'];
-            fields.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.addEventListener('input', () => this.validateForm());
-            });
-            document.getElementById('agreement-check')?.addEventListener('change', () => this.validateForm());
-            
-            this.validateForm();
-        }, 50);
-        
         window.currentConfirmationScreen = this;
-        
-        console.log('✅ ConfirmationScreen.show END');
-        // Очищаем чекбокс при загрузке экрана
-        const agreementCheck = document.getElementById('agreement-check');
-        if (agreementCheck) agreementCheck.checked = false;
+        console.log('✅ ConfirmationScreen.show END (шаг 1: форма данных)');
     }
 
     validateForm() {
@@ -294,51 +215,126 @@ class ConfirmationScreen extends ScreenBase {
             if (!response.ok) throw new Error('Ошибка создания бронирования');
             
             const result = await response.json();
-            booking.bookingId = result.id;
             
-            this.clearClientData();
-            
-            // Обновляем только нужные поля из API, сохраняя полный объект boat
+            // Сохраняем все данные из API в глобальный объект
             if (window.AquaGid?.UnifiedScreens?.booking) {
+                window.AquaGid.UnifiedScreens.booking.id = result.id;
                 window.AquaGid.UnifiedScreens.booking.bookingId = result.id;
                 window.AquaGid.UnifiedScreens.booking.total_price = result.total_price;
                 window.AquaGid.UnifiedScreens.booking.prepayment_amount = result.prepayment_amount;
-                window.AquaGid.UnifiedScreens.booking.id = result.id;
+                window.AquaGid.UnifiedScreens.booking.client_name = result.client_name;
+                window.AquaGid.UnifiedScreens.booking.client_phone = result.client_phone;
+                window.AquaGid.UnifiedScreens.booking.booking_date = result.booking_date;
+                window.AquaGid.UnifiedScreens.booking.start_time = result.start_time;
+                window.AquaGid.UnifiedScreens.booking.created_at = result.created_at;
             }
-
-            // window.AquaGid.UnifiedScreens.showSuccessScreen(); // Вызывается после оплаты с данными
             
-            console.log('🔍 Пытаемся обновить номер бронирования:', result.id);
-            console.log('🔍 window.currentSuccessScreen в момент попытки:', window.currentSuccessScreen);
-
-            // Ждём появления SuccessScreen с проверкой каждые 100мс
-            let attempts = 0;
-            const waitForSuccessScreen = setInterval(() => {
-                attempts++;
-                console.log(`🔍 Попытка ${attempts}: currentSuccessScreen =`, window.currentSuccessScreen);
-                
-                if (window.currentSuccessScreen) {
-                    console.log('✅ Нашли SuccessScreen, обновляем номер:', result.id);
-                    window.currentSuccessScreen.updateBookingNumber(result.id);
-                    clearInterval(waitForSuccessScreen);
-                }
-                
-                if (attempts >= 20) {
-                    console.error('❌ Не удалось найти SuccessScreen после 20 попыток');
-                    clearInterval(waitForSuccessScreen);
-                }
-            }, 100);
+            // Шаг 2: Показываем детали брони с точными суммами + платёжный блок
+            this.showPaymentStep(result);
             
         } catch (error) {
             console.error('❌ Ошибка:', error);
             alert('Произошла ошибка при бронировании. Попробуйте ещё раз.');
-            
-            const payButton = document.querySelector('.payment-button, .btn-pay, [id*="pay"]');
-            if (payButton) {
-                payButton.disabled = false;
-                payButton.textContent = '💳 Оплатить предоплату';
-            }
         }
+    }
+
+    showPaymentStep(apiResult) {
+        const booking = window.AquaGid.UnifiedScreens.booking;
+        const boat = booking.boat;
+        const totalPrice = apiResult.total_price;
+        const prepaymentAmount = apiResult.prepayment_amount;
+        const remainingAmount = totalPrice - prepaymentAmount;
+        
+        const clientName = apiResult.client_name || booking.client?.name || '';
+        const clientPhone = apiResult.client_phone || booking.client?.phone || '';
+        
+        const html = `
+            <div class="screen confirmation-screen">
+                <h2 class="screen-title">✅ Проверьте данные</h2>
+                
+                <div class="home-button-container">
+                    <button class="btn-home" onclick="window.AquaGid.UnifiedScreens.showWelcomeScreen()">
+                        🏠 В начало
+                    </button>
+                </div>
+                
+                <div class="booking-details-card">
+                    <h3>📋 Детали бронирования №${apiResult.id}</h3>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">🚤 Катер:</span>
+                        <span class="detail-value">${boat.name}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">📅 Дата:</span>
+                        <span class="detail-value">${new Date(booking.date).toLocaleDateString('ru-RU')}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">⏰ Время:</span>
+                        <span class="detail-value">${booking.time}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">⏱️ Длительность:</span>
+                        <span class="detail-value">${booking.duration} ч</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">👥 Вместимость:</span>
+                        <span class="detail-value">до ${boat.capacity} чел</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">👤 Имя:</span>
+                        <span class="detail-value">${clientName}</span>
+                    </div>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">📞 Телефон:</span>
+                        <span class="detail-value">${clientPhone}</span>
+                    </div>
+
+                    <div class="detail-row">
+                        <span class="detail-label">💬 Мессенджер:</span>
+                        <span class="detail-value">${apiResult.client_messenger_type || booking.client?.messengerType || '—'} ${apiResult.client_messenger_contact || booking.client?.messengerContact || ''}</span>
+                    </div>
+                    
+                    <div class="detail-row total">
+                        <span class="detail-label">💰 Полная стоимость:</span>
+                        <span class="detail-value">${totalPrice.toLocaleString()} ₽</span>
+                    </div>
+                    
+                    <div class="detail-row prepayment">
+                        <span class="detail-label">💳 Предоплата:</span>
+                        <span class="detail-value">${prepaymentAmount.toLocaleString()} ₽</span>
+                    </div>
+                    
+                    <div class="detail-row remaining">
+                        <span class="detail-label">💵 Остаток на месте:</span>
+                        <span class="detail-value">${remainingAmount.toLocaleString()} ₽</span>
+                    </div>
+                </div>
+                
+                <div style="width: 100%;">
+                    ${window.paymentUI?.renderPaymentBlock(prepaymentAmount, {
+                        onSuccess: (paymentResult) => {
+                            console.log('💰 Оплата успешна:', paymentResult);
+                            this.clearClientData();
+                            window.AquaGid.UnifiedScreens.showSuccessScreen();
+                        },
+                        onError: (error) => {
+                            console.log('Ошибка оплаты:', error);
+                            alert('Оплата не прошла. Попробуйте ещё раз.');
+                        }
+                    }) || '<div class="error">Платёжный модуль не загружен</div>'}
+                </div>
+            </div>
+        `;
+        
+        this.container.innerHTML = html;
+        window.currentConfirmationScreen = this;
     }
 
     clearClientData() {

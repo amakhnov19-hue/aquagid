@@ -162,6 +162,7 @@ async def update_boat_admin(
     data: BoatUpdateAdmin,
     db: AsyncSession = Depends(get_db)
 ):
+    print(f"DEBUG update_boat_admin: data={data.model_dump()}", flush=True)
     """Обновить катер (только для админа)"""
     
     result = await db.execute(
