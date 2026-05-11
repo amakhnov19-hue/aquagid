@@ -230,6 +230,7 @@
                 times.push(`${hour.toString().padStart(2, '0')}:00`);
                 times.push(`${hour.toString().padStart(2, '0')}:30`);
             }
+            times.push('24:00');
             return times;
         }
 
@@ -237,7 +238,7 @@
             const seasonStartValue = this.boatSettings.seasonStart || '';
             const seasonEndValue = this.boatSettings.seasonEnd || '';
             const workStartValue = this.boatSettings.workStart || '11:00';
-            const workEndValue = this.boatSettings.workEnd || '23:30';
+            const workEndValue = this.boatSettings.workEnd || '24:00';
             const maxDurationValue = this.boatSettings.maxDuration || 4;
             
             return `

@@ -1,82 +1,64 @@
-// /frontend/manager-panel/js/components/boats/PricingSimple.js
-// Версия: 1.0.0
-// Назначение: Простой компонент ценообразования (только чтение, управление из админки)
-
+// PricingSimple.js — компонент цены (менеджер вводит цену, процент — из глобальных настроек)
 (function(global) {
     'use strict';
     
     class PricingSimple {
         constructor(boat) {
             this.boat = boat;
+            this.globalPercent = null;
         }
         
-        /**
-         * Рендер ценового блока
-         */
+        async loadGlobalPercent() {
+            if (this.globalPercent !== null) return this.globalPercent;
+            try {
+                const token = localStorage.getItem('managerToken') || localStorage.getItem('access_token') || localStorage.getItem('token');
+                const resp = await fetch('/api/admin/global-settings/public', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const settings = await resp.json();
+                    this.globalPercent = settings.default_prepayment_percent || 15;
+                } else {
+                    this.globalPercent = 15;
+                }
+            } catch (e) {
+                this.globalPercent = 15;
+            }
+            return this.globalPercent;
+        }
+        
         render() {
-            const isEdit = this.boat !== null;
-            const pricingMethod = this.boat?.pricing_method || 'percent';
-            const isMargin = pricingMethod === 'margin' || pricingMethod === 'fixed';
+            const pricePerHour = this.boat?.price_per_hour || '';
+            
+            // Запускаем загрузку процента
+            this.loadGlobalPercent().then(pct => {
+                const percentEl = document.getElementById('globalPrepaymentPercent');
+                if (percentEl) percentEl.textContent = `${pct}% (глобальная настройка)`;
+            });
             
             return `
                 <div class="pricing-section">
-                    <!-- Метод расчёта (только для чтения) -->
-                    <div class="form-group">
-                        <label>Метод расчёта предоплаты</label>
-                        <div class="form-control" style="background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                            ${isMargin ? '💰 Разница цен (открытая / агентская)' : '📈 Процент от цены за час'}
-                            ${isEdit ? ' 🔒 (устанавливается администратором)' : ''}
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>💰 Цена за час (₽) *</label>
+                            <input type="number" id="boatPricePerHour" class="form-control" 
+                                value="${pricePerHour}" min="0" step="100" placeholder="Например: 12000" required>
                         </div>
-                    </div>
-
-                    ${isMargin ? this.renderMarginFields() : this.renderPercentFields()}
-                </div>
-            `;
-        }
-        
-        renderMarginFields() {
-            return `
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label>💰 Открытая цена (для клиента) ₽/час</label>
-                        <div class="form-control" style="background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                            ${this.boat?.open_price?.toLocaleString() || '—'} ₽/час
-                        </div>
-                    </div>
-                    <div class="form-group half">
-                        <label>🔒 Агентская цена (для нас) ₽/час</label>
-                        <div class="form-control" style="background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                            ${this.boat?.agent_price?.toLocaleString() || '—'} ₽/час
+                        <div class="form-group half">
+                            <label>📊 Предоплата</label>
+                            <div class="form-control" style="background: #f3f4f6; color: #1f2937;">
+                                <span id="globalPrepaymentPercent">⏳ Загрузка...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
         }
         
-        renderPercentFields() {
-            return `
-                <div class="form-row">
-                    <div class="form-group half">
-                        <label>💰 Цена за час (₽)</label>
-                        <div class="form-control" style="background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                            ${this.boat?.price_per_hour?.toLocaleString() || '—'} ₽/час
-                        </div>
-                    </div>
-                    <div class="form-group half">
-                        <label>📊 Процент предоплаты (%)</label>
-                        <div class="form-control" style="background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
-                            ${this.boat?.prepayment_percent || 20}%
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        /**
-         * Получить данные для сохранения (пусто, т.к. менеджер не может менять)
-         */
         getSaveData() {
-            return {};
+            return {
+                price_per_hour: parseFloat(document.getElementById('boatPricePerHour')?.value) || 0
+            };
         }
     }
     

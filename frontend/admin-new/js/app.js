@@ -287,6 +287,18 @@ async function renderSettings(container) {
                         <label>Предоплата по умолчанию (%):</label>
                         <input type="number" id="default_prepayment_percent" value="${settings.default_prepayment_percent || 20}" min="0" max="100" class="form-input">
                     </div>
+                    <div class="form-group">
+                        <label>Шаг слотов времени (минуты):</label>
+                        <input type="number" id="slot_step_minutes" value="${settings.slot_step_minutes || 30}" min="15" max="60" step="15" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Максимум фото на катер:</label>
+                        <input type="number" id="max_photos_per_boat" value="${settings.max_photos_per_boat || 5}" min="1" max="10" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Длительность анимаций (мс):</label>
+                        <input type="number" id="animation_duration_ms" value="${settings.animation_duration_ms || 300}" min="0" max="1000" step="50" class="form-input">
+                    </div>
                     <button type="submit" class="btn-save-settings">💾 Сохранить настройки</button>
                 </form>
             </div>
@@ -305,7 +317,10 @@ async function renderSettings(container) {
                     max_duration: parseInt(document.getElementById('max_duration').value),
                     break_minutes: parseInt(document.getElementById('break_minutes').value),
                     min_duration: parseInt(document.getElementById('min_duration').value),
-                    default_prepayment_percent: parseInt(document.getElementById('default_prepayment_percent').value)
+                    default_prepayment_percent: parseInt(document.getElementById('default_prepayment_percent').value),
+                    slot_step_minutes: parseInt(document.getElementById('slot_step_minutes').value),
+                    max_photos_per_boat: parseInt(document.getElementById('max_photos_per_boat').value),
+                    animation_duration_ms: parseInt(document.getElementById('animation_duration_ms').value)                    
                 };
                 
                 try {

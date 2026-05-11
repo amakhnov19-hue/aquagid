@@ -65,6 +65,65 @@ async def update_manager_status(
     
     return {"message": f"Статус изменён на {data.status}", "manager_id": manager_id}
 
+@router.delete("/{manager_id}")
+async def delete_manager(
+    manager_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Удалить менеджера и все его катера (включая фото на диске)"""
+    
+    import os
+    from app.models.boat_model import Boat, BoatPhoto
+    
+    # Получаем список фото для удаления с диска
+    photos_result = await db.execute(
+        text("""
+            SELECT bp.photo_url FROM boat_photos bp
+            JOIN boats b ON bp.boat_id = b.id
+            WHERE b.manager_id = :mid
+        """),
+        {"mid": manager_id}
+    )
+    photo_urls = [row[0] for row in photos_result.fetchall()]
+    
+    # Удаляем фото катеров
+    await db.execute(
+        text("DELETE FROM boat_photos WHERE boat_id IN (SELECT id FROM boats WHERE manager_id = :mid)"),
+        {"mid": manager_id}
+    )
+    
+    # Удаляем катера
+    await db.execute(
+        text("DELETE FROM boats WHERE manager_id = :mid"),
+        {"mid": manager_id}
+    )
+    
+    # Удаляем менеджера
+    result = await db.execute(
+        text("DELETE FROM managers WHERE id = :mid RETURNING id"),
+        {"mid": manager_id}
+    )
+    
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Менеджер не найден")
+    
+    await db.commit()
+    
+    # Удаляем файлы с диска
+    upload_dir = "/var/www/aquagid-experimental/shared-uploads"
+    for url in photo_urls:
+        if url:
+            filename = url.split('/')[-1]
+            filepath = os.path.join(upload_dir, filename)
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    print(f"🗑 Фото удалено: {filepath}")
+            except Exception as e:
+                print(f"⚠️ Ошибка удаления фото {filepath}: {e}")
+    
+    return {"message": f"Менеджер {manager_id}, его катера и фото удалены", "photos_deleted": len(photo_urls)}
+
 @router.put("/{manager_id}/prepayment")
 async def update_manager_prepayment(
     manager_id: int,

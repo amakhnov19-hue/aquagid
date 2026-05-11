@@ -372,7 +372,7 @@
                 has_maintenance: hasMaintenance,
                 maintenance_start: maintenanceStart || null,
                 maintenance_end: maintenanceEnd || null,
-                // Цены не отправляем — их устанавливает админ
+                ...new global.AquaGid.PricingSimple(this.boat).getSaveData(),
             };
             
             if (!boatData.name) {

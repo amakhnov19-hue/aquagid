@@ -16,23 +16,24 @@ class AvailabilityService {
      */
     canStartAt(date, time) {
         const [hours, minutes] = time.split(':').map(Number);
+        const [startH, startM] = (this.constants.TIME.work_start || '09:00').split(':').map(Number);
+        const [endH, endM] = (this.constants.TIME.work_end || '24:00').split(':').map(Number);
+        
+        // Последний старт = конец - 1ч - 30мин
+        const lastStartMin = endH * 60 + endM - 90;
+        const lastStartH = Math.floor(lastStartMin / 60);
+        const lastStartM = lastStartMin % 60;
+        
         const startDateTime = new Date(date);
         startDateTime.setHours(hours, minutes, 0, 0);
-        
         const now = new Date();
-        const workEnd = new Date(date);
-        workEnd.setHours(
-            this.constants.TIME.WORK_END_HOUR,
-            this.constants.TIME.WORK_END_MINUTE,
-            0, 0
-        );
         
         // Нельзя начать раньше открытия
-        if (hours < this.constants.TIME.WORK_START_HOUR) return false;
+        if (hours < startH || (hours === startH && minutes < startM)) return false;
         
         // Нельзя начать позже последнего старта
-        if (hours > this.constants.TIME.LAST_START_HOUR) return false;
-        if (hours === this.constants.TIME.LAST_START_HOUR && minutes > 0) return false;
+        const slotMin = hours * 60 + minutes;
+        if (slotMin > lastStartMin) return false;
         
         // Для сегодняшней даты - нельзя начать в прошлом
         if (this.isToday(date) && startDateTime < now) return false;
@@ -98,13 +99,8 @@ class AvailabilityService {
         const [hours, minutes] = time.split(':').map(Number);
         const currentMinutes = hours * 60 + minutes;
         
-        const workEnd = new Date(date);
-        workEnd.setHours(
-            this.constants.TIME.WORK_END_HOUR,
-            this.constants.TIME.WORK_END_MINUTE,
-            0, 0
-        );
-        const endMinutes = workEnd.getHours() * 60 + workEnd.getMinutes();
+        const [endH, endM] = (this.constants.TIME.work_end || '24:00').split(':').map(Number);
+        const endMinutes = endH * 60 + endM;
         
         // Максимум по рабочему дню
         let maxMinutes = endMinutes - currentMinutes;

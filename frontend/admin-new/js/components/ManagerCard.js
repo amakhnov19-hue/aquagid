@@ -49,6 +49,7 @@ class ManagerCard {
                 <div class="info-row"><span class="info-label">Телефон:</span> ${this.escapeHtml(m.phone) || '—'}</div>
                 <div class="info-row"><span class="info-label">Email:</span> ${this.escapeHtml(m.email) || '—'}</div>
                 <div class="info-row"><span class="info-label">Статус:</span> ${m.is_blocked ? '🔴 Заблокирован' : '🟢 Активен'}</div>
+                <button class="btn-delete" onclick="window.ManagerCardInstance.deleteManager(${m.id})" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">🗑 Удалить менеджера</button>
                 <div class="info-row"><span class="info-label">Предоплата:</span> ${m.prepayment_percent || 20}%</div>
                 <div class="info-row"><span class="info-label">Дата регистрации:</span> ${m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</div>
                 
@@ -68,7 +69,7 @@ class ManagerCard {
         
         container.innerHTML = '<div class="boats-loading">⏳ Загрузка катеров...</div>';
         
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_token');
         try {
             const response = await fetch(`/api/admin/boats/manager/${this.manager.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -87,13 +88,7 @@ class ManagerCard {
             let html = '<div class="boats-list">';
             boats.forEach(boat => {
                 let pricingText = '';
-                if (boat.pricing_method === 'percent') {
-                    pricingText = `📈 Процентный (${boat.prepayment_percent || 20}%)`;
-                } else if (boat.pricing_method === 'margin' || boat.pricing_method === 'fixed') {
-                    pricingText = `💰 Фиксированная маржа`;
-                } else {
-                    pricingText = `❓ Неизвестный метод`;
-                }
+                pricingText = `${(boat.price_per_hour || 0).toLocaleString()} ₽/час`;
                 
                 const isActive = boat.is_active !== false;
                 const statusBadge = isActive ? '🟢 Активен' : '🔴 Неактивен';
@@ -172,7 +167,7 @@ class ManagerCard {
         
         container.innerHTML = '<div class="settings-loading">⏳ Загрузка настроек...</div>';
         
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_token');
         try {
             const response = await fetch(`/api/settings/${this.manager.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -201,7 +196,7 @@ class ManagerCard {
     }
 
     async blockManager(managerId) {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_token');
         try {
             const response = await fetch(`/api/admin/managers/${managerId}/status`, {
                 method: 'PUT',
@@ -216,7 +211,7 @@ class ManagerCard {
             
             alert('✅ Менеджер заблокирован');
             this.close();
-            if (window.AdminApp) window.AdminApp.loadManagers();
+            loadView('managers');
         } catch (error) {
             console.error('Ошибка:', error);
             alert('❌ Ошибка блокировки');
@@ -224,7 +219,7 @@ class ManagerCard {
     }
 
     async unblockManager(managerId) {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_token');
         try {
             const response = await fetch(`/api/admin/managers/${managerId}/status`, {
                 method: 'PUT',
@@ -246,8 +241,29 @@ class ManagerCard {
         }
     }
 
+    async deleteManager(managerId) {
+        if (!confirm('⚠️ Вы уверены? Менеджер и ВСЕ его катера будут удалены безвозвратно!')) return;
+        
+        const token = localStorage.getItem('admin_token');
+        try {
+            const response = await fetch(`/api/admin/managers/${managerId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Ошибка удаления');
+            
+            alert('✅ Менеджер и его катера удалены');
+            this.close();
+            loadView('managers');
+        } catch (error) {
+            console.error('Ошибка:', error);
+            alert('❌ Ошибка удаления менеджера');
+        }
+    }
+
     showEditBoatForm(boatId, boatName) {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('admin_token');
         
         const fetchBoat = async () => {
             const response = await fetch(`/api/admin/boats/manager/${this.manager.id}`, {
@@ -257,7 +273,20 @@ class ManagerCard {
             return boats.find(b => b.id === boatId);
         };
         
-        fetchBoat().then(boatData => {
+        const fetchGlobalPercent = async () => {
+            try {
+                const resp = await fetch('/api/admin/global-settings', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (resp.ok) {
+                    const settings = await resp.json();
+                    return settings.default_prepayment_percent || 15;
+                }
+            } catch (e) {}
+            return 15;
+        };
+        
+        Promise.all([fetchBoat(), fetchGlobalPercent()]).then(([boatData, globalPercent]) => {
             if (!boatData) {
                 alert('Катер не найден');
                 return;
@@ -267,133 +296,52 @@ class ManagerCard {
             modal.id = 'editBoatModal';
             modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10000;';
             
-            const pricingMethod = boatData.pricing_method || 'percent';
-            
             modal.innerHTML = `
                 <div style="background: #ffffff; border-radius: 16px; padding: 28px; width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 40px rgba(0,0,0,0.3); color: #1e293b;">
-                    <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #1e293b;">✏️ Редактировать катер: ${this.escapeHtml(boatName)}</h3>
+                    <h3 style="margin: 0 0 20px 0; font-size: 20px;">🚤 ${this.escapeHtml(boatName)}</h3>
                     
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Название (только чтение):</label>
-                        <input type="text" id="editBoatName" value="${this.escapeHtml(boatData.name || '')}" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Цена за час:</label>
+                        <input type="text" value="${(boatData.price_per_hour || 0).toLocaleString()} ₽" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937;">
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Цена за час:</label>
+                        <input type="text" value="${(boatData.price_per_hour || 0).toLocaleString()} ₽" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937;">
                     </div>
                     
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Метод расчёта:</label>
-                        <select id="editBoatPricingMethod" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
-                            <option value="percent" ${pricingMethod === 'percent' ? 'selected' : ''}>📈 Процентный (процент от цены)</option>
-                            <option value="margin" ${pricingMethod === 'margin' ? 'selected' : ''}>💰 Фиксированная маржа</option>
-                            <option value="fixed" ${pricingMethod === 'fixed' ? 'selected' : ''}>💰 Фиксированная (разница цен)</option>
-                        </select>
-                    </div>
-                    
-                    <div id="pricingFields" style="margin-bottom: 16px;"></div>
-                    
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Вместимость (только чтение):</label>
-                        <input type="number" id="editBoatCapacity" value="${boatData.capacity || ''}" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Процент предоплаты:</label>
+                        <input type="text" value="${globalPercent}% (глобальная)" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937;">
                     </div>
                     
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Краткое описание (только чтение):</label>
-                        <textarea id="editBoatDescription" rows="3" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; resize: vertical;">${this.escapeHtml(boatData.description_short || '')}</textarea>
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Вместимость:</label>
+                        <input type="text" value="${boatData.capacity || '—'} чел." readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937;">
                     </div>
                     
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Адрес посадки (только чтение):</label>
-                        <input type="text" id="editBoatAddress" value="${this.escapeHtml(boatData.boarding_address || '')}" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937; cursor: not-allowed;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Адрес посадки:</label>
+                        <input type="text" value="${this.escapeHtml(boatData.boarding_address || '—')}" readonly style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #f3f4f6; color: #1f2937;">
                     </div>
                     
                     <div style="margin-bottom: 20px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
-                            <input type="checkbox" id="editBoatIsActive" ${boatData.is_active !== false ? 'checked' : ''} style="width: 18px; height: 18px;">
-                            <span style="font-weight: 600; color: #374151;">🟢 Катер активен (отображается клиентам)</span>
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-weight: 600; color: #374151;">Статус:</span>
+                            <span style="color: ${boatData.is_active !== false ? '#2e7d32' : '#c62828'}; font-weight: 600;">${boatData.is_active !== false ? '🟢 Активен' : '🔴 Неактивен'}</span>
                         </label>
                     </div>
                     
                     <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                        <button id="cancelEditBoatBtn" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">Отмена</button>
-                        <button id="saveEditBoatBtn" style="padding: 10px 20px; background: #0066CC; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">Сохранить</button>
+                        <button id="cancelEditBoatBtn" style="padding: 10px 20px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;">Закрыть</button>
                     </div>
                 </div>
             `;
             
             document.body.appendChild(modal);
             
-            const updatePricingFields = () => {
-                const method = document.getElementById('editBoatPricingMethod').value;
-                const container = document.getElementById('pricingFields');
-                
-                if (method === 'percent') {
-                    container.innerHTML = `
-                        <div style="margin-bottom: 14px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Цена за час (₽):</label>
-                            <input type="number" id="editBoatPricePerHour" value="${boatData.price_per_hour || ''}" step="100" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
-                        </div>
-                        <div style="margin-bottom: 14px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Процент предоплаты (%):</label>
-                            <input type="number" id="editBoatPrepaymentPercent" value="${boatData.prepayment_percent || 20}" min="0" max="100" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
-                        </div>
-                    `;
-                } else {
-                    container.innerHTML = `
-                        <div style="margin-bottom: 14px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Открытая цена (для клиентов) (₽):</label>
-                            <input type="number" id="editBoatOpenPrice" value="${boatData.open_price || ''}" step="100" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
-                        </div>
-                        <div style="margin-bottom: 14px;">
-                            <label style="display: block; margin-bottom: 6px; font-weight: 600; color: #374151;">Агентская цена (для нас) (₽):</label>
-                            <input type="number" id="editBoatAgentPrice" value="${boatData.agent_price || ''}" step="100" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff;">
-                        </div>
-                    `;
-                }
-            };
-            
-            updatePricingFields();
-            document.getElementById('editBoatPricingMethod').addEventListener('change', updatePricingFields);
-            
             document.getElementById('cancelEditBoatBtn').addEventListener('click', () => {
                 document.getElementById('editBoatModal')?.remove();
-            });
-            
-            document.getElementById('saveEditBoatBtn').addEventListener('click', async () => {
-                const method = document.getElementById('editBoatPricingMethod').value;
-                const data = {
-                    name: document.getElementById('editBoatName').value,
-                    pricing_method: method,
-                    capacity: parseInt(document.getElementById('editBoatCapacity').value) || null,
-                    description_short: document.getElementById('editBoatDescription').value,
-                    boarding_address: document.getElementById('editBoatAddress').value,
-                    is_active: document.getElementById('editBoatIsActive').checked
-                };
-                
-                if (method === 'percent') {
-                    data.price_per_hour = parseFloat(document.getElementById('editBoatPricePerHour')?.value) || null;
-                    data.approved_prepayment_percent = parseInt(document.getElementById('editBoatPrepaymentPercent')?.value) || 20;
-                } else {
-                    data.open_price = parseFloat(document.getElementById('editBoatOpenPrice')?.value) || null;
-                    data.agent_price = parseFloat(document.getElementById('editBoatAgentPrice')?.value) || null;
-                }
-                
-                try {
-                    const response = await fetch(`/api/admin/boats/${boatId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    
-                    if (!response.ok) throw new Error('Ошибка сохранения');
-                    
-                    alert('✅ Катер обновлён');
-                    document.getElementById('editBoatModal')?.remove();
-                    await this.loadBoats();
-                } catch (error) {
-                    console.error('Ошибка:', error);
-                    alert('❌ Ошибка сохранения');
-                }
             });
         });
     }

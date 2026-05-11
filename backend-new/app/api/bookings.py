@@ -293,6 +293,26 @@ async def get_client_bookings(
     
     return result_list
 
+@router.post("/{booking_id}/confirm-payment")
+async def confirm_payment(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Подтвердить оплату и активировать бронирование"""
+    
+    result = await db.execute(
+        select(BookingModel).where(BookingModel.id == booking_id)
+    )
+    booking = result.scalar_one_or_none()
+    
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    
+    booking.status = "active"
+    await db.commit()
+    
+    return {"message": "Бронирование активировано", "id": booking_id, "status": "active"}
+
 @router.post("/{booking_id}/cancel")
 async def cancel_booking(
     booking_id: int,

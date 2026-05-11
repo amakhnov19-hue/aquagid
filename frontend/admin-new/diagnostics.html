@@ -71,7 +71,7 @@
     </div>
     
     <script>
-        const API_BASE = 'https://admin.experimental.24aquabooking.ru';
+        const API_BASE = window.location.origin;
         
         function switchTab(name) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -88,7 +88,7 @@
             container.innerHTML = 'Загрузка...';
             
             try {
-                const response = await fetch(`${API_BASE}/api/diagnostics`);
+                const response = await fetch(`${API_BASE}/admin/diagnostics`);
                 const data = await response.json();
                 const backendOk = data.backend.includes('✅');
                 const dbOk = data.database.includes('✅');

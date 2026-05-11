@@ -11,6 +11,9 @@ class GlobalSettingsBase(BaseModel):
     break_minutes: Optional[int] = 30
     min_duration: Optional[int] = 1
     default_prepayment_percent: Optional[int] = 20
+    slot_step_minutes: Optional[int] = 30
+    max_photos_per_boat: Optional[int] = 5
+    animation_duration_ms: Optional[int] = 300
 
 class GlobalSettingsResponse(GlobalSettingsBase):
     id: int

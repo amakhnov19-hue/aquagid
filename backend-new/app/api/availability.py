@@ -46,11 +46,14 @@ async def get_available_slots_internal(boat_id: int, booking_date: date, db: Asy
         work_start = global_settings[0]
         work_end = global_settings[1]
     else:
-        work_start = "11:00"
-        work_end = "23:30"
+        work_start = "09:00"
+        work_end = "24:00"
     
     start_dt = datetime.combine(booking_date, datetime.strptime(work_start, "%H:%M").time())
-    end_dt = datetime.combine(booking_date, datetime.strptime(work_end, "%H:%M").time())
+    if work_end == "24:00":
+        end_dt = datetime.combine(booking_date + timedelta(days=1), datetime.strptime("00:00", "%H:%M").time())
+    else:
+        end_dt = datetime.combine(booking_date, datetime.strptime(work_end, "%H:%M").time())
 
     today = datetime.now().date()
     if booking_date == today:
@@ -380,27 +383,31 @@ async def get_available_slots(
     )
     settings = settings_result.fetchone()
     
-    work_start = "11:00"
-    work_end = "23:30"
+    work_start = None
+    work_end = None
 
-    if settings and settings[0] is not None:
+    if settings and settings[0] and settings[1]:
         work_start = settings[0]
-    if settings and settings[1] is not None:
         work_end = settings[1]
-
-    if settings is None or settings[0] is None or settings[1] is None:
+    else:
         global_result = await db.execute(
             text("SELECT work_start, work_end FROM global_settings LIMIT 1")
         )
         global_settings = global_result.fetchone()
-        if global_settings:
-            if work_start == "11:00" or (settings and settings[0] is None):
-                work_start = global_settings[0] or "11:00"
-            if work_end == "23:30" or (settings and settings[1] is None):
-                work_end = global_settings[1] or "23:30"
+        if global_settings and global_settings[0] and global_settings[1]:
+            work_start = global_settings[0]
+            work_end = global_settings[1]
+    
+    if not work_start:
+        work_start = "09:00"
+    if not work_end:
+        work_end = "24:00"
     
     start_dt = datetime.combine(booking_date, datetime.strptime(work_start, "%H:%M").time())
-    end_dt = datetime.combine(booking_date, datetime.strptime(work_end, "%H:%M").time())
+    if work_end == "24:00":
+        end_dt = datetime.combine(booking_date + timedelta(days=1), datetime.strptime("00:00", "%H:%M").time())
+    else:
+        end_dt = datetime.combine(booking_date, datetime.strptime(work_end, "%H:%M").time())
     start_dt = start_dt.replace(tzinfo=None)
     end_dt = end_dt.replace(tzinfo=None)
 

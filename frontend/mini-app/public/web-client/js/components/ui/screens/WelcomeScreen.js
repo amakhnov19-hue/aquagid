@@ -74,16 +74,25 @@ class WelcomeScreen extends ScreenBase {
                     <!-- Информационный блок -->
                     <div class="info-block">
                         <p style="font-size: 12px; color: #888; text-align: center; margin-top: 20px;">
-                            🕒 Ежедневно с 11:00 до 23:30<br>
+                            🕒 Ежедневно с <span id="work-time-display">09:00 до 24:00</span><br>
                             ⚓ Посадка с набережных СПб
                         </p>
                     </div>
                 </div>
             </div>
         `;
-        
+
         this.container.innerHTML = html;
         console.log('👋 WelcomeScreen.show END');
+        
+        // Обновляем время работы из констант
+        setTimeout(() => {
+            const el = document.getElementById('work-time-display');
+            if (el && window.APP_CONSTANTS?.TIME) {
+                el.textContent = `${window.APP_CONSTANTS.TIME.work_start || '09:00'} до ${window.APP_CONSTANTS.TIME.work_end || '24:00'}`;
+            }
+        }, 500);
+        
     }
 
     async loadClientNotifications() {

@@ -14,14 +14,11 @@ const APP_CONSTANTS = {
     // Эти параметры могут быть разными для разных городов/причалов,
     // но пока оставим как технические константы
     TIME: {
-        WORK_START_HOUR: 11,        // С 11:00 можно начинать рейсы
-        WORK_END_HOUR: 23,          // До 23:00 катер может быть в работе
-        WORK_END_MINUTE: 30,         // 23:30 - время окончания работы
-        
-        LAST_START_HOUR: 22,         // Последний рейс можно начать в 22:00
-        LAST_START_MINUTE: 0,         // ровно в 22:00 (не 22:30)
-        
-        SLOT_STEP_MINUTES: 30,        // Интервал между рейсами 30 минут
+        // Загружается из API (global_settings)
+        _loaded: false,
+        work_start: '09:00',
+        work_end: '24:00',
+        slot_step_minutes: 30,
     },
 
     // ========== ПРОДОЛЖИТЕЛЬНОСТЬ ==========
@@ -82,16 +79,42 @@ const APP_CONSTANTS = {
  * Получить все доступные слоты времени
  */
 APP_CONSTANTS.getTimeSlots = function() {
-    const slots = [];
-    const { WORK_START_HOUR, LAST_START_HOUR } = this.TIME;
+    const [startH, startM] = (this.TIME.work_start || '09:00').split(':').map(Number);
+    const [endH, endM] = (this.TIME.work_end || '24:00').split(':').map(Number);
+    const step = this.TIME.slot_step_minutes || 30;
     
-    for (let hour = WORK_START_HOUR; hour <= LAST_START_HOUR; hour++) {
-        slots.push(`${hour.toString().padStart(2, '0')}:00`);
-        if (hour < LAST_START_HOUR) {
-            slots.push(`${hour.toString().padStart(2, '0')}:30`);
-        }
+    // Последний рейс = конец работы - 1 час - 30 минут уборки
+    const lastStartMinutes = endH * 60 + endM - 60 - 30;
+    const lastStartH = Math.floor(lastStartMinutes / 60);
+    const lastStartM = lastStartMinutes % 60;
+    
+    const slots = [];
+    let currentMinutes = startH * 60 + startM;
+    const endMinutes = lastStartH * 60 + lastStartM;
+    
+    while (currentMinutes <= endMinutes) {
+        const h = Math.floor(currentMinutes / 60).toString().padStart(2, '0');
+        const m = (currentMinutes % 60).toString().padStart(2, '0');
+        slots.push(`${h}:${m}`);
+        currentMinutes += step;
     }
     return slots;
+};
+
+APP_CONSTANTS.loadFromAPI = async function() {
+    try {
+        const resp = await fetch('/api/admin/global-settings/public');
+        if (resp.ok) {
+            const settings = await resp.json();
+            if (settings.work_start) this.TIME.work_start = settings.work_start;
+            if (settings.work_end) this.TIME.work_end = settings.work_end;
+            if (settings.slot_step_minutes) this.TIME.slot_step_minutes = settings.slot_step_minutes;
+            this.TIME._loaded = true;
+            console.log('✅ Константы загружены из API:', this.TIME);
+        }
+    } catch (e) {
+        console.warn('⚠️ Не удалось загрузить константы из API, используем defaults');
+    }
 };
 
 /**
@@ -101,7 +124,8 @@ APP_CONSTANTS.formatDuration = function(hours) {
     return hours % 1 === 0 ? `${hours} ч` : `${hours} ч`;
 };
 
-// Защита от изменений
-Object.freeze(APP_CONSTANTS);
+// Загружаем настройки из API
+APP_CONSTANTS.loadFromAPI();
+
 window.APP_CONSTANTS = APP_CONSTANTS;
 

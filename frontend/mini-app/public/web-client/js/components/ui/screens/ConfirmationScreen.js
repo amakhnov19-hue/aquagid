@@ -15,6 +15,14 @@ class ConfirmationScreen extends ScreenBase {
         if (!this.container) return;
         this.container.classList.remove('loading');
         
+        // Если есть предыдущая pending-бронь — отменяем её
+        const prevBookingId = window.AquaGid?.UnifiedScreens?.booking?.bookingId;
+        if (prevBookingId) {
+            console.log('🗑 Отмена предыдущей pending-брони:', prevBookingId);
+            fetch(`/api/bookings/${prevBookingId}`, { method: 'DELETE' }).catch(() => {});
+            window.AquaGid.UnifiedScreens.booking.bookingId = null;
+        }
+        
         const booking = window.AquaGid.UnifiedScreens.booking;
         const boat = booking.boat;
         const fullBoat = this.app.booking.boat || boat;
@@ -70,7 +78,7 @@ class ConfirmationScreen extends ScreenBase {
                     <div class="input-group">
                         <label for="client-messenger">Мессенджер для связи</label>
                         <div style="display: flex; gap: 8px;">
-                            <select id="client-messenger-type" class="client-input" style="flex: 1; min-width: 0;">
+                            <select id="client-messenger-type" class="client-input" style="flex: 1; min-width: 0;" onchange="document.getElementById('client-messenger-contact').value = '';">
                                 <option value="">Не выбран</option>
                                 <option value="telegram" ${booking.client?.messengerType === 'telegram' ? 'selected' : ''}>✈️ Telegram</option>
                                 <option value="max" ${booking.client?.messengerType === 'max' ? 'selected' : ''}>💬 Макс</option>
@@ -300,6 +308,12 @@ class ConfirmationScreen extends ScreenBase {
                         <span class="detail-label">💬 Мессенджер:</span>
                         <span class="detail-value">${apiResult.client_messenger_type || booking.client?.messengerType || '—'} ${apiResult.client_messenger_contact || booking.client?.messengerContact || ''}</span>
                     </div>
+
+                    <div style="margin-top: 12px;">
+                        <button onclick="window.currentConfirmationScreen.show()" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; border: none; background: #f97316; color: white; cursor: pointer; font-weight: bold;">
+                            ✏️ Исправить данные
+                        </button>
+                    </div>
                     
                     <div class="detail-row total">
                         <span class="detail-label">💰 Полная стоимость:</span>
@@ -316,12 +330,29 @@ class ConfirmationScreen extends ScreenBase {
                         <span class="detail-value">${remainingAmount.toLocaleString()} ₽</span>
                     </div>
                 </div>
-                
+
                 <div style="width: 100%;">
                     ${window.paymentUI?.renderPaymentBlock(prepaymentAmount, {
-                        onSuccess: (paymentResult) => {
+                        onSuccess: async (paymentResult) => {
                             console.log('💰 Оплата успешна:', paymentResult);
+                            // Меняем статус на active
+                            const bookingId = window.AquaGid?.UnifiedScreens?.booking?.bookingId;
+                            if (bookingId) {
+                                try {
+                                    await fetch(`/api/bookings/${bookingId}/confirm-payment`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ status: 'active' })
+                                    });
+                                } catch (e) {
+                                    console.error('Ошибка смены статуса:', e);
+                                }
+                            }
                             this.clearClientData();
+                            // Обновляем дашборд менеджера, если открыт
+                            if (window.AquaGid?.ManagerDashboard) {
+                                window.AquaGid.ManagerDashboard.loadDashboardData();
+                            }
                             window.AquaGid.UnifiedScreens.showSuccessScreen();
                         },
                         onError: (error) => {
