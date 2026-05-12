@@ -396,9 +396,11 @@ class ManagerBookings {
             const isClient = b.source === 'client';
             const sourceDisplay = isGoogle ? '🌐 Google' : '📱 Приложение';
             
-            // Для Google — некликабельные и без подсветки
-            const rowStyle = (isActive && isClient) ? 'cursor: pointer;' : '';
-            const onclick = (isActive && isClient) ? `onclick="AquaGid.ManagerBookings.handleRowClick(${b.id})"` : '';
+            // Активные: кликабельны все (клиент — карточка, Google — удаление)
+            const rowStyle = (isActive) ? 'cursor: pointer;' : '';
+            const onclick = isGoogle 
+                ? `onclick="if(confirm('Удалить эту бронь из AquaGid?')) AquaGid.ManagerBookings.confirmDeleteGoogle(${b.id})"` 
+                : ((isActive && isClient) ? `onclick="AquaGid.ManagerBookings.handleRowClick(${b.id})"` : '');
             
             // Подсветка только для клиентских
             let backgroundColor = '';
@@ -667,6 +669,22 @@ class ManagerBookings {
             // Контейнер скрыт — просто загружаем данные в фоне
             console.log('Контейнер не найден, загружаем данные в фоне');
             await this.loadBookings();
+        }
+    }
+
+    async confirmDeleteGoogle(bookingId) {
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+        try {
+            const response = await fetch(`/api/bookings/${bookingId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error('Ошибка удаления');
+            alert('✅ Бронирование удалено из AquaGid');
+            this.renderContent();
+        } catch (e) {
+            console.error('Ошибка:', e);
+            alert('❌ Ошибка удаления');
         }
     }
 

@@ -318,7 +318,7 @@ async def cancel_booking(
     booking_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Отменить бронирование"""
+    """Отменить бронирование и удалить из Google Calendar"""
     
     result = await db.execute(
         select(BookingModel).where(BookingModel.id == booking_id)
@@ -328,8 +328,24 @@ async def cancel_booking(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
     
+    google_event_id = booking.google_event_id
     booking.status = "cancelled"
     await db.commit()
+    
+    # Удаляем из Google Calendar
+    if google_event_id:
+        try:
+            from app.services.sync.sync_service import sync_service
+            boat_result = await db.execute(
+                select(BoatModel).where(BoatModel.id == booking.boat_id)
+            )
+            boat = boat_result.scalar_one_or_none()
+            manager_id = boat.manager_id if boat else None
+            if manager_id:
+                await sync_service.delete_event(google_event_id, manager_id)
+                print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
+        except Exception as e:
+            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
     
     return {"message": "Бронирование отменено", "id": booking_id}
 

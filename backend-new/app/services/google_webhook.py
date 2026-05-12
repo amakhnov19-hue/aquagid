@@ -4,6 +4,7 @@
 
 import asyncio
 import uuid
+import os
 from datetime import datetime, timedelta
 from sqlalchemy import text
 from google.oauth2.credentials import Credentials
@@ -49,7 +50,7 @@ class GoogleWebhookService:
         channel = {
             "id": channel_id,
             "type": "web_hook",
-            "address": "https://manager.experimental.24aquabooking.ru/api/sync/google/webhook",
+            "address": f"{os.getenv('BASE_URL', 'https://manager.experimental.24aquabooking.ru')}/api/sync/google/webhook",
             "params": {
                 "ttl": "86400"
             },
