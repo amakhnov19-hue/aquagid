@@ -255,6 +255,11 @@ class ConfirmationScreen extends ScreenBase {
         
         const clientName = apiResult.client_name || booking.client?.name || '';
         const clientPhone = apiResult.client_phone || booking.client?.phone || '';
+
+        // Сохраняем bookingId в глобальный объект для PaymentService
+        if (window.AquaGid?.UnifiedScreens?.booking) {
+            window.AquaGid.UnifiedScreens.booking.bookingId = apiResult.id;
+        }
         
         const html = `
             <div class="screen confirmation-screen">
@@ -335,8 +340,8 @@ class ConfirmationScreen extends ScreenBase {
                     ${window.paymentUI?.renderPaymentBlock(prepaymentAmount, {
                         onSuccess: async (paymentResult) => {
                             console.log('💰 Оплата успешна:', paymentResult);
-                            // Меняем статус на active
-                            const bookingId = window.AquaGid?.UnifiedScreens?.booking?.bookingId;
+                            const bookingId = apiResult.id;  // ← вот правильный ID!
+                            console.log('🔄 confirm-payment bookingId:', bookingId);
                             if (bookingId) {
                                 try {
                                     await fetch(`/api/bookings/${bookingId}/confirm-payment`, {
@@ -349,7 +354,6 @@ class ConfirmationScreen extends ScreenBase {
                                 }
                             }
                             this.clearClientData();
-                            // Обновляем дашборд менеджера, если открыт
                             if (window.AquaGid?.ManagerDashboard) {
                                 window.AquaGid.ManagerDashboard.loadDashboardData();
                             }

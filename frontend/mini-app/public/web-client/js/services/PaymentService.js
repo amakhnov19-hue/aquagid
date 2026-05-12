@@ -39,8 +39,20 @@ class PaymentService {
             console.log('✅ [PaymentService] Платёж успешен:', paymentResult);
             this.currentPaymentId = paymentResult.paymentId;
             
-            // Бронь уже создана в confirmBooking(), здесь только возвращаем результат
+            // Бронь уже создана как pending, меняем статус на active
             const bookingId = bookingData.bookingId || (window.AquaGid?.UnifiedScreens?.booking?.bookingId);
+            if (bookingId) {
+                try {
+                    await fetch(`/api/bookings/${bookingId}/confirm-payment`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'active' })
+                    });
+                    console.log('✅ Статус брони изменён на active:', bookingId);
+                } catch (e) {
+                    console.error('❌ Ошибка смены статуса:', e);
+                }
+            }
             
             return {
                 success: true,
