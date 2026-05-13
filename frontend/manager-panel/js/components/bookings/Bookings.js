@@ -680,8 +680,16 @@ class ManagerBookings {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (!response.ok) throw new Error('Ошибка удаления');
-            alert('✅ Бронирование удалено из AquaGid');
-            this.renderContent();
+            
+            // Обновляем список
+            await this.loadBookings();
+            
+            // Обновляем дашборд
+            if (window.AquaGid?.ManagerDashboard) {
+                window.AquaGid.ManagerDashboard.loadDashboardData();
+            }
+            
+            alert('✅ Бронирование удалено из AquaGid (в Google Calendar останется)');
         } catch (e) {
             console.error('Ошибка:', e);
             alert('❌ Ошибка удаления');

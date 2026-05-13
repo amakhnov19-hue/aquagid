@@ -413,6 +413,9 @@
                 if (window.AquaGid?.ManagerCalendar) {
                     window.AquaGid.ManagerCalendar.loadCalendarData();
                 }
+                if (window.AquaGid?.ManagerBookings) {
+                    window.AquaGid.ManagerBookings.loadBookings();
+                }
                 
                 this.render();
             } catch (error) {

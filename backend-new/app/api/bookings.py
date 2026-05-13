@@ -617,11 +617,20 @@ async def delete_booking(
     db: AsyncSession = Depends(get_db),
     current_manager = Depends(get_current_manager)
 ):
-    print(f"DEBUG: delete_booking called with id={booking_id}")
-
-    """Удалить бронирование (только для менеджера)"""
+    """Удалить бронирование (только для менеджера) и событие из Google Calendar"""
     from sqlalchemy import text
     
+    # Получаем google_event_id и manager_id до удаления
+    booking_result = await db.execute(
+        text("SELECT google_event_id, boat_id FROM bookings WHERE id = :booking_id"),
+        {"booking_id": booking_id}
+    )
+    booking_row = booking_result.fetchone()
+    
+    google_event_id = booking_row[0] if booking_row else None
+    boat_id = booking_row[1] if booking_row else None
+    
+    # Удаляем бронь из БД
     result = await db.execute(
         text("DELETE FROM bookings WHERE id = :booking_id RETURNING id"),
         {"booking_id": booking_id}
@@ -630,6 +639,22 @@ async def delete_booking(
     
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="Бронирование не найдено")
+    
+    # Удаляем из Google Calendar
+    if google_event_id:
+        try:
+            from app.services.sync.sync_service import sync_service
+            boat_result = await db.execute(
+                text("SELECT manager_id FROM boats WHERE id = :boat_id"),
+                {"boat_id": boat_id}
+            )
+            boat_row = boat_result.fetchone()
+            manager_id = boat_row[0] if boat_row else None
+            if manager_id:
+                await sync_service.delete_event(google_event_id, manager_id)
+                print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
+        except Exception as e:
+            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
     
     return {"message": "Бронирование удалено"}
 

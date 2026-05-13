@@ -725,8 +725,6 @@ def get_google_router() -> APIRouter:
             
             for row in existing_google.fetchall():
                 if row[1] not in google_event_ids:
-                    await db.execute(text("INSERT INTO bookings_archive SELECT * FROM bookings WHERE id = :id"), {"id": row[0]})
-                    await db.execute(text("UPDATE bookings_archive SET status = 'cancelled_google' WHERE id = :id"), {"id": row[0]})
                     await db.execute(text("DELETE FROM bookings WHERE id = :id"), {"id": row[0]})
                     print(f"  🗑 Archived Google booking {row[0]}")
                     deleted_count += 1
