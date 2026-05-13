@@ -154,7 +154,9 @@ class SyncService:
             # Парсим название катера и клиента
             boat_name = None
             client_name = summary
-            match = re.search(r'(?:🔒\s+)?(?:🚤\s+)?(.+?)\s*-\s*(.+?)(?:\s*🔒)?$', summary)
+            # Формат: [🔒] [🚤] НазваниеКатера - ИмяКлиента [🔒]
+            # Название катера может содержать буквы, цифры, пробелы, дефисы
+            match = re.search(r'(?:🔒\s+)?(?:🚤\s+)?([\w\s\-]+?)\s*-\s*(.+?)(?:\s*🔒)?$', summary)
             if match:
                 boat_name = match.group(1).strip()
                 client_name = match.group(2).strip()

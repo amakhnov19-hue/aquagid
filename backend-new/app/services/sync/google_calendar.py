@@ -5,6 +5,7 @@
 import os
 import json
 import uuid
+import time
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
@@ -596,7 +597,7 @@ def get_google_router() -> APIRouter:
         
         async with AsyncSessionLocal() as db:
             cal_result = await db.execute(
-                text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE manager_id = :manager_id"),
+                text("SELECT credentials, selected_calendar_id, webhook_expiration FROM manager_calendar WHERE manager_id = :manager_id"),
                 {"manager_id": manager_id}
             )
             cal_row = cal_result.fetchone()
@@ -614,6 +615,29 @@ def get_google_router() -> APIRouter:
                 client_secret=creds_data.get("client_secret"),
                 scopes=creds_data.get("scopes")
             )
+            
+            # === Проверка webhook и пересоздание при необходимости ===
+            webhook_expiration = cal_row[2]  # datetime или None
+            needs_new_webhook = False
+            
+            if not webhook_expiration:
+                needs_new_webhook = True
+                print(f"⚠️ No webhook expiration found, will recreate")
+            elif webhook_expiration < datetime.utcnow() + timedelta(hours=1):
+                needs_new_webhook = True
+                print(f"⚠️ Webhook expires soon ({webhook_expiration}), recreating...")
+            
+            if needs_new_webhook:
+                try:
+                    from app.services.google_webhook import webhook_service
+                    success = await webhook_service.create_channel(manager_id, creds_data)
+                    if success:
+                        print(f"✅ Webhook recreated for manager {manager_id}")
+                    else:
+                        print(f"⚠️ Failed to recreate webhook for manager {manager_id}")
+                except Exception as e:
+                    print(f"⚠️ Error recreating webhook: {e}")
+            # === Конец проверки webhook ===
             
             service = build("calendar", "v3", credentials=credentials)
             
@@ -656,17 +680,16 @@ def get_google_router() -> APIRouter:
                     {"event_id": event_id}
                 )
                 if existing.fetchone():
-                    print(f"  ⏭️ Skipped: event already exists (active or archived)")
                     continue
                 
                 start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
                 end_dt = datetime.fromisoformat(end.replace('Z', '+00:00')) if end else start_dt + timedelta(hours=1)
                 duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
                 
+                # Парсим название катера и клиента (ИСПРАВЛЕННЫЙ Regex)
                 boat_name = None
                 client_name = summary
-                
-                match = re.search(r'(?:🔒\s+)?(?:🚤\s+)?(.+?)\s*-\s*(.+?)(?:\s*🔒)?$', summary)
+                match = re.search(r'(?:🔒\s+)?(?:🚤\s+)?([\w\s\-]+?)\s*-\s*(.+?)(?:\s*🔒)?$', summary)
                 if match:
                     boat_name = match.group(1).strip()
                     client_name = match.group(2).strip()
@@ -682,7 +705,6 @@ def get_google_router() -> APIRouter:
                     {"boat_id": boat_id, "date": start_dt.date(), "time": start_dt.time()}
                 )
                 if existing_client.fetchone():
-                    print(f"  ⏭️ Skipped: client booking already exists")
                     continue
 
                 print(f"  📅 Importing: {summary} | Boat: {boat_name} | Time: {start_dt}")
@@ -705,9 +727,6 @@ def get_google_router() -> APIRouter:
                 )
                 if result.rowcount > 0:
                     imported += 1
-                    print(f"  ✅ Imported: {summary}")
-                else:
-                    print(f"  ⏭️ Skipped (already exists): {summary}")
             
             # === Сверка удалённых Google-броней ===
             google_event_ids = {event.get("id") for event in events}
@@ -726,7 +745,6 @@ def get_google_router() -> APIRouter:
             for row in existing_google.fetchall():
                 if row[1] not in google_event_ids:
                     await db.execute(text("DELETE FROM bookings WHERE id = :id"), {"id": row[0]})
-                    print(f"  🗑 Archived Google booking {row[0]}")
                     deleted_count += 1
             
             await db.commit()
@@ -756,7 +774,18 @@ def get_google_router() -> APIRouter:
         resource_state = headers.get('x-goog-resource-state')
         channel_id_header = headers.get('x-goog-channel-id')
         
+        # === Защита от лавины webhook (не чаще раза в 30 секунд) ===
+        now = time.time()
+        last_import_time = getattr(google_webhook, '_last_import_time', 0)
+        if resource_state == 'exists' and (now - last_import_time) < 30:
+            logging.warning(f"⏭️ Webhook skipped (rate limit): last import was {now - last_import_time:.1f}s ago")
+            return {"success": True, "skipped": True}
+        google_webhook._last_import_time = now
+        # === Конец защиты ===
+        
         logging.warning(f"Webhook received: resource_id={resource_id}, state={resource_state}")
+        logging.warning(f"🔔 FULL WEBHOOK DATA: resource_state={resource_state}, resource_id={resource_id}, channel_id_header={channel_id_header}")
+        logging.warning(f"🔔 X-Goog-Resource-URI: {headers.get('x-goog-resource-uri')}")        
         
         # Подтверждение синхронизации (обязательно для активации вебхука)
         if resource_state == 'sync':

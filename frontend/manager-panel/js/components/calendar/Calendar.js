@@ -554,8 +554,12 @@
          */
         renderTimeScale() {
             let scale = '';
-            const startHour = 11;
-            const endHour = 23;
+            // Получаем настройки менеджера (по умолчанию 09:00-24:00)
+            const settings = window.AquaGid?.ManagerSettings?.boatSettings || {};
+            const workStart = settings.workStart || '09:00';
+            const workEnd = settings.workEnd || '24:00';
+            const startHour = parseInt(workStart.split(':')[0]); // 9
+            const endHour = parseInt(workEnd.split(':')[0]);     // 24
             const offset = 30;
             
             for (let hour = startHour; hour <= endHour; hour++) {
@@ -582,13 +586,16 @@
 
         renderCoordinateGrid() {
             let grid = '';
-            const startHour = 11;
-            const endHour = 24; // до 00:00
+            const settings = window.AquaGid?.ManagerSettings?.boatSettings || {};
+            const workStart = settings.workStart || '09:00';
+            const workEnd = settings.workEnd || '24:00';
+            const startHour = parseInt(workStart.split(':')[0]);
+            const endHour = parseInt(workEnd.split(':')[0]);
             const offset = 30; // смещение временной шкалы
             
             // Горизонтальные линии с отметками времени
             for (let hour = startHour; hour <= endHour; hour++) {
-                // Часовая линия (в 11:00, 12:00 и т.д.)
+                // Часовая линия 
                 const hourY = offset + (hour - startHour) * 60;
                 grid += `
                     <div style="position: absolute; top: ${hourY}px; left: 0; right: 0; height: 1px; background: rgba(100, 100, 100, 0.4); pointer-events: none;">
@@ -596,7 +603,7 @@
                     </div>
                 `;
                 
-                // Получасовая линия (в 11:30, 12:30 и т.д.)
+                // Получасовая линия 
                 if (hour < endHour) {
                     const halfHourY = offset + (hour - startHour) * 60 + 30;
                     grid += `
@@ -642,9 +649,11 @@
                 const [startHour, startMin] = startTime.split(':').map(Number);
                 const durationMin = booking.duration_minutes || 90;
                 
-                // Координаты в пикселях (1 час = 60px, начало в 11:00)
+                // Координаты в пикселях (1 час = 60px, начало динамическое)
                 const offset = 30; // смещение временной шкалы
-                const startY = (startHour - 11) * 60 + (startMin / 60) * 60 + offset;
+                const dayStartHour = window.AquaGid?.ManagerSettings?.boatSettings?.workStart || '09:00';
+                const dayStart = parseInt(dayStartHour.split(':')[0]);
+                const startY = (startHour - dayStart) * 60 + (startMin / 60) * 60 + offset;
                 const height = durationMin;
                 console.log(`Бронь ${startTime}: startY=${startY}, height=${height}, startHour=${startHour}, startMin=${startMin}`);
                 

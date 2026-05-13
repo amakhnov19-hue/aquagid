@@ -92,6 +92,12 @@
                     if (window.AquaGid?.ManagerCalendar) {
                         window.AquaGid.ManagerCalendar.loadCalendarData();
                     }
+
+                    // Обновляем список бронирований
+                    if (window.AquaGid?.ManagerBookings) {
+                        window.AquaGid.ManagerBookings.loadBookings();
+                    }
+
                     // Обновляем уведомления
                     if (window.AquaGid?.ManagerDashboard) {
                         window.AquaGid.ManagerDashboard.loadNotifications().then(() => {

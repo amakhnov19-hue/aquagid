@@ -311,6 +311,30 @@ async def confirm_payment(
     booking.status = "active"
     await db.commit()
     
+    # Отправляем WebSocket уведомление менеджеру
+    try:
+        from app.services.sync.websocket import ws_manager
+        boat = await db.execute(
+            select(BookingModel).where(BookingModel.id == booking_id)
+        )
+        booking_data = boat.scalar_one_or_none()
+        if booking_data:
+            boat_result = await db.execute(
+                select(BookingModel).where(BookingModel.id == booking_id)
+            )
+            # Получаем manager_id через лодку
+            from sqlalchemy import text
+            manager_result = await db.execute(
+                text("SELECT bo.manager_id FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+                {"bid": booking_id}
+            )
+            manager_row = manager_result.fetchone()
+            if manager_row and manager_row[0]:
+                await ws_manager.send_update(manager_row[0], "bookings_updated")
+                print(f"📡 WebSocket отправлен после активации брони #{booking_id}")
+    except Exception as e:
+        print(f"⚠️ Ошибка WebSocket при confirm_payment: {e}")
+    
     return {"message": "Бронирование активировано", "id": booking_id, "status": "active"}
 
 @router.post("/{booking_id}/cancel")
@@ -620,43 +644,124 @@ async def delete_booking(
     """Удалить бронирование (только для менеджера) и событие из Google Calendar"""
     from sqlalchemy import text
     
-    # Получаем google_event_id и manager_id до удаления
+    # 1. Получаем ВСЕ данные до удаления
     booking_result = await db.execute(
-        text("SELECT google_event_id, boat_id FROM bookings WHERE id = :booking_id"),
+        text("""
+            SELECT b.google_event_id, b.boat_id, b.source, b.manager_id as booking_manager_id,
+                   bo.manager_id as boat_manager_id
+            FROM bookings b
+            LEFT JOIN boats bo ON b.boat_id = bo.id
+            WHERE b.id = :booking_id
+        """),
         {"booking_id": booking_id}
     )
     booking_row = booking_result.fetchone()
     
-    google_event_id = booking_row[0] if booking_row else None
-    boat_id = booking_row[1] if booking_row else None
+    if not booking_row:
+        raise HTTPException(status_code=404, detail="Бронирование не найдено")
     
-    # Удаляем бронь из БД
-    result = await db.execute(
-        text("DELETE FROM bookings WHERE id = :booking_id RETURNING id"),
+    google_event_id = booking_row[0]
+    boat_id = booking_row[1]
+    source = booking_row[2]  # 'google' или 'manual'
+    booking_manager_id = booking_row[3]
+    boat_manager_id = booking_row[4]
+    
+    # 2. Удаляем бронь из БД
+    await db.execute(
+        text("DELETE FROM bookings WHERE id = :booking_id"),
         {"booking_id": booking_id}
     )
     await db.commit()
     
-    if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Бронирование не найдено")
-    
-    # Удаляем из Google Calendar
+    # 3. Удаляем событие из Google Calendar (если было)
     if google_event_id:
-        try:
-            from app.services.sync.sync_service import sync_service
-            boat_result = await db.execute(
-                text("SELECT manager_id FROM boats WHERE id = :boat_id"),
-                {"boat_id": boat_id}
-            )
-            boat_row = boat_result.fetchone()
-            manager_id = boat_row[0] if boat_row else None
-            if manager_id:
-                await sync_service.delete_event(google_event_id, manager_id)
+        # Определяем, чей календарь использовать
+        manager_id_for_calendar = booking_manager_id or boat_manager_id
+        
+        if manager_id_for_calendar:
+            try:
+                from app.services.sync.sync_service import sync_service
+                await sync_service.delete_event(google_event_id, manager_id_for_calendar)
                 print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
-        except Exception as e:
-            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
+                print(f"   Менеджер: {manager_id_for_calendar}, Источник: {source}")
+            except Exception as e:
+                response["google_deleted"] = False  # Не удалось удалить из GC
+                print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
+                print(f"   event_id={google_event_id}, manager_id={manager_id_for_calendar}")
+        else:
+            print(f"⚠️ Не найден manager_id для удаления события GC: {google_event_id}")
     
-    return {"message": "Бронирование удалено"}
+    # Формируем ответ
+    response = {"message": "Бронирование удалено"}
+    
+    if google_event_id:
+        response["google_deleted"] = True  # По умолчанию считаем что удалили
+    else:
+        response["google_deleted"] = None  # Нечего было удалять
+    
+    return response
+
+@router.post("/cleanup-pending")
+async def cleanup_pending_bookings(
+    db: AsyncSession = Depends(get_db)
+):
+    """Удалить просроченные pending-брони с очисткой Google Calendar"""
+    from sqlalchemy import text
+    
+    # Получаем все просроченные pending-брони с google_event_id
+    result = await db.execute(
+        text("""
+            SELECT b.id, b.google_event_id, b.boat_id,
+                   bo.manager_id as boat_manager_id
+            FROM bookings b
+            JOIN boats bo ON b.boat_id = bo.id
+            WHERE b.status = 'pending' 
+              AND b.created_at < NOW() - INTERVAL '10 minutes'
+        """)
+    )
+    expired = result.fetchall()
+    
+    deleted_count = 0
+    gc_deleted = 0
+    
+    for row in expired:
+        booking_id = row[0]
+        google_event_id = row[1]
+        boat_manager_id = row[4]
+        
+        # Удаляем из GC
+        if google_event_id and boat_manager_id:
+            try:
+                from app.services.sync.sync_service import sync_service
+                await sync_service.delete_event(google_event_id, boat_manager_id)
+                gc_deleted += 1
+                print(f"🗑 Удалено из GC: {google_event_id}")
+            except Exception as e:
+                print(f"⚠️ Ошибка удаления из GC: {e}")
+        
+        # Удаляем из БД
+        await db.execute(
+            text("DELETE FROM bookings WHERE id = :id"),
+            {"id": booking_id}
+        )
+        deleted_count += 1
+        
+        # Отправляем WebSocket
+        if boat_manager_id:
+            try:
+                from app.services.sync.websocket import ws_manager
+                await ws_manager.send_update(boat_manager_id, "bookings_updated")
+            except Exception as e:
+                print(f"⚠️ Ошибка WebSocket: {e}")
+    
+    await db.commit()
+    
+    return {
+        "success": True,
+        "deleted": deleted_count,
+        "gc_deleted": gc_deleted,
+        "message": f"Удалено {deleted_count} просроченных броней, {gc_deleted} событий в GC"
+    }
 
 @router.put("/{booking_id}/view")
 async def mark_booking_viewed(

@@ -662,13 +662,13 @@ class ManagerBookings {
      */
     async render(containerId) {
         const container = document.getElementById(containerId);
+        // Всегда загружаем данные
+        await this.loadBookings();
+        // Если контейнер есть на экране — рендерим
         if (container) {
             this.renderContent(container);
-            await this.loadBookings();
         } else {
-            // Контейнер скрыт — просто загружаем данные в фоне
-            console.log('Контейнер не найден, загружаем данные в фоне');
-            await this.loadBookings();
+            console.log('📋 Данные загружены в фоне (контейнер скрыт)');
         }
     }
 
@@ -679,7 +679,12 @@ class ManagerBookings {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (!response.ok) throw new Error('Ошибка удаления');
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.detail || 'Ошибка удаления');
+            }
             
             // Обновляем список
             await this.loadBookings();
@@ -689,10 +694,15 @@ class ManagerBookings {
                 window.AquaGid.ManagerDashboard.loadDashboardData();
             }
             
-            alert('✅ Бронирование удалено из AquaGid (в Google Calendar останется)');
+            // Показываем результат
+            if (data.google_deleted === false) {
+                alert('⚠️ Бронирование удалено из AquaGid, но событие в Google Calendar удалить не удалось. Удалите его вручную.');
+            } else {
+                alert('✅ Бронирование удалено (включая событие в Google Calendar)');
+            }
         } catch (e) {
-            console.error('Ошибка:', e);
-            alert('❌ Ошибка удаления');
+            console.error('Ошибка при удалении:', e);
+            alert('❌ Ошибка удаления: ' + e.message);
         }
     }
 
