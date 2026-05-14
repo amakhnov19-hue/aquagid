@@ -647,7 +647,7 @@ async def delete_booking(
     # 1. Получаем ВСЕ данные до удаления
     booking_result = await db.execute(
         text("""
-            SELECT b.google_event_id, b.boat_id, b.source, b.manager_id as booking_manager_id,
+            SELECT b.google_event_id, b.boat_id, b.source,
                    bo.manager_id as boat_manager_id
             FROM bookings b
             LEFT JOIN boats bo ON b.boat_id = bo.id
@@ -662,42 +662,31 @@ async def delete_booking(
     
     google_event_id = booking_row[0]
     boat_id = booking_row[1]
-    source = booking_row[2]  # 'google' или 'manual'
-    booking_manager_id = booking_row[3]
-    boat_manager_id = booking_row[4]
+    source = booking_row[2]
+    boat_manager_id = booking_row[3]
     
-    # 2. Удаляем бронь из БД
+    # Формируем ответ заранее
+    response = {"message": "Бронирование удалено"}
+    
+    # 2. Удаляем событие из Google Calendar (если было) — ДО удаления из БД
+    if google_event_id and boat_manager_id:
+        try:
+            from app.services.sync.sync_service import sync_service
+            await sync_service.delete_event(google_event_id, boat_manager_id)
+            response["google_deleted"] = True
+            print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
+        except Exception as e:
+            response["google_deleted"] = False
+            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
+    else:
+        response["google_deleted"] = None if not google_event_id else False
+    
+    # 3. Удаляем бронь из БД
     await db.execute(
         text("DELETE FROM bookings WHERE id = :booking_id"),
         {"booking_id": booking_id}
     )
     await db.commit()
-    
-    # 3. Удаляем событие из Google Calendar (если было)
-    if google_event_id:
-        # Определяем, чей календарь использовать
-        manager_id_for_calendar = booking_manager_id or boat_manager_id
-        
-        if manager_id_for_calendar:
-            try:
-                from app.services.sync.sync_service import sync_service
-                await sync_service.delete_event(google_event_id, manager_id_for_calendar)
-                print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
-                print(f"   Менеджер: {manager_id_for_calendar}, Источник: {source}")
-            except Exception as e:
-                response["google_deleted"] = False  # Не удалось удалить из GC
-                print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
-                print(f"   event_id={google_event_id}, manager_id={manager_id_for_calendar}")
-        else:
-            print(f"⚠️ Не найден manager_id для удаления события GC: {google_event_id}")
-    
-    # Формируем ответ
-    response = {"message": "Бронирование удалено"}
-    
-    if google_event_id:
-        response["google_deleted"] = True  # По умолчанию считаем что удалили
-    else:
-        response["google_deleted"] = None  # Нечего было удалять
     
     return response
 
@@ -727,7 +716,8 @@ async def cleanup_pending_bookings(
     for row in expired:
         booking_id = row[0]
         google_event_id = row[1]
-        boat_manager_id = row[4]
+        boat_id = row[2]
+        boat_manager_id = row[3]
         
         # Удаляем из GC
         if google_event_id and boat_manager_id:

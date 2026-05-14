@@ -91,9 +91,12 @@ class WeatherWidget {
 
         if (!this.isExpanded) {
             widget.innerHTML = `
-                <div class="weather-compact" onclick="window.weatherWidget.toggle()" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 24px;">${icon}</span>
-                    <span style="font-weight: bold; font-size: 16px;">${temp}°C</span>
+                <div style="position: relative;">
+                    <span class="weather-close" onclick="event.stopPropagation(); document.getElementById('weather-widget').remove(); window.weatherWidget = null; localStorage.setItem('showWeather', '0');" style="position: absolute; top: -8px; right: -8px; width: 20px; height: 20px; background: rgba(255,255,255,0.9); color: #333; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; z-index: 2;">✕</span>
+                    <div class="weather-compact" onclick="window.weatherWidget.toggle()" style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">${icon}</span>
+                        <span style="font-weight: bold; font-size: 16px;">${temp}°C</span>
+                    </div>
                 </div>
             `;
         } else {
@@ -208,6 +211,89 @@ class WeatherWidget {
         container.addEventListener('mouseenter', () => container.style.opacity = '1');
         container.addEventListener('mouseleave', () => container.style.opacity = '0.3');
 
+        // Drag-and-drop
+        let isDragging = false;
+        let startX, startY, startLeft, startTop;
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.weather-close')) return; // не драгаем если крестик
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = container.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            container.style.cursor = 'grabbing';
+            container.style.opacity = '1';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            container.style.left = (startLeft + dx) + 'px';
+            container.style.top = (startTop + dy) + 'px';
+            container.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                container.style.cursor = 'pointer';
+                // Сохраняем позицию
+                localStorage.setItem('weatherPos', JSON.stringify({
+                    left: container.style.left,
+                    top: container.style.top
+                }));
+            }
+        });
+
+        // Touch-события для телефона
+        container.addEventListener('touchstart', (e) => {
+            if (e.target.closest('.weather-close')) return;
+            isDragging = true;
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            const rect = container.getBoundingClientRect();
+            startLeft = rect.left;
+            startTop = rect.top;
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            const dx = touch.clientX - startX;
+            const dy = touch.clientY - startY;
+            container.style.left = (startLeft + dx) + 'px';
+            container.style.top = (startTop + dy) + 'px';
+            container.style.bottom = 'auto';
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
+            if (isDragging) {
+                isDragging = false;
+                localStorage.setItem('weatherPos', JSON.stringify({
+                    left: container.style.left,
+                    top: container.style.top
+                }));
+            }
+        });
+
+        // Восстановить сохранённую позицию
+        const savedPos = localStorage.getItem('weatherPos');
+        if (savedPos) {
+            try {
+                const pos = JSON.parse(savedPos);
+                container.style.left = pos.left;
+                container.style.top = pos.top;
+                container.style.bottom = 'auto';
+            } catch (e) {}
+        }
+        
+
         document.body.appendChild(container);
 
         this.updateDisplay();
@@ -216,12 +302,12 @@ class WeatherWidget {
     }
 }
 
-// Автозапуск
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => new WeatherWidget());
-} else {
-    new WeatherWidget();
-}
+// Автозапуск отключён — будет включаться из настроек
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', () => new WeatherWidget());
+// } else {
+//     new WeatherWidget();
+// }
 
 
 

@@ -774,11 +774,11 @@ def get_google_router() -> APIRouter:
         resource_state = headers.get('x-goog-resource-state')
         channel_id_header = headers.get('x-goog-channel-id')
         
-        # === Защита от лавины webhook (не чаще раза в 30 секунд) ===
+        # === Защита от лавины webhook (не чаще раза в 10 секунд) ===
         now = time.time()
         last_import_time = getattr(google_webhook, '_last_import_time', 0)
-        if resource_state == 'exists' and (now - last_import_time) < 30:
-            logging.warning(f"⏭️ Webhook skipped (rate limit): last import was {now - last_import_time:.1f}s ago")
+        if resource_state == 'exists' and (now - last_import_time) < 10:
+            print(f"⏭️ Webhook skipped (rate limit): last import was {now - last_import_time:.1f}s ago")
             return {"success": True, "skipped": True}
         google_webhook._last_import_time = now
         # === Конец защиты ===

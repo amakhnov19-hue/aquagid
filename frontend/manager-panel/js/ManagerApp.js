@@ -273,9 +273,6 @@
                             <div class="settings-icon" onclick="AquaGid.ManagerApp.switchSection('settings')">⚙️</div>
                         </div>
 
-                        <!-- Чат -->
-                        <div class="chat-button" onclick="alert('💬 Чат в разработке')">💬</div>
-                        
                     </header>
                     
                     <!-- Контент -->
@@ -602,9 +599,13 @@
                         <div class="menu-item" onclick="AquaGid.ManagerApp.switchSection('bookings'); this.parentElement.parentElement.remove()">
                             📋 Бронирования
                         </div>
+                        <div class="menu-item" onclick="AquaGid.ManagerApp.switchSection('chat'); this.parentElement.parentElement.remove()">
+                            💬 Чат
+                        </div>
                     </div>
                 `;
                 document.body.appendChild(menuDiv);
+                
             }
         }
 

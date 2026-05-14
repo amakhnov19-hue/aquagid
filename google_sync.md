@@ -1,79 +1,77 @@
 # 🔄 Google Calendar — логика синхронизации (AquaGid 2.0)
+# Обновлено: 2026-05-14
 
 ## 📁 Файлы, участвующие в работе с GC
 
 ### Бэкенд
-- `routes/google_calendar.py` — OAuth, подключение/отключение календаря
-- `routes/google_webhook.py` — приём webhook-уведомлений от Google
-- `services/sync_service.py` — вся логика синхронизации (экспорт, импорт, удаление)
-- `routes/bookings.py` — создание/отмена/удаление брони (вызывает sync_service)
+- `routes/google_calendar.py` — OAuth, подключение/отключение, webhook, импорт
+- `routes/google_webhook.py` — создание канала webhook
+- `services/sync/sync_service.py` — централизованный сервис (экспорт, импорт, удаление)
+- `routes/bookings.py` — `delete_booking`, `confirm_payment`, `cleanup_pending`
 - `config.py` / переменные окружения — GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI, BASE_URL
 
 ### Фронтенд
-- `ManagerPanel/Bookings.js` — список броней, кнопки удаления (в т.ч. Google-брони)
-- `ManagerPanel/Calendar.js` — календарь менеджера
-- `AdminPanel/Diagnostics.js` — возможно, диагностика GC
+- `ManagerPanel/js/ManagerApp.js` — WebSocket, меню, чат
+- `ManagerPanel/js/components/bookings/Bookings.js` — список броней, удаление
+- `ManagerPanel/js/components/calendar/Calendar.js` — календарь (день/месяц)
+- `ManagerPanel/js/components/settings/Settings.js` — настройки, погода
+- `ManagerPanel/js/components/WeatherWidget.js` — виджет погоды (drag-and-drop)
 
 ---
 
-## 🔁 Полный алгоритм работы
+## 🔁 Алгоритмы
 
-### 1. Подключение Google Calendar
-1. Менеджер в ЛК нажимает "Подключить Google Calendar"
-2. Фронтенд отправляет запрос на `GET /api/google-calendar/auth-url`
-3. Бэкенд генерирует OAuth URL с `redirect_uri`
-4. Менеджер авторизуется в Google
-5. Google редиректит на `GOOGLE_REDIRECT_URI`
-6. Бэкенд сохраняет токены в БД
-7. **Автоматически** подписывается на webhook для этого календаря
+### 1. Экспорт брони в GC
+- Происходит автоматически при подтверждении оплаты (статус → `active`)
+- `bookings.py:confirm_payment` → `sync_service.export_booking()`
+- WebSocket `bookings_updated` отправляется менеджеру
 
-### 2. Экспорт брони в GC (создание события)
-1. Менеджер создаёт бронь через ЛК
-2. `bookings.py` вызывает `sync_service.create_event(booking)`
-3. `sync_service` создаёт событие в Google Calendar
-4. Сохраняет `google_event_id` в таблице `bookings`
+### 2. Импорт из GC (ручной/авто)
+- Webhook → `google_calendar.py:google_webhook` → `do_import_from_calendar()`
+- Парсинг названий: `([\w\s\-]+?)\s*-\s*(.+?)`
+- Сверка удалённых: Google-брони без google_event_id в БД → удаляются
+- Debounce: 10 секунд между импортами
 
-### 3. Импорт из GC (ручной)
-1. Менеджер нажимает "Импортировать из Google"
-2. Фронтенд → `POST /api/google-calendar/import`
-3. Бэкенд получает события из GC за период
-4. Парсит название события (катер, клиент, телефон)
-5. Создаёт брони в AquaGid с `source='google'`
+### 3. Удаление брони
+- `delete_booking`: удаляет из БД, затем из GC через `sync_service.delete_event()`
+- `cleanup_pending`: крон */5 мин → эндпоинт → удаление просроченных pending + очистка GC
 
-### 4. Авто-импорт через webhook
-1. Google присылает уведомление на `POST /api/google-calendar/webhook`
-2. Бэкенд проверяет `X-Goog-Resource-State`
-3. Запускает импорт событий (инкрементальный)
-
-### 5. Удаление события в GC при отмене/удалении брони
-1. Менеджер отменяет бронь → `cancel_booking()`
-2. Вызывается `sync_service.delete_event(google_event_id)`
-3. Менеджер удаляет бронь → `delete_booking()`
-4. **До удаления из БД** получает `google_event_id`
-5. Вызывает `sync_service.delete_event(google_event_id)`
-6. Удаляет бронь из БД
-
-### 6. Удаление Google-брони из AquaGid
-1. Менеджер кликает на Google-бронь в списке
-2. Фронтенд показывает подтверждение
-3. `confirmDeleteGoogle()` → удаляет бронь из БД
-4. (Событие в GC остаётся — это импортированная бронь)
+### 4. Webhook
+- Создаётся при подключении календаря
+- Авто-пересоздаётся при `do_import_from_calendar()`, если истекает < 1 часа
+- URL: `https://manager.beta.24aquabooking.ru/api/sync/google/webhook`
+- Логирование: `print()` (не `logging`)
 
 ---
 
-## ⚠️ Текущие проблемы
+## ⚠️ Решённые проблемы
 
-1. **Regex для парсинга названий** — события с номерами ("Формула 280") не всегда парсятся
-2. **Webhook истекает** — требует пересоздания при переподключении календаря
-3. **Формат событий** — без пробела после тире ("Васса -Проверка") не импортируется
-4. **Обновление списка** — после авто-импорта список не обновляется до переключения вкладки
-5. **Удаление Google-броней** — не удаляет событие в GC (только в AquaGid)
+| # | Проблема | Решение | Дата |
+|---|---------|---------|------|
+| 1 | Удаление Google-брони (двустороннее) | `delete_booking` → `sync_service.delete_event()` | 13.05 |
+| 2 | Regex для названий с цифрами | `([\w\s\-]+?)` | 13.05 |
+| 3 | WebSocket → обновление Bookings | `loadBookings()` в `onmessage` | 13.05 |
+| 4 | Авто-пересоздание webhook | Проверка в `do_import_from_calendar` | 13.05 |
+| 5 | 429 лавина запросов | Debounce 10 сек | 13.05 |
+| 6 | `cleanup-pending` с удалением из GC | Эндпоинт + крон | 13.05 |
+| 7 | WebSocket при `confirm_payment` | `ws_manager.send_update()` | 13.05 |
+| 8 | Календарь "День" с 09:00 | Учёт `workStart` из настроек | 13.05 |
+| 9 | Логи терялись после ротации | `copytruncate` в logrotate | 14.05 |
+| 10 | 500 ошибка при удалении | Индексы `booking_row[3]` вместо `[4]` | 14.05 |
 
 ---
 
-## 🔴 Критические точки
+## 🔧 Погода (WeatherWidget)
+- Включается в Настройках (галочка "Показывать виджет погоды")
+- Drag-and-drop (мышь + touch)
+- Крестик для скрытия
+- Позиция сохраняется в localStorage
 
-- OAuth редирект (разные домены для эксперименталь и бета)
-- Webhook (должен пересоздаваться при обновлении токенов)
-- Удаление событий (должно быть двусторонним)
-- Парсинг названий событий (решается жёстким форматом)
+---
+
+## 🖥️ Окружение beta
+- Сервис: `aquagid-beta` (порт 8083)
+- Путь: `/var/www/beta/`
+- Логи: `/var/log/aquagid-beta.log` (rotate с `copytruncate`)
+- БД: `aquagid_beta`
+- Крон cleanup-pending: `*/5 * * * * curl -s -X POST http://127.0.0.1:8083/api/bookings/cleanup-pending`
