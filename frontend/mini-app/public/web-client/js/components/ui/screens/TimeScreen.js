@@ -51,7 +51,16 @@ class TimeScreen extends ScreenBase {
      */
     renderTimeSlots() {
         if (!this.availableSlots || this.availableSlots.length === 0) {
-            return '<p class="no-slots">❌ На эту дату нет доступного времени</p>';
+            return `
+                <div class="no-slots" style="text-align:center;padding:60px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;">
+                    <p style="font-size:48px;margin-bottom:16px;">😊</p>
+                    <p style="font-size:22px;color:#2d3748;margin-bottom:8px;font-weight:600;">Упс! Катера все заняты</p>
+                    <p style="color:#6b7280;margin-bottom:28px;font-size:16px;">Попробуйте выбрать другую дату</p>
+                    <a href="javascript:void(0)" onclick="window.UnifiedScreens?.showDateSelection()" 
+                       style="display:inline-block;padding:14px 36px;background:#0066CC;color:white;border-radius:12px;text-decoration:none;font-size:17px;font-weight:500;box-shadow:0 2px 8px rgba(0,102,204,0.3);">
+                        📅 Выбрать другую дату
+                    </a>
+                </div>`;
         }
         
         return this.availableSlots.map(time => {

@@ -28,6 +28,13 @@ class UnifiedScreens {
         
         // Инициализируем экраны
         this.initScreens();
+
+        // Обработка кнопки "Назад" браузера
+        window.addEventListener('popstate', (e) => {
+            if (e.state?.screen) {
+                this.navigateToScreen(e.state.screen);
+            }
+        });        
     }
 
     /**
@@ -43,6 +50,18 @@ class UnifiedScreens {
         this.successScreen = new SuccessScreen(this);
         this.quickScreen = new QuickScreen(this);  // ← добавить
         this.myBookingsScreen = new MyBookingsScreen(this);
+    }
+
+    navigateToScreen(screen) {
+        switch(screen) {
+            case 'welcome': this.welcomeScreen.show(); break;
+            case 'date': this.showDateSelection(); break;
+            case 'time': this.showTimeSelection(); break;
+            case 'duration': this.showDurationSelection(); break;
+            case 'boat': this.showBoatSelection(); break;
+            case 'quick': this.showQuickScreen(); break;
+            case 'confirmation': this.showConfirmationScreen(); break;
+        }
     }
 
     /**
@@ -77,6 +96,7 @@ class UnifiedScreens {
      * Показать экран приветствия
      */
     showWelcomeScreen() {
+        history.pushState({ screen: 'welcome' }, '', window.location.pathname);
         this.resetBooking();
         this.welcomeScreen.show();
     }
@@ -85,6 +105,7 @@ class UnifiedScreens {
      * Показать экран выбора даты
      */
     showDateSelection() {
+        history.pushState({ screen: 'date' }, '', window.location.pathname);
         console.log('📅 showDateSelection');
         
         if (this.currentFlow === 'bridges') {
@@ -100,16 +121,17 @@ class UnifiedScreens {
      * Показать экран выбора катера
      */
     showBoatSelection() {
+        history.pushState({ screen: 'boat' }, '', window.location.pathname);
         console.log('🚤 showBoatSelection, flow:', this.currentFlow);
         
         if (this.currentFlow === 'fromBoat') {
             // Ветка "от катера" - показываем все катера
             if (this.boatScreen) {
-                this.boatScreen.showAllBoats();
+                this.boatScreen.show();
             } else {
                 console.error('❌ BoatScreen не инициализирован');
                 this.boatScreen = new BoatScreen(this);
-                this.boatScreen.showAllBoats();
+                this.boatScreen.show();
             }
         } else {
             // Ветка "от даты" или другие - показываем доступные по времени
@@ -127,6 +149,7 @@ class UnifiedScreens {
      * Показать экран выбора времени
      */
     showTimeSelection() {
+        history.pushState({ screen: 'time' }, '', window.location.pathname);
         console.log('⏰ showTimeSelection');
         if (this.timeScreen) {
             this.timeScreen.show();
@@ -142,6 +165,7 @@ class UnifiedScreens {
      * Показать экран выбора длительности
      */
     showDurationSelection() {
+        history.pushState({ screen: 'duration' }, '', window.location.pathname);
         console.log('⏱️ showDurationSelection');
         if (this.durationScreen) {
             this.durationScreen.show();
@@ -152,18 +176,8 @@ class UnifiedScreens {
         }
     }
 
-    showBoatSelection() {
-        console.log('🚤 showBoatSelection');
-        if (this.boatScreen) {
-            this.boatScreen.show();
-        } else {
-            console.error('❌ BoatScreen не инициализирован');
-            this.boatScreen = new BoatScreen(this);
-            this.boatScreen.show();
-        }
-    }
-
     showConfirmationScreen() {
+        history.pushState({ screen: 'confirmation' }, '', window.location.pathname);
         console.log('✅ showConfirmationScreen');
         if (this.confirmationScreen) {
             this.confirmationScreen.show();

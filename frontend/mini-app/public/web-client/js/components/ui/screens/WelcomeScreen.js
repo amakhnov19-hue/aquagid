@@ -78,6 +78,14 @@ class WelcomeScreen extends ScreenBase {
                             ⚓ Посадка с набережных СПб
                         </p>
                     </div>
+
+                    <!-- Кнопка полной перезагрузки -->
+                    <div style="text-align:center;margin-top:16px;">
+                        <a href="javascript:void(0)" onclick="window.location.reload(true)" 
+                            style="display:inline-block;padding:8px 20px;background:none;color:#9ca3af;border:1px solid #e5e7eb;border-radius:20px;text-decoration:none;font-size:13px;">
+                            🔄 Полная перезагрузка
+                        </a>
+                    </div>
                 </div>
             </div>
         `;
