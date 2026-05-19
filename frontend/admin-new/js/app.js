@@ -24,7 +24,10 @@ async function loadView(view) {
             break;
         case 'documents':
             await renderDocuments(content);
-            break;        
+            break;
+        case 'chat':
+            await renderChat(content);
+            break;                    
         default:
             content.innerHTML = '<div class="card">Раздел в разработке</div>';
     }
@@ -533,6 +536,148 @@ window.saveDocument = async function(mode, id) {
         const err = await response.json();
         alert('❌ Ошибка: ' + (err.detail || 'сохранения'));
     }
+};
+
+// === ЧАТ ПОДДЕРЖКИ ===
+
+let currentDialog = null;
+
+async function renderChat(container) {
+    const token = localStorage.getItem('admin_token');
+    
+    container.innerHTML = `<div class="card"><h2>💬 Чат поддержки</h2><div class="loading">Загрузка...</div></div>`;
+    
+    try {
+        const response = await fetch('/api/messages/admin/dialogs', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const dialogs = await response.json();
+        
+        let html = `<div class="card"><h2>💬 Чат поддержки</h2>`;
+        
+        if (dialogs.length === 0) {
+            html += `<p style="color:#6b7280;">Нет обращений</p></div>`;
+        } else {
+            html += `
+                <div style="display:flex;gap:16px;">
+                    <div style="width:300px;border-right:1px solid #e5e7eb;padding-right:16px;">
+                        <h3>Диалоги</h3>
+                        ${dialogs.map(d => `
+                            <div class="dialog-item" onclick="openDialog('${d.sender_id}', '${d.sender_type}')" 
+                                 style="padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${currentDialog === d.sender_id ? '#e0e7ff' : '#f9fafb'};">
+                                <strong>${d.sender_id}</strong>
+                                <span style="font-size:11px;color:${d.status === 'new' ? '#dc2626' : '#6b7280'};float:right;">${d.status}</span>
+                                <div style="font-size:12px;color:#6b7280;">${d.last_message || ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div id="chatMessages" style="flex:1;">
+                        <p style="color:#6b7280;">Выберите диалог</p>
+                    </div>
+                </div>
+            </div>`;
+        }
+        
+        container.innerHTML = html;
+
+        // Подключаем WebSocket для админа
+        if (!window._adminWs) {
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${location.host}/api/sync/ws/admin`;
+            window._adminWs = new WebSocket(wsUrl);
+            window._adminWs.onopen = () => console.log('✅ WebSocket админа подключён');
+            window._adminWs.onmessage = (event) => {
+                console.log('📩 Админ WebSocket:', event.data);
+                if (event.data === 'new_chat_message') {
+                    if (window._currentDialog) {
+                        openDialog(window._currentDialog, 'client');
+                    } else {
+                        loadView('chat');
+                    }
+                }
+            };
+        }        
+        
+    } catch (error) {
+        container.innerHTML = `<div class="card error">Ошибка: ${error.message}</div>`;
+    }
+}
+
+window.openDialog = async function(senderId, senderType) {
+    currentDialog = senderId;
+    window._currentDialog = senderId;
+    const token = localStorage.getItem('admin_token');
+    
+    const response = await fetch(`/api/messages?client_phone=${encodeURIComponent(senderId)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const messages = await response.json();
+    
+    const msgContainer = document.getElementById('chatMessages');
+    if (msgContainer) {
+        msgContainer.innerHTML = `
+            <h3>${senderId} (${senderType})</h3>
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;max-height:400px;overflow-y:auto;margin-bottom:12px;background:#f9fafb;">
+                ${messages.reverse().map(m => `
+                    <div style="margin-bottom:8px;text-align:${m.sender_type === 'admin' ? 'right' : 'left'};">
+                        <div style="display:inline-block;padding:8px 12px;border-radius:12px;max-width:70%;background:${m.sender_type === 'admin' ? '#0066CC' : '#e5e7eb'};color:${m.sender_type === 'admin' ? 'white' : '#333'};">
+                            ${m.body || m.title}
+                        </div>
+                        <div style="font-size:10px;color:#9ca3af;">${m.created_at ? new Date(m.created_at).toLocaleTimeString() : ''}</div>
+                    </div>
+                `).join('')}
+            </div>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="adminChatInput" placeholder="Ответ..." style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                <button class="btn btn-primary" onclick="sendAdminReply('${senderId}')">➤</button>
+            </div>
+            <div style="margin-top:8px;">
+                <button class="btn btn-sm" onclick="closeDialog('${senderId}')">✅ Закрыть диалог</button>
+            </div>
+        `;
+    }
+    
+    // Обновляем подсветку в списке диалогов
+    document.querySelectorAll('.dialog-item').forEach(el => {
+        el.style.background = el.onclick?.toString().includes(senderId) ? '#e0e7ff' : '#f9fafb';
+    });
+};
+
+window.sendAdminReply = async function(senderId) {
+    const input = document.getElementById('adminChatInput');
+    const message = input.value.trim();
+    if (!message) return;
+    
+    const token = localStorage.getItem('admin_token');
+    await fetch('/api/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            sender_type: 'admin',
+            sender_id: '0',
+            receiver_type: 'client',
+            receiver_id: senderId,
+            type: 'chat',
+            title: 'Ответ поддержки',
+            body: message
+        })
+    });
+    
+    input.value = '';
+    openDialog(senderId, 'client');
+};
+
+window.closeDialog = async function(senderId) {
+    const token = localStorage.getItem('admin_token');
+    await fetch(`/api/messages/admin/dialog/${senderId}/status?status=closed`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    alert('✅ Диалог закрыт');
+    loadView('chat');
 };
 
 window.viewDocument = async function(id) {

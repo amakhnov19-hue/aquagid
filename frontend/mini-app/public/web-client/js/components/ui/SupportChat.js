@@ -92,30 +92,158 @@
                 chatWindow.classList.toggle('open', this.isOpen);
             }
             
-            // Если открыли и есть непрочитанные - сбрасываем счётчик
-            if (this.isOpen && this.unreadCount > 0) {
-                this.unreadCount = 0;
-                this.updateBadge();
+            if (this.isOpen) {
+                this.loadHistory().then(() => {
+                    const msgContainer = document.getElementById('support-chat-messages');
+                    if (msgContainer) {
+                        msgContainer.innerHTML = `
+                            <div class="support-chat__message support-chat__message--support">
+                                <div class="support-chat__avatar">${this.config.supportAvatar}</div>
+                                <div class="support-chat__bubble">${this.config.welcomeMessage}</div>
+                            </div>
+                            ${this.renderMessages()}
+                        `;
+                        msgContainer.scrollTop = msgContainer.scrollHeight;
+                    }
+                });
+                
+                if (this.unreadCount > 0) {
+                    this.unreadCount = 0;
+                    this.updateBadge();
+                }
+            }
+        }
+
+        connectWebSocket() {
+            const clientPhone = localStorage.getItem('clientPhone');
+            if (!clientPhone) {
+                console.log('⏳ WebSocket: ждём телефон');
+                return;
+            }
+            
+            const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${location.host}/api/sync/ws/${clientPhone}`;
+            
+            console.log('🔌 WebSocket подключение:', wsUrl);
+            
+            try {
+                this.ws = new WebSocket(wsUrl);
+                this.ws.onopen = () => console.log('✅ WebSocket чата подключён');
+                this.ws.onmessage = (event) => {
+                    console.log('📩 WebSocket:', event.data);
+                    if (event.data === 'new_chat_message' && this.isOpen) {
+                        this.loadHistory().then(() => {
+                            const msgContainer = document.getElementById('support-chat-messages');
+                            if (msgContainer) {
+                                msgContainer.innerHTML = `
+                                    <div class="support-chat__message support-chat__message--support">
+                                        <div class="support-chat__avatar">${this.config.supportAvatar}</div>
+                                        <div class="support-chat__bubble">${this.config.welcomeMessage}</div>
+                                    </div>
+                                    ${this.renderMessages()}
+                                `;
+                                msgContainer.scrollTop = msgContainer.scrollHeight;
+                            }
+                        });
+                    }
+                };
+            } catch (e) {
+                console.warn('WebSocket error:', e);
+            }
+        }        
+        
+        /**
+         * Отправить сообщение админу
+         */
+        async sendMessage() {
+            const input = document.getElementById('support-chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            let clientPhone = localStorage.getItem('clientPhone');
+            let clientName = localStorage.getItem('clientName');
+            
+            // Если нет данных — запрашиваем один раз
+            if (!clientPhone || !clientName) {
+                const name = prompt('Ваше имя:');
+                if (!name) return;
+                const phone = prompt('Ваш телефон:', '+7');
+                if (!phone) return;
+                
+                clientPhone = phone.replace(/\D/g, '');
+                if (clientPhone.length < 10) {
+                    alert('Введите корректный телефон');
+                    return;
+                }
+                
+                localStorage.setItem('clientPhone', clientPhone);
+                localStorage.setItem('clientName', name);
+                clientName = name;
+                
+                // Обновляем приветствие
+                this.config.welcomeMessage = `Здравствуйте, ${name}! Чем могу помочь?`;
+            }
+            
+            // Подключаем WebSocket если ещё не подключён
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                this.connectWebSocket();
+            }
+            
+            // Добавляем локально
+            this.addMessage(message, 'user');
+            input.value = '';
+            
+            // Отправляем на сервер
+            try {
+                await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender_type: 'client',
+                        sender_id: clientPhone,
+                        receiver_type: 'admin',
+                        receiver_id: '0',
+                        type: 'chat',
+                        title: `Сообщение от ${clientName}`,
+                        body: message
+                    })
+                });
+            } catch (error) {
+                console.error('Ошибка отправки:', error);
+                this.addMessage('❌ Ошибка отправки.', 'support');
             }
         }
         
         /**
-         * Отправить сообщение
+         * Загрузить историю с сервера
          */
-        sendMessage() {
-            const input = document.getElementById('support-chat-input');
-            const message = input.value.trim();
+        async loadHistory() {
+            const clientPhone = localStorage.getItem('clientPhone');
+            if (!clientPhone) return;
             
-            if (!message) return;
-            
-            // Добавляем сообщение пользователя
-            this.addMessage(message, 'user');
-            input.value = '';
-            
-            // Имитация ответа поддержки (для теста)
-            setTimeout(() => {
-                this.addMessage('Спасибо за сообщение! Мы ответим в ближайшее время.', 'support');
-            }, 1000);
+            try {
+                const response = await fetch(`/api/messages?client_phone=${encodeURIComponent(clientPhone)}`);
+                const messages = await response.json();
+                
+                if (messages.length > 0) {
+                    this.messages = [];
+                    messages.reverse().forEach(msg => {
+                        this.messages.push({
+                            text: msg.body || msg.title,
+                            type: msg.sender_type === 'client' ? 'user' : 'support',
+                            timestamp: msg.created_at
+                        });
+                    });
+                }
+                
+                // Приветствие с именем
+                const clientName = localStorage.getItem('clientName');
+                if (clientName) {
+                    this.config.welcomeMessage = `Здравствуйте, ${clientName}! Чем могу помочь?`;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки истории:', error);
+            }
         }
         
         /**

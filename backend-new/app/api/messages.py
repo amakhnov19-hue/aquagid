@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.security import get_current_manager
+from app.core.security import get_current_manager, get_current_admin
 from app.models.message_model import Message
 
 router = APIRouter(tags=["messages"])
@@ -31,28 +31,65 @@ class MessageResponse(BaseModel):
     body: Optional[str]
     related_booking_id: Optional[int]
     is_read: bool
+    status: Optional[str]
     created_at: str
 
     class Config:
         from_attributes = True
 
+
+# ========== ОТПРАВКА СООБЩЕНИЯ ==========
+
+@router.post("")
 @router.post("")
 async def send_message(message: MessageCreate, db: AsyncSession = Depends(get_db)):
     """Отправить сообщение"""
-    db_message = Message(**message.dict())
-    db.add(db_message)
+    result = await db.execute(
+        text("""
+            INSERT INTO messages (sender_type, sender_id, receiver_type, receiver_id, type, title, body, related_booking_id, status)
+            VALUES (:sender_type, :sender_id, :receiver_type, :receiver_id, :type, :title, :body, :related_booking_id, 'new')
+            RETURNING id
+        """),
+        {
+            "sender_type": message.sender_type,
+            "sender_id": message.sender_id,
+            "receiver_type": message.receiver_type,
+            "receiver_id": message.receiver_id,
+            "type": message.type,
+            "title": message.title or "Сообщение в чат",
+            "body": message.body or "",
+            "related_booking_id": message.related_booking_id
+        }
+    )
+    new_id = result.fetchone()[0]
     await db.commit()
-    await db.refresh(db_message)
-    return {"success": True, "id": db_message.id}
+    
+    # WebSocket уведомление получателю
+    try:
+        from app.services.sync.websocket import ws_manager
+        if message.receiver_type == 'admin':
+            await ws_manager.broadcast_to_admins("new_chat_message")
+        elif message.receiver_type == 'client':
+            await ws_manager.send_update(message.receiver_id, "new_chat_message")        
+        elif message.receiver_type == 'manager':
+            await ws_manager.send_update(int(message.receiver_id), "new_chat_message")
+    except Exception as e:
+        print(f"⚠️ WebSocket error: {e}")
+    
+    return {"success": True, "id": new_id}
+
+
+# ========== ПОЛУЧЕНИЕ СООБЩЕНИЙ ==========
 
 @router.get("")
 async def get_messages(
     manager_id: Optional[int] = None,
     client_phone: Optional[str] = None,
+    admin_id: Optional[int] = None,
     type: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ):
-    """Получить сообщения для менеджера или клиента"""
+    """Получить сообщения для менеджера, клиента или админа"""
     query = "SELECT * FROM messages WHERE 1=1"
     params = {}
     
@@ -62,12 +99,14 @@ async def get_messages(
     elif client_phone:
         query += " AND (sender_id = :phone OR receiver_id = :phone)"
         params["phone"] = client_phone
+    elif admin_id is not None:
+        query += " AND (receiver_type = 'admin' OR sender_type = 'admin')"
     
     if type:
         query += " AND type = :type"
         params["type"] = type
     
-    query += " ORDER BY created_at DESC LIMIT 50"
+    query += " ORDER BY created_at DESC LIMIT 100"
     
     result = await db.execute(text(query), params)
     messages = []
@@ -83,9 +122,41 @@ async def get_messages(
             "body": row[7],
             "related_booking_id": row[8],
             "is_read": row[9],
+            "status": row[11] if len(row) > 11 else 'new',
             "created_at": str(row[10]) if row[10] else None
         })
     return messages
+
+
+# ========== ДИАЛОГИ ДЛЯ АДМИНА ==========
+
+@router.get("/admin/dialogs")
+async def admin_get_dialogs(
+    db: AsyncSession = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """Список диалогов для админа (сгруппированы по sender_id)"""
+    result = await db.execute(
+        text("""
+            SELECT DISTINCT ON (sender_id) sender_id, sender_type, title, body, created_at, status
+            FROM messages 
+            WHERE receiver_type = 'admin' OR sender_type = 'admin'
+            ORDER BY sender_id, created_at DESC
+        """)
+    )
+    dialogs = []
+    for row in result.fetchall():
+        dialogs.append({
+            "sender_id": row[0],
+            "sender_type": row[1],
+            "last_message": row[3][:100] if row[3] else "",
+            "last_time": str(row[4]) if row[4] else None,
+            "status": row[5] or "new"
+        })
+    return dialogs
+
+
+# ========== ОТМЕТИТЬ ПРОЧИТАННЫМ ==========
 
 @router.put("/{message_id}/read")
 async def mark_read(message_id: int, db: AsyncSession = Depends(get_db)):
@@ -96,6 +167,27 @@ async def mark_read(message_id: int, db: AsyncSession = Depends(get_db)):
     )
     await db.commit()
     return {"success": True}
+
+
+# ========== СМЕНИТЬ СТАТУС ДИАЛОГА ==========
+
+@router.put("/admin/dialog/{sender_id}/status")
+async def update_dialog_status(
+    sender_id: str,
+    status: str = Query("replied"),
+    db: AsyncSession = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """Сменить статус диалога (new/replied/closed)"""
+    await db.execute(
+        text("UPDATE messages SET status = :status WHERE sender_id = :sid"),
+        {"status": status, "sid": sender_id}
+    )
+    await db.commit()
+    return {"success": True}
+
+
+# ========== ОЧИСТКА ИСТОРИИ ==========
 
 @router.delete("/history")
 async def clear_history(

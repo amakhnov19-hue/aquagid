@@ -14,5 +14,6 @@ class Message(Base):
     body = Column(Text)
     related_booking_id = Column(Integer, nullable=True)
     is_read = Column(Boolean, default=False)
+    status = Column(String(20), default='new')
     created_at = Column(DateTime, server_default=func.now())
 
