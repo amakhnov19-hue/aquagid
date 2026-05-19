@@ -22,6 +22,9 @@ async function loadView(view) {
         case 'diagnostics':
             content.innerHTML = `<iframe src="/diagnostics" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px;"></iframe>`;
             break;
+        case 'documents':
+            await renderDocuments(content);
+            break;        
         default:
             content.innerHTML = '<div class="card">Раздел в разработке</div>';
     }
@@ -349,6 +352,227 @@ async function renderSettings(container) {
         container.innerHTML = `<div class="card error">Ошибка загрузки настроек: ${error.message}</div>`;
     }
 }
+
+async function renderDocuments(container) {
+    const token = localStorage.getItem('admin_token');
+    
+    container.innerHTML = `<div class="card"><h2>📄 Документы</h2><div class="loading">Загрузка...</div></div>`;
+    
+    try {
+        const response = await fetch('/api/documents/admin/all', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        const docs = data.documents || [];
+        
+        let html = `
+            <div class="card">
+                <h2>📄 Документы</h2>
+                <p style="color:#6b7280;margin-bottom:16px;">Управление текстами для клиентов и менеджеров.</p>
+                <table class="data-table">
+                    <thead><tr><th>ID</th><th>Название</th><th>Клиент</th><th>Менеджер</th><th>Действия</th></tr></thead>
+                    <tbody>
+        `;
+        
+        docs.forEach(doc => {
+            html += `
+                <tr>
+                    <td>${doc.id}</td>
+                    <td><strong>${doc.title}</strong></td>
+                    <td>${doc.show_in_client ? '✅' : '—'}</td>
+                    <td>${doc.show_in_manager ? '✅' : '—'}</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="openDocumentModal('edit', ${doc.id}, '${doc.title.replace(/'/g, "\\'")}', ${doc.show_in_client}, ${doc.show_in_manager})">✏️</button>
+                        <button class="btn btn-sm" onclick="viewDocument(${doc.id})">👁</button>
+                        <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="deleteDocument(${doc.id})">🗑</button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `</tbody></table>
+            <button class="btn btn-primary" style="margin-top:16px;" onclick="openDocumentModal('add')">➕ Добавить документ</button>
+            </div>
+            <div id="docPreview" class="card" style="display:none;margin-top:16px;"></div>
+            <div id="documentModal" class="modal" style="display:none;"></div>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        container.innerHTML = `<div class="card error">Ошибка: ${error.message}</div>`;
+    }
+}
+
+// === Модальное окно документа ===
+
+window.openDocumentModal = function(mode, id, title, showClient, showManager) {
+    const modal = document.getElementById('documentModal');
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content" style="background:white;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;">
+            <h3>${mode === 'add' ? '➕ Новый документ' : '✏️ Редактировать'}</h3>
+            
+            <div class="form-group">
+                <label>Название:</label>
+                <input type="text" id="docTitle" value="${title || ''}" class="form-input" placeholder="Например: Оферта для клиентов">
+            </div>
+            
+            <div class="form-group">
+                <label>Где показывать:</label>
+                <div style="display:flex;gap:16px;">
+                    <label><input type="checkbox" id="docShowClient" ${showClient ? 'checked' : ''}> Клиентам</label>
+                    <label><input type="checkbox" id="docShowManager" ${showManager ? 'checked' : ''}> Менеджерам</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Файл (.txt):</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="docFileName" class="form-input" readonly placeholder="Файл не выбран" style="flex:1;">
+                    <input type="file" id="docFileInput" accept=".txt" style="display:none;" onchange="onFileSelected(this)">
+                    <button class="btn btn-secondary" onclick="document.getElementById('docFileInput').click()">📁 Выбрать</button>
+                    <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearFile()">✖</button>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Предпросмотр:</label>
+                <div id="docPreviewArea" style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;background:#f9fafb;min-height:60px;color:#9ca3af;">
+                    Текст появится здесь после выбора файла
+                </div>
+            </div>
+            
+            <div style="display:flex;gap:8px;margin-top:16px;">
+                <button class="btn btn-primary" onclick="saveDocument('${mode}', ${id || 0})">💾 Сохранить</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('documentModal').style.display='none'">Отмена</button>
+            </div>
+        </div>
+    `;
+    
+    // Клик вне модалки — закрыть
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+};
+
+window.onFileSelected = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    document.getElementById('docFileName').value = file.name;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('docPreviewArea');
+        preview.innerHTML = e.target.result.replace(/\n/g, '<br>');
+        preview.style.color = '#333';
+    };
+    reader.readAsText(file);
+};
+
+window.clearFile = function() {
+    document.getElementById('docFileName').value = '';
+    document.getElementById('docFileInput').value = '';
+    document.getElementById('docPreviewArea').innerHTML = 'Текст появится здесь после выбора файла';
+    document.getElementById('docPreviewArea').style.color = '#9ca3af';
+};
+
+window.saveDocument = async function(mode, id) {
+    const title = document.getElementById('docTitle').value.trim();
+    if (!title) { alert('Введите название'); return; }
+    
+    const showClient = document.getElementById('docShowClient').checked;
+    const showManager = document.getElementById('docShowManager').checked;
+    
+    if (!showClient && !showManager) {
+        if (!confirm('Документ нигде не будет показан. Продолжить?')) return;
+    }
+    
+    const fileInput = document.getElementById('docFileInput');
+    const file = fileInput.files[0];
+    
+    let content = '';
+    if (file) {
+        content = await file.text();
+    } else if (mode === 'edit') {
+        // Без нового файла — оставляем старый контент
+        content = '__KEEP__';
+    }
+    
+    const token = localStorage.getItem('admin_token');
+    const key = title.toLowerCase().replace(/\s+/g, '_').replace(/[^a-zа-я0-9_]/g, '').substring(0, 50) + '_' + Date.now();
+    
+    let url, method, body;
+    
+    if (mode === 'add') {
+        url = '/api/documents/admin';
+        method = 'POST';
+        body = { key, title, content, show_in_client: showClient, show_in_manager: showManager, sort_order: 0 };
+    } else {
+        url = `/api/documents/admin/${id}`;
+        method = 'PUT';
+        body = { title, show_in_client: showClient, show_in_manager: showManager };
+        if (content !== '__KEEP__') body.content = content;
+    }
+    
+    const response = await fetch(url, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+    });
+    
+    if (response.ok) {
+        document.getElementById('documentModal').style.display = 'none';
+        alert('✅ Документ сохранён');
+        loadView('documents');
+    } else {
+        const err = await response.json();
+        alert('❌ Ошибка: ' + (err.detail || 'сохранения'));
+    }
+};
+
+window.viewDocument = async function(id) {
+    const token = localStorage.getItem('admin_token');
+    const response = await fetch('/api/documents/admin/all', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    const doc = (data.documents || []).find(d => d.id === id);
+    
+    const preview = document.getElementById('docPreview');
+    if (doc && preview) {
+        preview.style.display = 'block';
+        preview.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h3>👁 ${doc.title}</h3>
+                <button class="btn btn-sm" onclick="document.getElementById('docPreview').style.display='none'">✕</button>
+            </div>
+            <p style="color:#6b7280;font-size:12px;">Клиент: ${doc.show_in_client ? 'Да' : 'Нет'} | Менеджер: ${doc.show_in_manager ? 'Да' : 'Нет'}</p>
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-top:8px;max-height:400px;overflow-y:auto;background:#fff;">
+                ${doc.content}
+            </div>
+        `;
+    }
+};
+
+window.deleteDocument = async function(id) {
+    if (!confirm('Удалить документ навсегда?')) return;
+    const token = localStorage.getItem('admin_token');
+    const response = await fetch(`/api/documents/admin/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (response.ok) {
+        alert('✅ Документ удалён');
+        loadView('documents');
+    } else {
+        alert('❌ Ошибка удаления');
+    }
+};
 
 window.createInviteLink = async function() {
     const phone = document.getElementById('invitePhone').value;

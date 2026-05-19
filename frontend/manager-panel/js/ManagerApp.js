@@ -602,6 +602,9 @@
                         <div class="menu-item" onclick="AquaGid.ManagerApp.switchSection('chat'); this.parentElement.parentElement.remove()">
                             💬 Чат
                         </div>
+                        <div class="menu-item" onclick="AquaGid.ManagerApp.showDocuments(); this.parentElement.parentElement.remove()">
+                            📜 Порядок работы с платформой
+                        </div>
                     </div>
                 `;
                 document.body.appendChild(menuDiv);
@@ -637,7 +640,23 @@
             }
         }
 
-
+        /**
+         * Показать документы (Порядок работы с платформой)
+         */
+        showDocuments() {
+            if (window.AquaGid?.Documentation) {
+                window.AquaGid.Documentation.isManager = true;
+                // Создаём контейнер для модалки (как в клиенте)
+                let container = document.getElementById('documentation-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'documentation-container';
+                    document.body.appendChild(container);
+                }
+                window.AquaGid.Documentation.render('documentation-container');
+                window.AquaGid.Documentation.toggle();
+            }
+        }
         
         /**
          * Рендер кнопок навигации

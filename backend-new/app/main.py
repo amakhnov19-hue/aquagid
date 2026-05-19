@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Импорты API
-from app.api import boats, availability, bookings, geocode, managers, messages
+from app.api import boats, availability, bookings, geocode, managers, messages, documents
 from app.api import settings_api
 from app.api import maintenance_api
 from app.api import admin_invites, admin_managers, admin_boats
@@ -57,6 +57,7 @@ app.include_router(geocode.router, prefix="/api")
 app.include_router(managers.router, prefix="/api")
 app.include_router(settings_api.router, prefix="/api")
 app.include_router(messages.router, prefix="/api/messages")
+app.include_router(documents.router, prefix="/api")
 from app.api import test_logs
 app.include_router(test_logs.router, prefix="/api")
 from app.api import terminal_pins
@@ -71,6 +72,7 @@ app.include_router(admin_auth.router, prefix="/api")
 app.include_router(admin_settings.router)
 app.include_router(admin_global_settings.router)
 app.include_router(admin_diagnostics.router)
+app.include_router(documents.router, prefix="/api")
 
 # Модуль синхронизации (Google Calendar, WebSocket)
 if sync_manager.enabled:

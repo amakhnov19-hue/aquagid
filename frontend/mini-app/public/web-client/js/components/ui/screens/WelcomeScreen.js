@@ -65,7 +65,7 @@ class WelcomeScreen extends ScreenBase {
 
                     <!-- Кнопка документации -->
                     <button class="btn-home btn-documentation" onclick="window.AquaGid.Documentation.toggle()">
-                        📚 Документация
+                        📜 Условия, права и согласия
                     </button>
                     <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
                         Договор оферты, политика конфиденциальности, согласие на обработку ПД — всё по 152-ФЗ
