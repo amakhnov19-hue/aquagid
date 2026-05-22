@@ -433,7 +433,7 @@ window.openDocumentModal = function(mode, id, title, showClient, showManager) {
                 <label>Файл (.txt):</label>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <input type="text" id="docFileName" class="form-input" readonly placeholder="Файл не выбран" style="flex:1;">
-                    <input type="file" id="docFileInput" accept=".txt" style="display:none;" onchange="onFileSelected(this)">
+                    <input type="file" id="docFileInput" accept=".txt,.docx" style="display:none;" onchange="onFileSelected(this)">
                     <button class="btn btn-secondary" onclick="document.getElementById('docFileInput').click()">📁 Выбрать</button>
                     <button class="btn btn-sm" style="background:#ef4444;color:white;" onclick="clearFile()">✖</button>
                 </div>
@@ -468,10 +468,20 @@ window.onFileSelected = function(input) {
     const reader = new FileReader();
     reader.onload = function(e) {
         const preview = document.getElementById('docPreviewArea');
-        preview.innerHTML = e.target.result.replace(/\n/g, '<br>');
+        if (file.name.endsWith('.docx')) {
+            // Для docx показываем имя файла (предпросмотр будет после сохранения)
+            preview.innerHTML = `<p>📄 Файл <strong>${file.name}</strong> загружен. Предпросмотр будет доступен после сохранения.</p>`;
+        } else {
+            preview.innerHTML = e.target.result.replace(/\n/g, '<br>');
+        }
         preview.style.color = '#333';
     };
-    reader.readAsText(file);
+    
+    if (file.name.endsWith('.docx')) {
+        reader.readAsBinaryString(file);
+    } else {
+        reader.readAsText(file);
+    }
 };
 
 window.clearFile = function() {
@@ -497,7 +507,20 @@ window.saveDocument = async function(mode, id) {
     
     let content = '';
     if (file) {
-        content = await file.text();
+        if (file.name.endsWith('.docx')) {
+            content = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const bytes = new Uint8Array(reader.result);
+                    let binary = '';
+                    bytes.forEach(b => binary += String.fromCharCode(b));
+                    resolve(btoa(binary)); // base64
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        } else {
+            content = await file.text();
+        }
     } else if (mode === 'edit') {
         // Без нового файла — оставляем старый контент
         content = '__KEEP__';

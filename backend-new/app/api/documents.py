@@ -21,6 +21,52 @@ def txt_to_html(txt: str) -> str:
     txt = txt.replace('\n', '<br>')
     return f'<p>{txt}</p>'
 
+def docx_to_html(file_bytes: bytes) -> str:
+    """Конвертирует .docx в HTML"""
+    from io import BytesIO
+    from docx import Document
+    
+    doc = Document(BytesIO(file_bytes))
+    html_parts = []
+    
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text:
+            html_parts.append('<br>')
+            continue
+        
+        # Определяем стиль
+        if para.style.name.startswith('Heading'):
+            level = para.style.name.split()[-1]
+            html_parts.append(f'<h{level}>{text}</h{level}>')
+        elif para.style.name == 'List Bullet':
+            html_parts.append(f'<li>{text}</li>')
+        elif para.style.name == 'List Number':
+            html_parts.append(f'<li>{text}</li>')
+        else:
+            html_parts.append(f'<p>{text}</p>')
+    
+    return '\n'.join(html_parts)
+
+import base64
+
+def decode_content(content: str) -> str:
+    """Если контент в base64 (docx) — декодируем и конвертируем"""
+    if not content:
+        return content
+    if content.startswith('PK'):
+        return docx_to_html(content.encode('latin-1'))
+    try:
+        # Пробуем base64
+        decoded = base64.b64decode(content)
+        if decoded[:2] == b'PK':
+            return docx_to_html(decoded)
+    except:
+        pass
+    if not re.search(r'<[^>]+>', content):
+        return txt_to_html(content)
+    return content
+
 
 # ========== ПУБЛИЧНЫЕ ==========
 
@@ -92,8 +138,8 @@ async def admin_create_document(
     """Создать документ (админ). Поля: key, title, content, show_in_client, show_in_manager, sort_order"""
     # Конвертируем .txt → HTML если контент не содержит HTML-тегов
     content = data.get("content", "")
-    if content and not re.search(r'<[^>]+>', content):
-        content = txt_to_html(content)
+    if content:
+        content = decode_content(content)
     
     result = await db.execute(
         text("""
@@ -123,8 +169,8 @@ async def admin_update_document(
 ):
     """Обновить документ (админ)"""
     content = data.get("content", "")
-    if content and not re.search(r'<[^>]+>', content):
-        content = txt_to_html(content)
+    if content:
+        content = decode_content(content)
     
     await db.execute(
         text("""
