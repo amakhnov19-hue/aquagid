@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="css/manager-card.css">
 </head>
 <body>
+    <button class="hamburger" id="hamburgerBtn" onclick="document.getElementById('sidebarMenu').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active');">☰</button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="document.getElementById('sidebarMenu').classList.remove('open'); this.classList.remove('active');"></div>
     <div id="app" class="app">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebarMenu">
             <div class="sidebar-header">
                 <h1>⚓ AquaGid</h1>
                 <p>Админ-панель</p>

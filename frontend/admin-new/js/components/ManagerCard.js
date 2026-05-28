@@ -51,6 +51,8 @@ class ManagerCard {
                 <div class="info-row"><span class="info-label">Статус:</span> ${m.is_blocked ? '🔴 Заблокирован' : '🟢 Активен'}</div>
                 <button class="btn-delete" onclick="window.ManagerCardInstance.deleteManager(${m.id})" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">🗑 Удалить менеджера</button>
                 <div class="info-row"><span class="info-label">Предоплата:</span> ${m.prepayment_percent || 20}%</div>
+                <div class="info-row"><span class="info-label">Реферальный код:</span> ${this.escapeHtml(m.referral_code) || '—'}</div>
+                <div class="info-row"><span class="info-label">Скидка по рефералу:</span> ${m.referral_discount_percent || 10}%</div>
                 <div class="info-row"><span class="info-label">Дата регистрации:</span> ${m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</div>
                 
                 <div style="margin-top: 20px; display: flex; gap: 10px;">
@@ -179,7 +181,40 @@ class ManagerCard {
             
             container.innerHTML = `
                 <div class="settings-tab">
-                    <h3>⚙️ Настройки менеджера (только для чтения)</h3>
+                    <h3>⚙️ Настройки менеджера</h3>
+                    
+                    <div class="settings-section" style="margin-top: 16px;">
+                        <h4 style="margin-bottom: 12px;">🔗 Реферальная программа</h4>
+                        <div class="form-group">
+                            <label>Реферальный код:</label>
+                            <input type="text" id="refCode" class="form-input" value="${this.escapeHtml(this.manager.referral_code || '')}" placeholder="Например: mysite2024">
+                        </div>
+                        <div id="refLinkBlock" style="margin-top: 8px; display: ${this.manager.referral_code ? 'block' : 'none'};">
+                            <label style="font-weight: 600; font-size: 13px;">🔗 Реферальная ссылка:</label>
+                            <div style="display: flex; gap: 8px; margin-top: 4px;">
+                                <input type="text" id="refLink" class="form-input" value="https://beta.24aquabooking.ru/?ref=${this.escapeHtml(this.manager.referral_code || '')}" readonly style="flex: 1; font-size: 12px;">
+                                <button onclick="navigator.clipboard.writeText(document.getElementById('refLink').value); alert('✅ Ссылка скопирована!');" style="padding: 6px 12px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: nowrap;">📋 Копировать</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Скидка по рефералу (%):</label>
+                            <input type="number" id="refDiscount" class="form-input" value="${this.manager.referral_discount_percent || 10}" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Режим показа катеров:</label>
+                            <select id="refMode" class="form-input">
+                                <option value="all_boats" ${(this.manager.referral_mode || 'all_boats') === 'all_boats' ? 'selected' : ''}>🌐 Все катера (скидка больше)</option>
+                                <option value="own_only" ${this.manager.referral_mode === 'own_only' ? 'selected' : ''}>🚤 Только свои катера (скидка меньше)</option>
+                            </select>
+                            <small style="color: #666; display: block; margin-top: 4px;">Как показывать катера при переходе по реферальной ссылке</small>
+                        </div>
+                        <button class="btn-save-settings" onclick="window.ManagerCardInstance.saveReferralSettings()">💾 Сохранить реферальные настройки</button>
+                        <div id="refSaveStatus" style="margin-top: 8px; font-size: 13px;"></div>
+                    </div>
+                    
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                    
+                    <h4 style="margin-bottom: 12px;">📋 Основные настройки (только чтение)</h4>
                     <div class="info-row"><span class="info-label">Сезон:</span> ${settings.season_start || '—'} — ${settings.season_end || '—'}</div>
                     <div class="info-row"><span class="info-label">Рабочее время:</span> ${settings.work_start || '—'} — ${settings.work_end || '—'}</div>
                     <div class="info-row"><span class="info-label">Макс. длительность:</span> ${settings.max_duration || '—'} ч</div>
@@ -192,6 +227,59 @@ class ManagerCard {
         } catch (error) {
             console.error('Ошибка загрузки настроек:', error);
             container.innerHTML = '<div class="error-message">❌ Ошибка загрузки настроек</div>';
+        }
+    }
+
+    async saveReferralSettings() {
+        const token = localStorage.getItem('admin_token');
+        const refCode = document.getElementById('refCode')?.value?.trim() || '';
+        const refDiscount = parseInt(document.getElementById('refDiscount')?.value) || 10;
+        
+        const status = document.getElementById('refSaveStatus');
+        
+        try {
+            const response = await fetch(`/api/admin/managers/${this.manager.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    referral_code: refCode || null,
+                    referral_discount_percent: refDiscount,
+                    referral_mode: document.getElementById('refMode')?.value || 'all_boats'
+                })
+            });
+            
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || 'Ошибка сохранения');
+            }
+            
+            // Обновляем локальные данные
+            this.manager.referral_code = refCode || null;
+            // Обновляем ссылку
+            const refLinkBlock = document.getElementById('refLinkBlock');
+            const refLink = document.getElementById('refLink');
+            if (refLinkBlock && refLink) {
+                if (refCode) {
+                    refLinkBlock.style.display = 'block';
+                    refLink.value = `https://beta.24aquabooking.ru/?ref=${refCode}`;
+                } else {
+                    refLinkBlock.style.display = 'none';
+                }
+            }
+            this.manager.referral_discount_percent = refDiscount;
+            this.manager.referral_mode = document.getElementById('refMode')?.value || 'all_boats';
+            
+            if (status) {
+                status.innerHTML = '<span style="color: #10b981;">✅ Настройки сохранены</span>';
+                setTimeout(() => { status.innerHTML = ''; }, 2000);
+            }
+        } catch (error) {
+            if (status) {
+                status.innerHTML = `<span style="color: #ef4444;">❌ ${error.message}</span>`;
+            }
         }
     }
 

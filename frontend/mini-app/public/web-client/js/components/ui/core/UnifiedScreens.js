@@ -29,10 +29,25 @@ class UnifiedScreens {
         // Инициализируем экраны
         this.initScreens();
 
+        // Сохраняем реферальный код из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+        if (refCode) {
+            localStorage.setItem('aquagid-ref', refCode);
+            console.log('🔗 Реферальный код сохранён:', refCode);
+        } else if (localStorage.getItem('aquagid-ref')) {
+            localStorage.removeItem('aquagid-ref');
+            console.log('🔗 Реферальный код удалён (заход без ref)');
+        }
+
         // Обработка кнопки "Назад" браузера
         window.addEventListener('popstate', (e) => {
             if (e.state?.screen) {
                 this.navigateToScreen(e.state.screen);
+            } else {
+                // Конец истории — показываем приветствие вместо выхода
+                e.preventDefault();
+                this.showWelcomeScreen();
             }
         });        
     }
@@ -54,49 +69,77 @@ class UnifiedScreens {
 
     navigateToScreen(screen) {
         switch(screen) {
-            case 'welcome': this.welcomeScreen.show(); break;
+            case 'welcome': this.showWelcomeScreen(); break;
             case 'date': this.showDateSelection(); break;
             case 'time': this.showTimeSelection(); break;
             case 'duration': this.showDurationSelection(); break;
             case 'boat': this.showBoatSelection(); break;
             case 'quick': this.showQuickScreen(); break;
             case 'confirmation': this.showConfirmationScreen(); break;
+            case 'mybookings': this.showMyBookings(); break;
+            case 'notifications': 
+                this.welcomeScreen.toggleClientNotifications(); 
+                break; 
+            case 'chat':
+                window.AquaGid?.SupportChat?.toggle();
+                break;
+            case 'docs':
+                window.AquaGid?.Documentation?.close();
+                break;
+            case 'bookingdetail':
+                this.showMyBookings();
+                break;
+            case 'success':
+                // Если пришли из Моих бронирований — возвращаемся в список
+                this.showMyBookings();
+                break;                       
+            default: this.showWelcomeScreen(); break;
         }
     }
 
-    /**
-     * Старт бронирования
-     */
-    startBooking(mode = 'quick') {
+        startBooking(mode = 'quick') {
         console.log('🚀 startBooking', mode);
+
+        // Проверяем, приняты ли условия
+        if (!localStorage.getItem('aquagid-docs-accepted')) {
+            alert('📜 Пожалуйста, примите условия использования внизу экрана.');
+            return;
+        }
         
         this.resetBooking();
         this.currentFlow = mode;
         
+        // Пушим welcome как базовое состояние
+        history.pushState({ screen: 'welcome' }, '', window.location.pathname);
+        
         if (mode === 'fromDate') {
-            this.showDateSelection();
+            this.showDateSelection(); // внутри уже пушит 'date'
         } else if (mode === 'fromBoat') {
-            this.showBoatSelection();
+            this.showBoatSelection(); // внутри уже пушит 'boat'
         } else if (mode === 'quick') {
-            this.showQuickScreen();  // ← вместо showBoatSelection()
+            this.showQuickScreen();   // внутри уже пушит 'quick'
         }
     }
 
     showQuickScreen() {
-        console.log('⚡ showQuickScreen');
-        if (this.quickScreen) {
-            this.quickScreen.show();
-        } else {
-            this.quickScreen = new QuickScreen(this);
-            this.quickScreen.show();
+        if (history.state?.screen !== 'quick') {
+            history.pushState({ screen: 'quick' }, '', window.location.pathname);
         }
+        console.log('⚡ showQuickScreen');
+        if (!this.quickScreen) {
+            this.quickScreen = new QuickScreen(this);
+        }
+        this.quickScreen.show();
     }
 
     /**
      * Показать экран приветствия
      */
     showWelcomeScreen() {
-        history.pushState({ screen: 'welcome' }, '', window.location.pathname);
+        // Не пушим новую запись, если мы уже на приветствии (защита от двойного pushState)
+        if (history.state?.screen !== 'welcome') {
+            history.pushState({ screen: 'welcome' }, '', window.location.pathname);
+        }
         this.resetBooking();
         this.welcomeScreen.show();
     }
@@ -105,14 +148,14 @@ class UnifiedScreens {
      * Показать экран выбора даты
      */
     showDateSelection() {
-        history.pushState({ screen: 'date' }, '', window.location.pathname);
+        if (history.state?.screen !== 'date') {
+            history.pushState({ screen: 'date' }, '', window.location.pathname);
+        }
         console.log('📅 showDateSelection');
         
         if (this.currentFlow === 'bridges') {
-            // Для ветки развода мостов используем специальный экран
             this.dateScreen.showBridgesMode();
         } else {
-            // Обычный режим
             this.dateScreen.show();
         }
     }
@@ -121,82 +164,63 @@ class UnifiedScreens {
      * Показать экран выбора катера
      */
     showBoatSelection() {
-        history.pushState({ screen: 'boat' }, '', window.location.pathname);
+        if (history.state?.screen !== 'boat') {
+            history.pushState({ screen: 'boat' }, '', window.location.pathname);
+        }
         console.log('🚤 showBoatSelection, flow:', this.currentFlow);
         
-        if (this.currentFlow === 'fromBoat') {
-            // Ветка "от катера" - показываем все катера
-            if (this.boatScreen) {
-                this.boatScreen.show();
-            } else {
-                console.error('❌ BoatScreen не инициализирован');
-                this.boatScreen = new BoatScreen(this);
-                this.boatScreen.show();
-            }
-        } else {
-            // Ветка "от даты" или другие - показываем доступные по времени
-            if (this.boatScreen) {
-                this.boatScreen.show();
-            } else {
-                console.error('❌ BoatScreen не инициализирован');
-                this.boatScreen = new BoatScreen(this);
-                this.boatScreen.show();
-            }
+        if (!this.boatScreen) {
+            this.boatScreen = new BoatScreen(this);
         }
+        this.boatScreen.show();
     }
 
         /**
      * Показать экран выбора времени
      */
     showTimeSelection() {
-        history.pushState({ screen: 'time' }, '', window.location.pathname);
-        console.log('⏰ showTimeSelection');
-        if (this.timeScreen) {
-            this.timeScreen.show();
-        } else {
-            console.error('❌ TimeScreen не инициализирован');
-            // На всякий случай создаем экран
-            this.timeScreen = new TimeScreen(this);
-            this.timeScreen.show();
+        if (history.state?.screen !== 'time') {
+            history.pushState({ screen: 'time' }, '', window.location.pathname);
         }
+        console.log('⏰ showTimeSelection');
+        if (!this.timeScreen) {
+            this.timeScreen = new TimeScreen(this);
+        }
+        this.timeScreen.show();
     }
 
     /**
      * Показать экран выбора длительности
      */
     showDurationSelection() {
-        history.pushState({ screen: 'duration' }, '', window.location.pathname);
-        console.log('⏱️ showDurationSelection');
-        if (this.durationScreen) {
-            this.durationScreen.show();
-        } else {
-            console.error('❌ DurationScreen не инициализирован');
-            this.durationScreen = new DurationScreen(this);
-            this.durationScreen.show();
+        if (history.state?.screen !== 'duration') {
+            history.pushState({ screen: 'duration' }, '', window.location.pathname);
         }
+        console.log('⏱️ showDurationSelection');
+        if (!this.durationScreen) {
+            this.durationScreen = new DurationScreen(this);
+        }
+        this.durationScreen.show();
     }
 
     showConfirmationScreen() {
-        history.pushState({ screen: 'confirmation' }, '', window.location.pathname);
-        console.log('✅ showConfirmationScreen');
-        if (this.confirmationScreen) {
-            this.confirmationScreen.show();
-        } else {
-            console.error('❌ ConfirmationScreen не инициализирован');
-            this.confirmationScreen = new ConfirmationScreen(this);
-            this.confirmationScreen.show();
+        if (history.state?.screen !== 'confirmation') {
+            history.pushState({ screen: 'confirmation' }, '', window.location.pathname);
         }
+        console.log('✅ showConfirmationScreen');
+        if (!this.confirmationScreen) {
+            this.confirmationScreen = new ConfirmationScreen(this);
+        }
+        this.confirmationScreen.show();
     }
 
     showSuccessScreen(options = {}) {
+        history.pushState({ screen: 'success' }, '', window.location.pathname);
         console.log('🎉 showSuccessScreen', options);
-        if (this.successScreen) {
-            this.successScreen.show(options);
-        } else {
-            console.error('❌ SuccessScreen не инициализирован');
+        if (!this.successScreen) {
             this.successScreen = new SuccessScreen(this);
-            this.successScreen.show(options);
         }
+        this.successScreen.show(options);
     }
 
     /**
@@ -241,73 +265,14 @@ class UnifiedScreens {
     }
 
     /**
-     * Навигация до причала - меню выбора навигатора
-     */
-    navigateToPier() {
-        console.log('🧭 navigateToPier');
-        
-        const boat = this.booking?.boat;
-        const address = boat?.boarding_address || 'Санкт-Петербург, наб. реки Фонтанки, 123';
-        const coordinates = boat?.boarding_coordinates || '59.9398,30.3146';
-        
-        // Создаем меню выбора
-        const choice = prompt(
-            `🗺️ Построить маршрут до причала:\n\n` +
-            `📍 Адрес: ${address}\n\n` +
-            `Выберите навигатор (введите номер):\n` +
-            `1 - Яндекс.Навигатор (приложение)\n` +
-            `2 - Яндекс.Карты (браузер)\n` +
-            `3 - Google Maps (браузер)\n` +
-            `4 - 2ГИС (браузер)\n` +
-            `0 - ❌ Отмена`
-        );
-        
-        let url;
-        
-        switch(choice) {
-            case '1': // Яндекс.Навигатор
-                url = `yandexnavi://show_point_on_map?addr=${encodeURIComponent(address)}&lat=${coordinates.split(',')[0]}&lon=${coordinates.split(',')[1]}`;
-                window.location.href = url;
-                
-                // Fallback если навигатор не установлен
-                setTimeout(() => {
-                    const fallbackUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-                    if (confirm('Яндекс.Навигатор не найден. Открыть в Яндекс.Картах?')) {
-                        window.open(fallbackUrl, '_blank');
-                    }
-                }, 500);
-                break;
-                
-            case '2': // Яндекс.Карты
-                url = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}`;
-                window.open(url, '_blank');
-                break;
-                
-            case '3': // Google Maps
-                url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
-                window.open(url, '_blank');
-                break;
-                
-            case '4': // 2ГИС
-                url = `https://2gis.ru/geo/${encodeURIComponent(address)}`;
-                window.open(url, '_blank');
-                break;
-                
-            default: // 0 или отмена
-                console.log('❌ Навигация отменена пользователем');
-                break;
-        }
-    }
-
-    /**
      * Показать меню выбора навигатора
      */
     showNavigationMenu() {
         console.log('🧭 showNavigationMenu');
         
         const boat = this.booking?.boat;
-        const address = boat?.boarding_address || 'Санкт-Петербург, наб. реки Фонтанки, 123';
-        const coordinates = boat?.boarding_coordinates || '59.9398,30.3146';
+        const address = boat?.boarding_address || 'Санкт-Петербург, наб. реки Мойки, 17';
+        const coordinates = boat?.boarding_coordinates || '59.9405,30.3168';
         
         // Удаляем предыдущее меню если было
         const oldMenu = document.getElementById('navigation-menu-overlay');
@@ -403,16 +368,105 @@ class UnifiedScreens {
     /**
      * Навигация до причала (вызывает меню)
      */
-    navigateToPier() {
+        navigateToPier() {
         console.log('🧭 navigateToPier');
+        if (localStorage.getItem('aquagid-geo-accepted') !== 'true') {
+            this.showManualAddressForRoute();
+            return;
+        }
         this.showNavigationMenu();
     }
 
+    /**
+     * Показать поле ввода адреса для построения маршрута
+     */
+    showManualAddressForRoute() {
+        const boat = this.booking?.boat;
+        const pierAddress = boat?.boarding_address || 'Санкт-Петербург, наб. реки Мойки, 17';
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'route-address-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+        
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:12px;padding:20px;width:90%;max-width:400px;text-align:center;">
+                <p style="font-weight:600;margin-bottom:12px;">🗺️ Введите ваш адрес</p>
+                <p style="font-size:13px;color:#666;margin-bottom:4px;">До причала:</p>
+                <p style="font-size:13px;font-weight:600;margin-bottom:12px;">📍 ${pierAddress}</p>
+                <input type="text" id="route-manual-address" placeholder="Ваш адрес" style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;font-size:14px;">
+                <button id="route-build-btn" style="width:100%;padding:10px;background:#0066cc;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;">
+                    🗺️ Выбрать навигатор
+                </button>
+                <button onclick="document.getElementById('route-address-overlay').remove()" style="width:100%;padding:8px;background:none;color:#999;border:none;margin-top:8px;font-size:13px;">
+                    Отмена
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+        
+        document.getElementById('route-build-btn').addEventListener('click', () => {
+            const userAddress = document.getElementById('route-manual-address').value.trim();
+            if (!userAddress) {
+                alert('Введите адрес');
+                return;
+            }
+            overlay.remove();
+            // Показываем стандартное меню навигаторов с маршрутом от адреса до причала
+            this.showNavigationMenuWithAddress(userAddress, pierAddress);
+        });
+    }
+
+    /**
+     * Показать меню навигаторов с маршрутом от адреса до причала
+     */
+    showNavigationMenuWithAddress(fromAddress, toAddress) {
+        const menuHTML = `
+            <div id="navigation-menu-overlay" class="navigation-menu-overlay" onclick="if(event.target === this) window.AquaGid.UnifiedScreens.closeNavigationMenu()">
+                <div class="navigation-menu">
+                    <div class="navigation-menu-header">
+                        <h3>🗺️ Маршрут до причала</h3>
+                        <p style="font-size:12px;">От: ${fromAddress}</p>
+                        <p>📍 ${toAddress}</p>
+                    </div>
+                    
+                    <div class="navigation-menu-items">
+                        <button class="nav-item yandex-nav" onclick="window.open('https://yandex.ru/maps/?mode=routes&rtext=${encodeURIComponent(fromAddress)}~${encodeURIComponent(toAddress)}&rtt=pd', '_blank')"
+                            <span class="nav-icon">🗺️</span>
+                            <span class="nav-text">Яндекс.Карты<small>откроется в браузере</small></span>
+                        </button>
+                        
+                        <button class="nav-item google-maps" onclick="window.open('https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromAddress)}&destination=${encodeURIComponent(toAddress)}&travelmode=walking', '_blank')">
+                            <span class="nav-icon">📍</span>
+                            <span class="nav-text">Google Maps<small>откроется в браузере</small></span>
+                        </button>
+                        
+                        <button class="nav-item dgis" onclick="window.open('https://2gis.ru/routeSearch/rsType/car/to/${encodeURIComponent(toAddress)}', '_blank')">
+                            <span class="nav-icon">🏢</span>
+                            <span class="nav-text">2ГИС<small>откроется в браузере</small></span>
+                        </button>
+                    </div>
+                    
+                    <button class="nav-item-cancel" onclick="window.AquaGid.UnifiedScreens.closeNavigationMenu()">
+                        ❌ Отмена
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', menuHTML);
+    }
+
     showMyBookings() {
-        console.log('📋 showMyBookings');
-        if (this.myBookingsScreen) {
-            this.myBookingsScreen.show();
+        if (history.state?.screen !== 'mybookings') {
+            history.pushState({ screen: 'mybookings' }, '', window.location.pathname);
         }
+        console.log('📋 showMyBookings');
+        if (!this.myBookingsScreen) {
+            this.myBookingsScreen = new MyBookingsScreen(this);
+        }
+        this.myBookingsScreen.show();
     }
 
     /**

@@ -63,13 +63,15 @@ class WelcomeScreen extends ScreenBase {
                         Просмотр, отмена и управление бронированиями
                     </p>
 
-                    <!-- Кнопка документации -->
-                    <button class="btn-home btn-documentation" onclick="window.AquaGid.Documentation.toggle()">
-                        📜 Условия, права и согласия
-                    </button>
-                    <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
-                        Договор оферты, политика конфиденциальности, согласие на обработку ПД — всё по 152-ФЗ
-                    </p>
+                    <!-- Кнопка документации (показывается только после принятия согласий) -->
+                    <div id="docs-button-wrapper" style="display: ${localStorage.getItem('aquagid-docs-accepted') ? 'block' : 'none'};">
+                        <button class="btn-home btn-documentation" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle()">
+                            📜 Условия, права и согласия
+                        </button>
+                        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
+                            Договор оферты, политика конфиденциальности, согласие на обработку ПД — всё по 152-ФЗ
+                        </p>
+                    </div>
                     
                     <!-- Информационный блок -->
                     <div class="info-block">
@@ -77,6 +79,34 @@ class WelcomeScreen extends ScreenBase {
                             🕒 Ежедневно с <span id="work-time-display">09:00 до 24:00</span><br>
                             ⚓ Посадка с набережных СПб
                         </p>
+                    </div>
+
+                    <!-- Баннер согласий -->
+                    <div id="consent-banner" class="consent-banner" style="display: ${localStorage.getItem('aquagid-docs-accepted') ? 'none' : 'block'}; background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 16px 0; text-align: left; font-size: 13px; border: 1px solid #e0e0e0;">
+                        <p style="margin: 0 0 12px 0; font-weight: 600;">📜 Условия использования</p>
+                        
+                        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; cursor: pointer;">
+                            <input type="checkbox" id="consent-terms" onchange="window.AquaGid.UnifiedScreens.welcomeScreen.updateConsentButton()" style="margin-top: 2px;">
+                            <span>Принимаю <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle(); return false;" style="color: #0066cc;">условия и оферту</a></span>
+                        </label>
+                        
+                        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                            <input type="checkbox" id="consent-geo" style="margin-top: 2px;">
+                            <span>Согласен на определение местоположения (для поиска ближайших катеров и маршрута до причала; координаты не сохраняются)</span>
+                        </label>
+                        
+                        <button id="consent-continue" onclick="window.AquaGid.UnifiedScreens.welcomeScreen.acceptConsents()" disabled
+                            style="width: 100%; padding: 10px; background: #0066cc; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; opacity: 0.5;">
+                            Продолжить
+                        </button>
+                    </div>
+                    
+                    <!-- ВРЕМЕННАЯ кнопка сброса согласий (удалить после теста) -->
+                    <div style="text-align:center;margin-top:8px;">
+                        <a href="javascript:void(0)" onclick="localStorage.removeItem('aquagid-docs-accepted');localStorage.removeItem('aquagid-geo-accepted');location.reload();" 
+                            style="display:inline-block;padding:6px 14px;background:#dc3545;color:white;border-radius:20px;text-decoration:none;font-size:12px;">
+                            🔄 Сбросить согласия (тест)
+                        </a>
                     </div>
 
                     <!-- Кнопка полной перезагрузки -->
@@ -101,6 +131,53 @@ class WelcomeScreen extends ScreenBase {
             }
         }, 500);
         
+    }
+
+    /**
+     * Обновить состояние кнопки "Продолжить" в баннере согласий
+     */
+    updateConsentButton() {
+        const termsChecked = document.getElementById('consent-terms')?.checked;
+        const btn = document.getElementById('consent-continue');
+        if (btn) {
+            btn.disabled = !termsChecked;
+            btn.style.opacity = termsChecked ? '1' : '0.5';
+        }
+    }
+
+    /**
+     * Принять согласия и скрыть баннер
+     */
+    acceptConsents() {
+        const termsChecked = document.getElementById('consent-terms')?.checked;
+        const geoChecked = document.getElementById('consent-geo')?.checked;
+        
+        if (!termsChecked) return;
+        
+        // Сохраняем принятие условий
+        const accepted = {
+            rules: true,
+            offer: true,
+            date: new Date().toISOString()
+        };
+        localStorage.setItem('aquagid-docs-accepted', JSON.stringify(accepted));
+        
+        // Сохраняем согласие на геолокацию
+        if (geoChecked) {
+            localStorage.setItem('aquagid-geo-accepted', 'true');
+        }
+        
+        // Скрываем баннер
+        const banner = document.getElementById('consent-banner');
+        if (banner) {
+            banner.style.display = 'none';
+        }
+
+        // Показываем кнопку документации
+        const docsBtn = document.getElementById('docs-button-wrapper');
+        if (docsBtn) {
+            docsBtn.style.display = 'block';
+        }
     }
 
     async loadClientNotifications() {
@@ -133,7 +210,7 @@ class WelcomeScreen extends ScreenBase {
         const isOpening = list.style.display === 'none';
         
         if (isOpening) {
-            // При открытии всегда показываем новые
+            history.pushState({ screen: 'notifications' }, '', window.location.pathname);
             this._showingHistory = false;
         }
         

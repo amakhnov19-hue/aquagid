@@ -27,6 +27,7 @@ class Booking(Base):
     
     # Клиентские данные
     client_name = Column(String(255), nullable=True)
+    client_passengers = Column(Integer, default=1)
     client_phone = Column(String(50), nullable=True)
     client_telegram = Column(String(100), nullable=True)
     client_messenger_type = Column(String(10), nullable=True)
@@ -42,5 +43,6 @@ class Booking(Base):
     cancelled_at = Column(DateTime, nullable=True)
     hidden_for_client = Column(Boolean, default=False)
     source = Column(String(20), default='manual')
+    ref_code = Column(String(50), nullable=True)
     google_event_id = Column(String(255), nullable=True)
     viewed_at = Column(DateTime, nullable=True)

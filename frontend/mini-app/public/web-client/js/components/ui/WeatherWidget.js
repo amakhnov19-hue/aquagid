@@ -13,32 +13,10 @@ class WeatherWidget {
     }
 
     async init() {
-        await this.getUserLocation();
         await this.fetchWeather();
         this.render();
         // updateDisplay() вызовется внутри fetchWeather() после получения данных
         setInterval(() => this.fetchWeather(), 30 * 60 * 1000);
-    }
-
-    getUserLocation() {
-        return new Promise((resolve) => {
-            if (!navigator.geolocation) {
-                console.log('Геолокация не поддерживается, используем СПб');
-                resolve();
-                return;
-            }
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    this.latitude = position.coords.latitude;
-                    this.longitude = position.coords.longitude;
-                    resolve();
-                },
-                () => {
-                    console.log('Не удалось получить геолокацию, используем СПб');
-                    resolve();
-                }
-            );
-        });
     }
 
     async fetchWeather() {

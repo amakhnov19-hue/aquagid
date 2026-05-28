@@ -93,6 +93,7 @@
             }
             
             if (this.isOpen) {
+                history.pushState({ screen: 'chat' }, '', window.location.pathname);
                 this.loadHistory().then(() => {
                     const msgContainer = document.getElementById('support-chat-messages');
                     if (msgContainer) {
@@ -167,12 +168,13 @@
             if (!clientPhone || !clientName) {
                 const name = prompt('Ваше имя:');
                 if (!name) return;
-                const phone = prompt('Ваш телефон:', '+7');
+                // Показываем модальное окно для ввода телефона
+                const phone = await this.showPhoneModal();
                 if (!phone) return;
-                
+
                 clientPhone = phone.replace(/\D/g, '');
                 if (clientPhone.length < 10) {
-                    alert('Введите корректный телефон');
+                    alert('Введите корректный телефон (минимум 10 цифр)');
                     return;
                 }
                 
@@ -327,200 +329,10 @@
         }
         
         /**
-         * Добавить стили для чата
+         * Стили подгружаются через index.html (css/support-chat.css)
          */
         injectStyles() {
-            const styleId = 'support-chat-styles';
-            
-            // Удаляем предыдущие стили если есть
-            const oldStyle = document.getElementById(styleId);
-            if (oldStyle) oldStyle.remove();
-            
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.textContent = `
-                .support-chat {
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    z-index: 9999;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                }
-                
-                .support-chat__button {
-                    width: 60px;
-                    height: 60px;
-                    border-radius: 50%;
-                    background: #0066CC;
-                    color: white;
-                    border: none;
-                    box-shadow: 0 4px 12px rgba(0,102,204,0.3);
-                    cursor: pointer;
-                    font-size: 24px;
-                    position: relative;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                }
-                
-                .support-chat__button:hover {
-                    transform: scale(1.1);
-                    box-shadow: 0 6px 16px rgba(0,102,204,0.4);
-                }
-                
-                .support-chat__badge {
-                    position: absolute;
-                    top: -5px;
-                    right: -5px;
-                    background: #DC3545;
-                    color: white;
-                    border-radius: 50%;
-                    width: 22px;
-                    height: 22px;
-                    font-size: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border: 2px solid white;
-                }
-                
-                .support-chat__window {
-                    position: absolute;
-                    bottom: 80px;
-                    right: 0;
-                    width: 320px;
-                    height: 450px;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-                    display: none;
-                    flex-direction: column;
-                    overflow: hidden;
-                }
-                
-                .support-chat__window.open {
-                    display: flex;
-                }
-                
-                .support-chat__header {
-                    background: #0066CC;
-                    color: white;
-                    padding: 15px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-                
-                .support-chat__title {
-                    font-weight: 600;
-                    font-size: 16px;
-                }
-                
-                .support-chat__close {
-                    background: none;
-                    border: none;
-                    color: white;
-                    font-size: 20px;
-                    cursor: pointer;
-                    opacity: 0.8;
-                }
-                
-                .support-chat__close:hover {
-                    opacity: 1;
-                }
-                
-                .support-chat__messages {
-                    flex: 1;
-                    padding: 15px;
-                    overflow-y: auto;
-                    background: #f5f5f5;
-                }
-                
-                .support-chat__message {
-                    display: flex;
-                    margin-bottom: 15px;
-                    gap: 8px;
-                }
-                
-                .support-chat__message--user {
-                    justify-content: flex-end;
-                }
-                
-                .support-chat__avatar {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    background: #e0e0e0;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 18px;
-                }
-                
-                .support-chat__bubble {
-                    max-width: 70%;
-                    padding: 10px 12px;
-                    border-radius: 16px;
-                    background: white;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    word-wrap: break-word;
-                }
-                
-                .support-chat__message--support .support-chat__bubble {
-                    background: white;
-                    border-bottom-left-radius: 4px;
-                }
-                
-                .support-chat__message--user .support-chat__bubble {
-                    background: #0066CC;
-                    color: white;
-                    border-bottom-right-radius: 4px;
-                }
-                
-                .support-chat__input {
-                    padding: 12px;
-                    background: white;
-                    border-top: 1px solid #eee;
-                    display: flex;
-                    gap: 8px;
-                }
-                
-                .support-chat__input input {
-                    flex: 1;
-                    padding: 8px 12px;
-                    border: 1px solid #ddd;
-                    border-radius: 20px;
-                    outline: none;
-                    font-size: 14px;
-                }
-                
-                .support-chat__input input:focus {
-                    border-color: #0066CC;
-                }
-                
-                .support-chat__input button {
-                    width: 36px;
-                    height: 36px;
-                    border-radius: 50%;
-                    background: #0066CC;
-                    color: white;
-                    border: none;
-                    cursor: pointer;
-                    transition: background 0.2s;
-                }
-                
-                .support-chat__input button:hover {
-                    background: #0052a3;
-                }
-                
-                @media (max-width: 480px) {
-                    .support-chat__window {
-                        width: calc(100vw - 40px);
-                        height: 60vh;
-                        right: 20px;
-                    }
-                }
-            `;
-            
-            document.head.appendChild(style);
+            // Стили теперь в отдельном файле, подключаемом в index.html
         }
         
         /**
@@ -538,6 +350,65 @@
          */
         setApiEndpoint(endpoint) {
             this.config.apiEndpoint = endpoint;
+        }
+
+        /**
+         * Показывает модальное окно для ввода телефона
+         * @returns {Promise<string|null>} - телефон или null если отмена
+         */
+        async showPhoneModal() {
+            return new Promise((resolve) => {
+                // Создаём оверлей
+                const overlay = document.createElement('div');
+                overlay.className = 'phone-modal-overlay';
+                overlay.innerHTML = `
+                    <div class="phone-modal">
+                        <div class="phone-modal-header">📱 Ваш телефон для связи</div>
+                        <div class="phone-modal-body">
+                            <input type="tel" 
+                                id="phone-modal-input" 
+                                class="phone-modal-input" 
+                                placeholder="+7 (___) ___-__-__" 
+                                autofocus>
+                            <div class="phone-modal-hint">Введите номер в международном формате</div>
+                        </div>
+                        <div class="phone-modal-footer">
+                            <button class="phone-modal-btn phone-modal-cancel">Отмена</button>
+                            <button class="phone-modal-btn phone-modal-ok">Продолжить</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                const input = document.getElementById('phone-modal-input');
+                const okBtn = overlay.querySelector('.phone-modal-ok');
+                const cancelBtn = overlay.querySelector('.phone-modal-cancel');
+
+                // Обработка подтверждения
+                const submit = () => {
+                    const value = input.value.trim();
+                    document.body.removeChild(overlay);
+                    resolve(value || null);
+                };
+
+                // Обработка отмены
+                const cancel = () => {
+                    document.body.removeChild(overlay);
+                    resolve(null);
+                };
+
+                okBtn.addEventListener('click', submit);
+                cancelBtn.addEventListener('click', cancel);
+                
+                // Enter — подтвердить, Escape — отменить
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') submit();
+                    if (e.key === 'Escape') cancel();
+                });
+
+                // Фокус на поле
+                setTimeout(() => input.focus(), 100);
+            });
         }
     }
     

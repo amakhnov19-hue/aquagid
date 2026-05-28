@@ -33,3 +33,7 @@ class Manager(Base):
     deleted_at = Column(DateTime, nullable=True)
 
     prepayment_percent = Column(Integer, default=20)
+
+    referral_code = Column(String(50), unique=True, nullable=True)
+    referral_discount_percent = Column(Integer, default=10)
+    referral_mode = Column(String(20), default='all_boats')  # 'own_only' или 'all_boats'

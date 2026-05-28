@@ -772,6 +772,13 @@ document.querySelector('.nav').addEventListener('click', (e) => {
     item.classList.add('active');
     currentView = item.dataset.view;
     loadView(currentView);
+    // Закрываем sidebar на мобильном
+    document.getElementById('sidebarMenu').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    logout();
 });
 
 document.getElementById('logoutBtn').addEventListener('click', () => {

@@ -68,6 +68,7 @@ async def create_booking(
     
     # Единый калькулятор цен
     from app.services.price_calculator import calculate
+    from app.models.manager_model import Manager as ManagerModel
     
     price_per_hour = float(boat.price_per_hour) if boat.price_per_hour else 0
     hours = booking.duration_minutes / 60
@@ -78,17 +79,35 @@ async def create_booking(
     global_row = global_result.fetchone()
     prepayment_percent = global_row[0] if global_row and global_row[0] else 15
 
-    print(f"🔍 DEBUG CALC: price_per_hour={price_per_hour}, hours={hours}, prepayment_percent={prepayment_percent}, result_total={price_per_hour * hours}, result_prepayment={price_per_hour * hours * prepayment_percent / 100}", flush=True)
+    # Проверяем реферальный код (если передан)
+    referral_discount_percent = 0
+    ref_code = booking.model_dump().get('ref_code') if hasattr(booking, 'model_dump') else None
+    if ref_code:
+        ref_manager = await db.execute(
+            select(ManagerModel).where(
+                ManagerModel.referral_code == ref_code,
+                ManagerModel.id == boat.manager_id,
+                ManagerModel.status == 'active'
+            )
+        )
+        ref_manager = ref_manager.scalar_one_or_none()
+        if ref_manager:
+            referral_discount_percent = ref_manager.referral_discount_percent or 10
+            print(f"🔗 Реферальная скидка применена: {referral_discount_percent}% (менеджер: {ref_manager.full_name})")
+
+    print(f"🔍 DEBUG CALC: price_per_hour={price_per_hour}, hours={hours}, prepayment_percent={prepayment_percent}, referral_discount={referral_discount_percent}", flush=True)
     
-    result = calculate(price_per_hour, hours, prepayment_percent)
+    result = calculate(price_per_hour, hours, prepayment_percent, referral_discount_percent)
     
     # Создаем бронирование
     db_booking = BookingModel(
+        ref_code=ref_code,
         boat_id=booking.boat_id,
         booking_date=booking.booking_date,
         start_time=booking.start_time,
         duration_minutes=booking.duration_minutes,
         client_name=booking.client_name,
+        client_passengers=booking.client_passengers,
         client_phone=booking.client_phone,
         client_telegram=booking.client_telegram,
         client_messenger_type=booking.client_messenger_type,

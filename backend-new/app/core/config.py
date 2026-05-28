@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Общие настройки
     DEBUG: bool = True
     ENVIRONMENT: str = "development"
+
+    # Пути
+    UPLOAD_DIR: str = "/var/www/shared-uploads/boats"
     
     model_config = ConfigDict(env_file=".env", extra="ignore")
 

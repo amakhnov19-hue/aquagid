@@ -9,6 +9,7 @@ class BookingBase(BaseModel):
     start_time: time
     duration_minutes: int
     client_name: Optional[str] = None
+    client_passengers: Optional[int] = None
     client_phone: Optional[str] = None
     client_telegram: Optional[str] = None
     client_messenger_type: Optional[str] = None
@@ -20,6 +21,7 @@ class BookingCreate(BookingBase):
     payment_id: Optional[str] = None
     prepayment_amount: Optional[float] = None
     status: Optional[str] = "pending"
+    ref_code: Optional[str] = None  # Реферальный код
 
 # Для ответа (после создания)
 class BookingResponse(BaseModel):
@@ -33,6 +35,7 @@ class BookingResponse(BaseModel):
     prepayment_amount: Optional[float] = None
     created_at: datetime
     client_name: Optional[str] = None
+    client_passengers: Optional[int] = None
     client_phone: Optional[str] = None
     client_telegram: Optional[str] = None
     client_messenger_type: Optional[str] = None

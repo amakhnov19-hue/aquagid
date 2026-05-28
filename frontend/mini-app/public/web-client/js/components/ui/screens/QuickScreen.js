@@ -42,8 +42,12 @@ class QuickScreen extends ScreenBase {
         // Добавляем обработчик для кнопки поиска по адресу
         document.getElementById('search-address-btn')?.addEventListener('click', () => this.searchByAddress());
         
-        // Автоматически запрашиваем геолокацию
-        await this.requestLocation();
+        // Запрашиваем геолокацию только если пользователь дал согласие
+        if (localStorage.getItem('aquagid-geo-accepted') === 'true') {
+            await this.requestLocation();
+        } else {
+            this.showAddressInput('Введите ваш адрес для поиска ближайших катеров:');
+        }
         
         console.log('⚡ QuickScreen.show END');
     }
@@ -85,15 +89,7 @@ class QuickScreen extends ScreenBase {
 
     showAddressInput(message) {
         const content = document.getElementById('quick-content');
-        content.innerHTML = `
-            <div class="address-input-container">
-                <p>${message}</p>
-                <input type="text" id="manual-address" placeholder="Например: Санкт-Петербург, Пушкин, ул. Ленинградская 10">
-                <button onclick="window.currentQuickScreen?.geocodeManualAddress()" class="btn-primary">
-                    Определить катера
-                </button>
-            </div>
-        `;
+        content.innerHTML = '';
     }
 
     /**
@@ -178,7 +174,9 @@ class QuickScreen extends ScreenBase {
         
         try {
             // Загружаем все катера
-            const response = await fetch('/api/boats/client');
+            const refCode = localStorage.getItem('aquagid-ref');
+            const url = refCode ? `/api/boats/client?ref=${encodeURIComponent(refCode)}` : '/api/boats/client';
+            const response = await fetch(url);
             const boats = await response.json();
             
             console.log('📡 Загружено катеров:', boats.length);

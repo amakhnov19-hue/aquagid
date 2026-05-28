@@ -468,6 +468,7 @@
          * Показать детали бронирования (экран успеха)
          */
         showBookingDetails(bookingId) {
+            history.pushState({ screen: 'bookingdetail' }, '', window.location.pathname);
             const booking = this.allBookings.find(b => b.id == bookingId);
             if (!booking) {
                 console.error('Бронирование не найдено:', bookingId);

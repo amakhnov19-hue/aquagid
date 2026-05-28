@@ -147,7 +147,9 @@ class BoatScreen extends ScreenBase {
         
         try {
             const headers = force ? { 'Cache-Control': 'no-cache, no-store, must-revalidate' } : {};
-            const response = await fetch('/api/boats/client', { headers });
+            const refCode = localStorage.getItem('aquagid-ref');
+            const url = refCode ? `/api/boats/client?ref=${encodeURIComponent(refCode)}` : '/api/boats/client';
+            const response = await fetch(url, { headers });
             console.log('📡 Ответ статус:', response.status);
             
             const boats = await response.json();

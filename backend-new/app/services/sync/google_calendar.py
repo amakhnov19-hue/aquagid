@@ -65,6 +65,14 @@ class GoogleCalendarService:
                 client_secret=creds_data.get("client_secret"),
                 scopes=creds_data.get("scopes")
             )
+
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(GoogleRequest())
+                await db.execute(
+                    text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
+                    {"creds": credentials.to_json(), "manager_id": manager_id}
+                )
+                await db.commit()
             
             service = build("calendar", "v3", credentials=credentials)
             
@@ -117,6 +125,14 @@ class GoogleCalendarService:
             
             start_datetime = datetime.combine(booking[1], booking[2])
             end_datetime = start_datetime + timedelta(minutes=booking[3])
+
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(GoogleRequest())
+                await db.execute(
+                    text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
+                    {"creds": credentials.to_json(), "manager_id": manager_id}
+                )
+                await db.commit()
             
             service = build("calendar", "v3", credentials=credentials)
             
@@ -350,6 +366,14 @@ def get_google_router() -> APIRouter:
             client_secret=creds_data.get("client_secret"),
             scopes=creds_data.get("scopes")
         )
+
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(GoogleRequest())
+            await db.execute(
+                text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
+                {"creds": credentials.to_json(), "manager_id": manager_id}
+            )
+            await db.commit()
         
         service = build("calendar", "v3", credentials=credentials)
         calendar_list = service.calendarList().list().execute()
@@ -638,6 +662,14 @@ def get_google_router() -> APIRouter:
                 except Exception as e:
                     print(f"⚠️ Error recreating webhook: {e}")
             # === Конец проверки webhook ===
+
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(GoogleRequest())
+                await db.execute(
+                    text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
+                    {"creds": credentials.to_json(), "manager_id": manager_id}
+                )
+                await db.commit()
             
             service = build("calendar", "v3", credentials=credentials)
             

@@ -195,8 +195,18 @@
             if (modal) {
                 modal.classList.toggle('open', this.isOpen);
                 if (this.isOpen) {
+                    history.pushState({ screen: 'docs' }, '', window.location.pathname);
                     this.loadDocList().then(() => this.openDoc(Object.keys(this.docs)[0] || '_empty'));
                 }
+            }
+        }
+
+        close() {
+            if (!this.isOpen) return;
+            this.isOpen = false;
+            const modal = document.querySelector('.documentation__modal');
+            if (modal) {
+                modal.classList.remove('open');
             }
         }
         

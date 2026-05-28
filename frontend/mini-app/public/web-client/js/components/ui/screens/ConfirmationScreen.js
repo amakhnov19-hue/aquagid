@@ -69,6 +69,19 @@ class ConfirmationScreen extends ScreenBase {
                         <label for="client-name">Имя *</label>
                         <input type="text" id="client-name" class="client-input" placeholder="Введите ваше имя" value="${booking.client?.name || ''}">
                     </div>
+
+                    <div class="input-group">
+                        <label for="client-passengers">Количество гостей</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <select id="client-passengers" class="client-input" style="flex: 1;">
+                                <option value="0" selected>Выберите</option>
+                                ${Array.from({length: booking.boat?.capacity || 1}, (_, i) => i + 1).map(n => 
+                                    `<option value="${n}">${n} чел.</option>`
+                                ).join('')}
+                            </select>
+                            <span style="color: #666; font-size: 13px; white-space: nowrap;">до ${booking.boat?.capacity || '—'} чел.</span>
+                        </div>
+                    </div>
                     
                     <div class="input-group">
                         <label for="client-phone">Телефон *</label>
@@ -133,8 +146,10 @@ class ConfirmationScreen extends ScreenBase {
         
         const nameValid = name && name.length > 1;
         const phoneValid = phone && phone.replace(/\D/g, '').length >= 10;
+        const passengers = document.getElementById('client-passengers')?.value;
+        const passengersValid = passengers && parseInt(passengers) > 0;
         const agreementValid = agreement;
-        const isValid = nameValid && phoneValid && agreementValid;
+        const isValid = nameValid && phoneValid && passengersValid && agreementValid;
         
         const payButton = document.querySelector('.payment-button, .btn-pay, [id*="pay"], .pay-button');
         if (payButton) {
@@ -183,6 +198,12 @@ class ConfirmationScreen extends ScreenBase {
             alert('Необходимо согласие с условиями бронирования');
             return;
         }
+
+        const passengers = parseInt(document.getElementById('client-passengers')?.value) || 0;
+        if (!passengers || passengers < 1) {
+            alert('Пожалуйста, выберите количество гостей');
+            return;
+        }
         
         const booking = window.AquaGid.UnifiedScreens.booking;
         booking.client = { name, phone, email, messengerType, messengerContact };
@@ -208,10 +229,12 @@ class ConfirmationScreen extends ScreenBase {
                 start_time: booking.time,
                 duration_minutes: booking.duration * 60,
                 client_name: name,
+                client_passengers: parseInt(document.getElementById('client-passengers')?.value) || 1,
                 client_phone: phone,
                 client_email: email,
                 client_messenger_type: messengerType,
-                client_messenger_contact: messengerContact
+                client_messenger_contact: messengerContact,
+                ref_code: localStorage.getItem('aquagid-ref') || null
             };
             
             const response = await fetch('/api/bookings', {
@@ -231,6 +254,7 @@ class ConfirmationScreen extends ScreenBase {
                 window.AquaGid.UnifiedScreens.booking.total_price = result.total_price;
                 window.AquaGid.UnifiedScreens.booking.prepayment_amount = result.prepayment_amount;
                 window.AquaGid.UnifiedScreens.booking.client_name = result.client_name;
+                window.AquaGid.UnifiedScreens.booking.client.passengers = passengers;
                 window.AquaGid.UnifiedScreens.booking.client_phone = result.client_phone;
                 window.AquaGid.UnifiedScreens.booking.booking_date = result.booking_date;
                 window.AquaGid.UnifiedScreens.booking.start_time = result.start_time;
@@ -295,8 +319,8 @@ class ConfirmationScreen extends ScreenBase {
                     </div>
                     
                     <div class="detail-row">
-                        <span class="detail-label">👥 Вместимость:</span>
-                        <span class="detail-value">до ${boat.capacity} чел</span>
+                        <span class="detail-label">👥 Всего гостей:</span>
+                        <span class="detail-value">${booking.client?.passengers || '—'} чел.</span>
                     </div>
                     
                     <div class="detail-row">

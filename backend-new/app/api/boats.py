@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 from typing import List
 from app.core.database import get_db
 from app.core.security import get_current_manager
+from app.core.config import settings
 from app.models.boat_model import Boat as BoatModel
 from app.schemas.boat_schema import Boat, BoatCreate, BoatUpdate, BoatListItem
 from app.models.boat_photo_model import BoatPhoto
@@ -143,18 +144,42 @@ async def get_boats(
 
 @router.get("/client")
 async def get_client_boats(
+    ref: str = None,
     db: AsyncSession = Depends(get_db)
 ):
     """Получить катера для клиентского приложения (только активные)"""
     from sqlalchemy.orm import joinedload
     
-    result = await db.execute(
-        select(BoatModel)
-        .options(joinedload(BoatModel.photos))
-        .where(BoatModel.is_active == True)
-        .where(BoatModel.deleted_at == None)
-        .order_by(BoatModel.name)
+    # Если есть реферальный код — находим менеджера
+    ref_manager = None
+    if ref:
+        ref_result = await db.execute(
+            select(ManagerModel).where(
+                ManagerModel.referral_code == ref,
+                ManagerModel.status == 'active'
+            )
+        )
+        ref_manager = ref_result.scalar_one_or_none()
+        if ref_manager:
+            print(f"🔗 Реферальный код: {ref}, менеджер: {ref_manager.full_name}, режим: {ref_manager.referral_mode}")
+    
+    # Базовый запрос
+    query = select(BoatModel).options(
+        joinedload(BoatModel.photos)
+    ).where(
+        BoatModel.is_active == True,
+        BoatModel.deleted_at == None
     )
+    
+    # Фильтрация по реферальному режиму
+    if ref_manager and ref_manager.referral_mode == 'own_only':
+        # Показываем только катера этого менеджера
+        query = query.where(BoatModel.manager_id == ref_manager.id)
+        print(f"   Режим: только свои катера (manager_id={ref_manager.id})")
+    
+    query = query.order_by(BoatModel.name)
+    
+    result = await db.execute(query)
     boats = result.unique().scalars().all()
     
     # Получаем менеджеров для катеров
@@ -189,6 +214,7 @@ async def get_client_boats(
             "has_blankets": b.has_blankets,
             "has_kitchenware": b.has_kitchenware,
             "photos": [p.photo_url for p in b.photos] if b.photos else [],
+            "manager_id": b.manager_id,
             "manager_name": managers[b.manager_id].full_name if b.manager_id and b.manager_id in managers else None,
             "manager_company": managers[b.manager_id].company_name if b.manager_id and b.manager_id in managers else None,
             "manager_phone": managers[b.manager_id].phone if b.manager_id and b.manager_id in managers else None,
@@ -426,7 +452,7 @@ async def add_boat_photo(
             file_data = base64.b64decode(base64_data)
             
             # Создаём папку для катера
-            upload_base = Path("/var/www/shared-uploads/boats")
+            upload_base = Path(settings.UPLOAD_DIR)
             boat_dir = upload_base / str(boat_id)
             boat_dir.mkdir(parents=True, exist_ok=True)
             
@@ -540,7 +566,7 @@ async def delete_boat(
     
     # Удаляем фотографии с диска
     try:
-        boat_dir = Path(f"/var/www/shared-uploads/boats/{boat_id}")
+        boat_dir = Path(settings.UPLOAD_DIR) / str(boat_id)
         if boat_dir.exists():
             shutil.rmtree(boat_dir)
     except Exception as e:

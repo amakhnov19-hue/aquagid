@@ -34,12 +34,19 @@ async def get_all_managers(
         {
             "id": m.id,
             "name": m.full_name,
+            "full_name": m.full_name,
             "email": m.email,
             "phone": m.phone,
             "company": m.company_name,
+            "company_name": m.company_name,
             "status": m.status or "active",
+            "is_blocked": m.status == "blocked",
             "created_at": m.created_at,
-            "prepayment": m.prepayment_percent or 20
+            "prepayment": m.prepayment_percent or 20,
+            "prepayment_percent": m.prepayment_percent or 20,
+            "referral_code": m.referral_code,
+            "referral_discount_percent": m.referral_discount_percent or 10,
+            "referral_mode": m.referral_mode or 'all_boats',
         }
         for m in managers
     ]
@@ -144,6 +151,54 @@ async def update_manager_prepayment(
     await db.commit()
     
     return {"message": "Предоплата обновлена", "prepayment": data.prepayment_percent}
+
+class ManagerUpdate(BaseModel):
+    referral_code: Optional[str] = None
+    referral_discount_percent: Optional[int] = None
+    prepayment_percent: Optional[int] = None
+    referral_mode: Optional[str] = None  # 'own_only' или 'all_boats'
+
+@router.put("/{manager_id}")
+async def update_manager(
+    manager_id: int,
+    data: ManagerUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Обновить данные менеджера (реферальный код, скидка, предоплата)"""
+    
+    result = await db.execute(
+        select(Manager).where(Manager.id == manager_id)
+    )
+    manager = result.scalar_one_or_none()
+    
+    if not manager:
+        raise HTTPException(status_code=404, detail="Менеджер не найден")
+    
+    if data.referral_code is not None:
+        # Проверяем уникальность кода
+        if data.referral_code:
+            existing = await db.execute(
+                select(Manager).where(
+                    Manager.referral_code == data.referral_code,
+                    Manager.id != manager_id
+                )
+            )
+            if existing.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail="Этот реферальный код уже используется")
+        manager.referral_code = data.referral_code
+    
+    if data.referral_discount_percent is not None:
+        manager.referral_discount_percent = data.referral_discount_percent
+    
+    if data.prepayment_percent is not None:
+        manager.prepayment_percent = data.prepayment_percent
+
+    if data.referral_mode is not None:
+        manager.referral_mode = data.referral_mode
+    
+    await db.commit()
+    
+    return {"message": "Менеджер обновлён", "manager_id": manager_id}
 
 from app.models.admin_model import Admin
 import bcrypt
