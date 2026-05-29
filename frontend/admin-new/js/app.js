@@ -2,6 +2,30 @@
 
 let currentView = 'dashboard';
 
+function formatMessageTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const time = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    if (date.toDateString() === now.toDateString()) {
+        return `Сегодня ${time}`;
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+        return `Вчера ${time}`;
+    }
+    
+    return `${date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} ${time}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 async function loadView(view) {
     const content = document.getElementById('content');
     content.innerHTML = '<div class="loading">Загрузка...</div>';
@@ -26,6 +50,7 @@ async function loadView(view) {
             await renderDocuments(content);
             break;
         case 'chat':
+            console.log('loadView chat, content:', content?.id, content?.innerHTML?.substring(0, 50));
             await renderChat(content);
             break;                    
         default:
@@ -566,7 +591,9 @@ window.saveDocument = async function(mode, id) {
 let currentDialog = null;
 
 async function renderChat(container) {
+    console.log('renderChat вызван, container:', container?.id);
     const token = localStorage.getItem('admin_token');
+    const isMobile = window.innerWidth < 768;
     
     container.innerHTML = `<div class="card"><h2>💬 Чат поддержки</h2><div class="loading">Загрузка...</div></div>`;
     
@@ -574,29 +601,48 @@ async function renderChat(container) {
         const response = await fetch('/api/messages/admin/dialogs', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        const dialogs = await response.json();
+        const data = await response.json();
+        const dialogs = Array.isArray(data) ? data.filter(d => d.sender_id !== '0') : [];
+        const clientDialogs = dialogs.filter(d => d.sender_type === 'client');
+        const managerDialogs = dialogs.filter(d => d.sender_type === 'manager');
+        console.log('Диалоги получены:', dialogs.length, dialogs);
+        
+        // Если открыт диалог на мобилке — показываем только его
+        if (isMobile && currentDialog) {
+            container.innerHTML = `
+                <div class="card" id="chatMessages">
+                    <button onclick="currentDialog=null;loadView('chat');" style="background:none;border:none;font-size:16px;cursor:pointer;margin-bottom:10px;">← Назад к списку</button>
+                    <p style="color:#6b7280;">Загрузка диалога...</p>
+                </div>`;
+            openDialog(currentDialog, 'client');
+            return;
+        }
         
         let html = `<div class="card"><h2>💬 Чат поддержки</h2>`;
+        
+        const renderDialogItem = (d) => `
+            <div class="dialog-item" onclick="openDialog('${d.sender_id}', '${d.sender_type}')" 
+                style="padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${currentDialog === d.sender_id ? '#e0e7ff' : d.status === 'new' ? '#fff3cd' : '#f9fafb'};">
+                <strong>${d.sender_id}</strong>
+                <span style="font-size:11px;color:${d.status === 'new' ? '#dc2626' : '#6b7280'};float:right;">${d.status === 'new' ? '🆕' : '📖'}</span>
+                <div style="font-size:12px;color:#6b7280;">${escapeHtml(d.last_message || '')}</div>
+            </div>`;
         
         if (dialogs.length === 0) {
             html += `<p style="color:#6b7280;">Нет обращений</p></div>`;
         } else {
             html += `
-                <div style="display:flex;gap:16px;">
-                    <div style="width:300px;border-right:1px solid #e5e7eb;padding-right:16px;">
-                        <h3>Диалоги</h3>
-                        ${dialogs.map(d => `
-                            <div class="dialog-item" onclick="openDialog('${d.sender_id}', '${d.sender_type}')" 
-                                 style="padding:8px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:${currentDialog === d.sender_id ? '#e0e7ff' : '#f9fafb'};">
-                                <strong>${d.sender_id}</strong>
-                                <span style="font-size:11px;color:${d.status === 'new' ? '#dc2626' : '#6b7280'};float:right;">${d.status}</span>
-                                <div style="font-size:12px;color:#6b7280;">${d.last_message || ''}</div>
-                            </div>
-                        `).join('')}
+                <div class="chat-layout" style="display:flex;gap:16px;">
+                    <div class="chat-dialogs-list" style="width:${isMobile ? '100%' : '300px'};border-right:${isMobile ? 'none' : '1px solid #e5e7eb'};padding-right:${isMobile ? '0' : '16px'};">
+                        <h3>👥 Клиенты</h3>
+                        ${clientDialogs.length > 0 ? clientDialogs.map(renderDialogItem).join('') : '<p style="color:#6b7280;font-size:12px;">Нет обращений</p>'}
+                        ${managerDialogs.length > 0 ? `<h3 style="margin-top:16px;">👔 Менеджеры</h3>` : ''}
+                        ${managerDialogs.length > 0 ? managerDialogs.map(renderDialogItem).join('') : ''}
                     </div>
+                    ${!isMobile ? `
                     <div id="chatMessages" style="flex:1;">
                         <p style="color:#6b7280;">Выберите диалог</p>
-                    </div>
+                    </div>` : ''}
                 </div>
             </div>`;
         }
@@ -604,7 +650,7 @@ async function renderChat(container) {
         container.innerHTML = html;
 
         // Подключаем WebSocket для админа
-        if (!window._adminWs) {
+        if (!window._adminWs || window._adminWs.readyState !== WebSocket.OPEN) {
             const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${wsProtocol}//${location.host}/api/sync/ws/admin`;
             window._adminWs = new WebSocket(wsUrl);
@@ -619,7 +665,8 @@ async function renderChat(container) {
                     }
                 }
             };
-        }        
+            window._adminWs.onclose = () => console.log('❌ WebSocket админа закрыт');
+        }
         
     } catch (error) {
         container.innerHTML = `<div class="card error">Ошибка: ${error.message}</div>`;
@@ -627,26 +674,53 @@ async function renderChat(container) {
 }
 
 window.openDialog = async function(senderId, senderType) {
+    console.log('openDialog вызван:', senderId, senderType);
+    const token = localStorage.getItem('admin_token');
+    const isMobile = window.innerWidth < 768;
+    
     currentDialog = senderId;
     window._currentDialog = senderId;
-    const token = localStorage.getItem('admin_token');
+    
+    // Меняем статус на viewed
+    fetch(`/api/messages/admin/dialog/${senderId}/status?status=viewed`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    // Меняем цвет диалога в списке без перерисовки
+    document.querySelectorAll('.dialog-item').forEach(item => {
+        if (item.getAttribute('onclick')?.includes(senderId)) {
+            item.style.background = '#f9fafb';
+            const statusSpan = item.querySelector('span');
+            if (statusSpan) statusSpan.innerHTML = '📖';
+        }
+    });
+
+    if (isMobile) {
+        const container = document.getElementById('content');
+        container.innerHTML = `
+            <div class="card" id="chatMessages">
+                <p style="color:#6b7280;">Загрузка...</p>
+            </div>`;
+    }
     
     const response = await fetch(`/api/messages?client_phone=${encodeURIComponent(senderId)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     const messages = await response.json();
+    console.log('Сообщения загружены:', messages.length, messages);
     
     const msgContainer = document.getElementById('chatMessages');
     if (msgContainer) {
         msgContainer.innerHTML = `
-            <h3>${senderId} (${senderType})</h3>
-            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;max-height:400px;overflow-y:auto;margin-bottom:12px;background:#f9fafb;">
+            <h3>💬 ${escapeHtml((messages.find(m => m.sender_type === 'client')?.title || '').replace('Сообщение от ', '') || 'Клиент')} <span style="font-size:14px;color:#6b7280;">${senderId}</span> ${isMobile ? '<button onclick="currentDialog=null;loadView(\'chat\');" style="background:none;border:none;font-size:18px;cursor:pointer;float:right;">✕</button>' : ''}</h3>
+            <div style="border:1px solid #e5e7eb;border-radius:8px;padding:12px;max-height:${isMobile ? '60vh' : '400px'};overflow-y:auto;margin-bottom:12px;background:#f9fafb;">
                 ${messages.reverse().map(m => `
                     <div style="margin-bottom:8px;text-align:${m.sender_type === 'admin' ? 'right' : 'left'};">
                         <div style="display:inline-block;padding:8px 12px;border-radius:12px;max-width:70%;background:${m.sender_type === 'admin' ? '#0066CC' : '#e5e7eb'};color:${m.sender_type === 'admin' ? 'white' : '#333'};">
-                            ${m.body || m.title}
+                            ${escapeHtml(m.body || m.title)}
                         </div>
-                        <div style="font-size:10px;color:#9ca3af;">${m.created_at ? new Date(m.created_at).toLocaleTimeString() : ''}</div>
+                        <div style="font-size:10px;color:#9ca3af;">${m.created_at ? formatMessageTime(m.created_at) : ''}</div>
                     </div>
                 `).join('')}
             </div>
@@ -654,8 +728,8 @@ window.openDialog = async function(senderId, senderType) {
                 <input type="text" id="adminChatInput" placeholder="Ответ..." style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
                 <button class="btn btn-primary" onclick="sendAdminReply('${senderId}')">➤</button>
             </div>
-            <div style="margin-top:8px;">
-                <button class="btn btn-sm" onclick="closeDialog('${senderId}')">✅ Закрыть диалог</button>
+            <div style="margin-top:8px;display:flex;gap:8px;">
+                <button class="btn btn-sm" onclick="deleteDialog('${senderId}')" style="background:#dc2626;color:white;">❌ Удалить</button>
             </div>
         `;
     }
@@ -664,6 +738,19 @@ window.openDialog = async function(senderId, senderType) {
     document.querySelectorAll('.dialog-item').forEach(el => {
         el.style.background = el.onclick?.toString().includes(senderId) ? '#e0e7ff' : '#f9fafb';
     });
+};
+
+window.deleteDialog = async function(senderId) {
+    if (!confirm('Удалить диалог полностью? Это действие необратимо.')) return;
+    const token = localStorage.getItem('admin_token');
+    // Сначала очищаем сообщения
+    await fetch(`/api/messages/history?client_phone=${senderId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    currentDialog = null;
+    window._currentDialog = null;
+    loadView('chat');
 };
 
 window.sendAdminReply = async function(senderId) {
@@ -775,10 +862,6 @@ document.querySelector('.nav').addEventListener('click', (e) => {
     // Закрываем sidebar на мобильном
     document.getElementById('sidebarMenu').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.remove('active');
-});
-
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    logout();
 });
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
