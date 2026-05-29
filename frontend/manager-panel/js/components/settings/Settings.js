@@ -498,8 +498,20 @@
                 const response = await fetch(`/api/sync/google/calendars/${managerId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
+                
+                // Если 401 — токен протух, нужна переавторизация
+                if (!response.ok) {
+                    this.googleCalendar = { 
+                        connected: true, 
+                        calendars: [], 
+                        needReconnect: true 
+                    };
+                    this.render();
+                    return;
+                }
+                
                 const data = await response.json();
-                const calendars = data.calendars || data || [];
+                const calendars = data.calendars || [];
                 this.googleCalendar.calendars = calendars;
                 
                 const statusResponse = await fetch(`/api/sync/google/status/${managerId}`, {

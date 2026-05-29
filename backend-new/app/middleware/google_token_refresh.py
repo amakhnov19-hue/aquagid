@@ -7,7 +7,7 @@ from app.services.sync.google_calendar import refresh_google_token_if_expired
 class GoogleTokenRefreshMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         # Проверяем, относится ли запрос к Google Calendar API
-        if request.url.path.startswith("/api/calendar/") and request.method in ["GET", "POST", "PUT", "DELETE"]:
+        if (request.url.path.startswith("/api/calendar/") or request.url.path.startswith("/api/sync/google/")) and request.method in ["GET", "POST", "PUT", "DELETE"]:
             # Извлекаем manager_id из пути
             path_parts = request.url.path.split("/")
             manager_id = None

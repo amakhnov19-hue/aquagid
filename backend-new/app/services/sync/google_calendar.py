@@ -180,7 +180,11 @@ async def refresh_google_token_if_expired(manager_id: int, db: AsyncSession):
     )
     
     if creds.expired and creds.refresh_token:
-        creds.refresh(GoogleRequest())
+        try:
+            creds.refresh(GoogleRequest())
+        except Exception as e:
+            print(f"⚠️ Не удалось обновить токен для manager {manager_id}: {e}")
+            return None
         
         await db.execute(
             text("""
@@ -349,6 +353,8 @@ def get_google_router() -> APIRouter:
     # ========== Список календарей ==========
     @router.get("/calendars/{manager_id}")
     async def list_calendars(manager_id: int, db: AsyncSession = Depends(get_db)):
+        # Обновляем токен перед запросом
+        await refresh_google_token_if_expired(manager_id, db)
         result = await db.execute(
             text("SELECT credentials FROM manager_calendar WHERE manager_id = :manager_id"),
             {"manager_id": manager_id}
@@ -368,15 +374,22 @@ def get_google_router() -> APIRouter:
         )
 
         if credentials.expired and credentials.refresh_token:
-            credentials.refresh(GoogleRequest())
+            try:
+                credentials.refresh(GoogleRequest())
+            except Exception as e:
+                # Токен безнадёжно протух — нужна переавторизация
+                raise HTTPException(status_code=401, detail=f"Token expired, please reconnect: {str(e)}")
             await db.execute(
                 text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
                 {"creds": credentials.to_json(), "manager_id": manager_id}
             )
             await db.commit()
         
-        service = build("calendar", "v3", credentials=credentials)
-        calendar_list = service.calendarList().list().execute()
+        try:
+            service = build("calendar", "v3", credentials=credentials)
+            calendar_list = service.calendarList().list().execute()
+        except Exception as e:
+            raise HTTPException(status_code=401, detail=f"Google API error, please reconnect: {str(e)}")
         
         return {"calendars": calendar_list.get("items", [])}
 
