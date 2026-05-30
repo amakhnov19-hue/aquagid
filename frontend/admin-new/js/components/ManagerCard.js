@@ -168,8 +168,28 @@ class ManagerCard {
         if (!container) return;
         
         container.innerHTML = '<div class="settings-loading">⏳ Загрузка настроек...</div>';
-        
+
         const token = localStorage.getItem('admin_token');
+
+        // Загружаем список платёжных аккаунтов
+        setTimeout(async () => {
+            const paSelect = document.getElementById('paymentAccountSelect');
+            if (!paSelect) return;
+            try {
+                const resp = await fetch('/api/payment-accounts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await resp.json();
+                (data.accounts || []).forEach(acc => {
+                    const option = document.createElement('option');
+                    option.value = acc.id;
+                    option.textContent = `${acc.name} (${acc.bank})`;
+                    if (acc.id === this.manager.payment_account_id) option.selected = true;
+                    paSelect.appendChild(option);
+                });
+            } catch(e) {}
+        }, 200);
+        
         try {
             const response = await fetch(`/api/settings/${this.manager.id}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -182,6 +202,18 @@ class ManagerCard {
             container.innerHTML = `
                 <div class="settings-tab">
                     <h3>⚙️ Настройки менеджера</h3>
+
+                    <div class="settings-section" style="margin-top: 16px;">
+                        <h4 style="margin-bottom: 12px;">💳 Платёжный аккаунт</h4>
+                        <div class="form-group">
+                            <label>Принимать оплату через:</label>
+                            <select id="paymentAccountSelect" class="form-input">
+                                <option value="">🏠 По умолчанию (текущая система)</option>
+                            </select>
+                        </div>
+                        <button class="btn-save-settings" onclick="window.ManagerCardInstance.savePaymentAccount()">💾 Сохранить платёжный аккаунт</button>
+                        <div id="paSaveStatus" style="margin-top: 8px; font-size: 13px;"></div>
+                    </div>
                     
                     <div class="settings-section" style="margin-top: 16px;">
                         <h4 style="margin-bottom: 12px;">🔗 Реферальная программа</h4>
@@ -227,6 +259,32 @@ class ManagerCard {
         } catch (error) {
             console.error('Ошибка загрузки настроек:', error);
             container.innerHTML = '<div class="error-message">❌ Ошибка загрузки настроек</div>';
+        }
+    }
+
+    async savePaymentAccount() {
+        const token = localStorage.getItem('admin_token');
+        const paSelect = document.getElementById('paymentAccountSelect');
+        const payment_account_id = paSelect?.value || null;
+        const status = document.getElementById('paSaveStatus');
+        
+        try {
+            const resp = await fetch(`/api/managers/${this.manager.id}/payment-account`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ payment_account_id: payment_account_id ? parseInt(payment_account_id) : null })
+            });
+            if (resp.ok) {
+                status.innerHTML = '✅ Сохранено';
+                this.manager.payment_account_id = payment_account_id ? parseInt(payment_account_id) : null;
+            } else {
+                status.innerHTML = '❌ Ошибка';
+            }
+        } catch(e) {
+            status.innerHTML = '❌ Ошибка';
         }
     }
 

@@ -43,6 +43,9 @@ async function loadView(view) {
         case 'settings':
             await renderSettings(content);
             break;
+        case 'payments':
+            await new PaymentSettings(content).render();
+            break;
         case 'diagnostics':
             content.innerHTML = `<iframe src="/diagnostics" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px;"></iframe>`;
             break;
