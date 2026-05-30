@@ -87,6 +87,13 @@ class PaymentUI {
             
             if (result.success) {
                 this.currentPaymentId = result.paymentId;
+                
+                // Если платёж перенаправлен на внешнюю страницу — ждём возврата
+                if (result.redirect) {
+                    this.showStatus('⏳ Ожидание оплаты на внешней странице...', 'info');
+                    return;
+                }
+                
                 this.showStatus('✅ Платёж успешно выполнен!', 'success');
                 
                 console.log('💰 [PaymentUI] Успешный платёж, bookingId:', result.bookingId);
@@ -109,7 +116,6 @@ class PaymentUI {
                         b.start_time = result.bookingData.start_time;
                         b.duration_minutes = result.bookingData.duration_minutes;
                         b.status = result.bookingData.status;
-                        // boat и client НЕ перезаписываем — они уже полные
                     }
                 }
                 console.log('📦 booking before show:', window.AquaGid?.UnifiedScreens?.booking);

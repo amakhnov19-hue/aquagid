@@ -69,10 +69,8 @@ class PaymentSettings {
                 <div class="form-group"><label>Название:</label>
                     <input type="text" id="paName" value="${account.name}" class="form-input"></div>
                 <div class="form-group"><label>Банк:</label>
-                    <select id="paBank" class="form-input">
-                        <option value="modulbank" ${account.bank === 'modulbank' ? 'selected' : ''}>МодульБанк</option>
-                        <option value="tbank" ${account.bank === 'tbank' ? 'selected' : ''}>Т-Банк</option>
-                    </select></div>
+                    <select id="paBank" class="form-input">Загрузка банков...</select>
+                    <small style="color:#666;">Нет нужного банка? <a href="#" id="addBankLink">Добавить</a></small>
                 <div class="form-group"><label>Merchant ID:</label>
                     <input type="text" id="paMerchant" value="${account.merchant_id || ''}" class="form-input"></div>
                 <div class="form-group"><label>Secret Key:</label>
@@ -89,6 +87,27 @@ class PaymentSettings {
         document.body.appendChild(modal);
         
         document.getElementById('paCancel').onclick = () => modal.remove();
+        // Загружаем список банков
+        const banksResp = await fetch('/api/banks', { headers: { 'Authorization': `Bearer ${token}` } });
+        const banksData = await banksResp.json();
+        const banks = banksData.banks || [];
+        const paBank = document.getElementById('paBank');
+        paBank.innerHTML = banks.map(b => `<option value="${b.code}" ${account.bank === b.code ? 'selected' : ''}>${b.name}</option>`).join('');
+
+        document.getElementById('addBankLink').onclick = async (e) => {
+            e.preventDefault();
+            const code = prompt('Код банка (латиница):');
+            if (!code) return;
+            const name = prompt('Название банка:');
+            if (!name) return;
+            await fetch('/api/banks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ code, name })
+            });
+            paBank.innerHTML += `<option value="${code}">${name}</option>`;
+            paBank.value = code;
+        };
         document.getElementById('paSave').onclick = async () => {
             const body = {
                 name: document.getElementById('paName').value,

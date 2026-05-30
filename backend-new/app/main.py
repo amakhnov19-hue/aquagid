@@ -10,7 +10,7 @@ from app.api import admin_invites, admin_managers, admin_boats
 from app.api import admin_auth, admin_settings, admin_global_settings
 from app.api import admin_diagnostics
 from app.api import admin_payments
-from app.services.modulbank import router as modulbank_router
+from app.api.payment_api import router as payment_router
 
 # Синхронизация с внешними сервисами
 from app.services.sync import sync_manager
@@ -76,7 +76,7 @@ app.include_router(admin_global_settings.router)
 app.include_router(admin_payments.router, prefix="/api")
 app.include_router(admin_diagnostics.router)
 app.include_router(documents.router, prefix="/api")
-app.include_router(modulbank_router, prefix="/api")
+app.include_router(payment_router, prefix="/api")
 
 # Модуль синхронизации (Google Calendar, WebSocket)
 if sync_manager.enabled:

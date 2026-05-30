@@ -121,3 +121,29 @@ async def set_manager_payment_account(
     )
     await db.commit()
     return {"success": True}
+
+@router.get("/banks")
+async def get_banks(
+    db: AsyncSession = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """Список доступных банков"""
+    result = await db.execute(
+        text("SELECT code, name FROM banks WHERE is_active = true ORDER BY name")
+    )
+    return {"banks": [{"code": row[0], "name": row[1]} for row in result.fetchall()]}
+
+
+@router.post("/banks")
+async def add_bank(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """Добавить новый банк"""
+    await db.execute(
+        text("INSERT INTO banks (code, name) VALUES (:code, :name) ON CONFLICT (code) DO UPDATE SET name = :name"),
+        {"code": data.get("code"), "name": data.get("name")}
+    )
+    await db.commit()
+    return {"success": True}

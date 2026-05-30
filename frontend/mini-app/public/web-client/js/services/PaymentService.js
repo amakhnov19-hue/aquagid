@@ -24,52 +24,37 @@ class PaymentService {
         console.log('💳 [PaymentService] Начало обработки платежа', { amount, bookingData, clientData });
         
         try {
-            const paymentResult = await this.gateway.processPayment(amount, clientData, bookingData);
-            
-            if (!paymentResult.success) {
-                console.error('❌ [PaymentService] Платёж не удался:', paymentResult.error);
-                return {
-                    success: false,
-                    error: paymentResult.error,
-                    paymentId: null,
-                    bookingId: null
-                };
-            }
-            
-            console.log('✅ [PaymentService] Платёж успешен:', paymentResult);
-            this.currentPaymentId = paymentResult.paymentId;
-            
-            // Бронь уже создана как pending, меняем статус на active
             const bookingId = bookingData.bookingId || (window.AquaGid?.UnifiedScreens?.booking?.bookingId);
-            if (bookingId) {
-                try {
-                    await fetch(`/api/bookings/${bookingId}/confirm-payment`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ status: 'active' })
-                    });
-                    console.log('✅ Статус брони изменён на active:', bookingId);
-                } catch (e) {
-                    console.error('❌ Ошибка смены статуса:', e);
-                }
+
+            const response = await fetch('/api/create-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking_id: bookingId,
+                    amount: amount,
+                    description: `Бронирование #${bookingId}`,
+                    client_name: clientData.name || '',
+                    client_phone: clientData.phone || '',
+                    client_email: clientData.email || ''
+                })
+            });
+
+            const paymentResult = await response.json();
+
+            if (!paymentResult.success) {
+                return { success: false, error: paymentResult.error };
             }
-            
-            return {
-                success: true,
-                bookingId: bookingId,
-                paymentId: paymentResult.paymentId,
-                amount: amount,
-                transactionId: paymentResult.transactionId
-            };
+
+            if (paymentResult.payment_url) {
+                window.open(paymentResult.payment_url, '_blank');
+                return { success: true, bookingId, paymentId: paymentResult.payment_id, redirect: true };
+            }
+
+            return { success: true, bookingId, paymentId: paymentResult.payment_id };
             
         } catch (error) {
             console.error('❌ [PaymentService] Критическая ошибка:', error);
-            return {
-                success: false,
-                error: error.message || 'Неизвестная ошибка',
-                paymentId: null,
-                bookingId: null
-            };
+            return { success: false, error: error.message };
         }
     }
 
