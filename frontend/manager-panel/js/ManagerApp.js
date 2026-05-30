@@ -802,7 +802,13 @@
                 case SECTIONS.BOOKINGS:
                         return '<div id="bookings-container"></div>';
                 case SECTIONS.CHAT:
-                    return '<div class="section-placeholder">💬 Раздел "Чат" (будет подключен Chat.js)</div>';
+                    setTimeout(() => {
+                        if (window.AquaGid?.ChatService) {
+                            window.AquaGid.ChatService.initForRole('manager', window.managerId, localStorage.getItem('managerName'));
+                            window.AquaGid.ChatService.openModal();
+                        }
+                    }, 100);
+                    return '';
                 case SECTIONS.SETTINGS:
                     return '<div id="settings-container"></div>';
                 default:

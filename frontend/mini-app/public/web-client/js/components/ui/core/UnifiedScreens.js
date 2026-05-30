@@ -29,6 +29,19 @@ class UnifiedScreens {
         // Инициализируем экраны
         this.initScreens();
 
+        // Инициализируем чат
+        setTimeout(() => {
+            const chatContainer = document.getElementById('support-chat-container') || (() => {
+                const c = document.createElement('div');
+                c.id = 'support-chat-container';
+                document.body.appendChild(c);
+                return c;
+            })();
+            if (window.AquaGid?.ChatService) {
+                window.AquaGid.ChatService.render(chatContainer);
+            }
+        }, 100);
+
         // Сохраняем реферальный код из URL
         const urlParams = new URLSearchParams(window.location.search);
         const refCode = urlParams.get('ref');
@@ -81,7 +94,7 @@ class UnifiedScreens {
                 this.welcomeScreen.toggleClientNotifications(); 
                 break; 
             case 'chat':
-                window.AquaGid?.SupportChat?.toggle();
+                window.AquaGid?.ChatService?.toggle();
                 break;
             case 'docs':
                 window.AquaGid?.Documentation?.close();

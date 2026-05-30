@@ -138,10 +138,13 @@ async def admin_get_dialogs(
     """Список диалогов для админа (сгруппированы по sender_id)"""
     result = await db.execute(
         text("""
-            SELECT DISTINCT ON (sender_id) sender_id, sender_type, title, body, created_at, status
-            FROM messages 
-            WHERE receiver_type = 'admin' OR sender_type = 'admin'
-            ORDER BY sender_id, created_at DESC
+            SELECT DISTINCT ON (m.sender_id) 
+                m.sender_id, m.sender_type, m.title, m.body, m.created_at, m.status,
+                COALESCE(mgr.full_name, mgr.company_name) as sender_name
+            FROM messages m
+            LEFT JOIN managers mgr ON m.sender_type = 'manager' AND m.sender_id = mgr.id::text
+            WHERE m.receiver_type = 'admin' OR m.sender_type = 'admin'
+            ORDER BY m.sender_id, m.created_at DESC
         """)
     )
     dialogs = []
@@ -149,11 +152,27 @@ async def admin_get_dialogs(
         dialogs.append({
             "sender_id": row[0],
             "sender_type": row[1],
+            "sender_name": row[6] or None,
             "last_message": row[3][:100] if row[3] else "",
             "last_time": str(row[4]) if row[4] else None,
             "status": row[5] or "new"
         })
     return dialogs
+
+# ========== УДАЛИТЬ ДИАЛОГ (ВСЕ СООБЩЕНИЯ С КЛИЕНТОМ) ==========
+@router.delete("/dialog/{sender_id}")
+async def delete_dialog(
+    sender_id: str,
+    db: AsyncSession = Depends(get_db),
+    admin = Depends(get_current_admin)
+):
+    """Полностью удалить все сообщения диалога с клиентом"""
+    await db.execute(
+        text("DELETE FROM messages WHERE sender_id = :sid OR receiver_id = :sid"),
+        {"sid": sender_id}
+    )
+    await db.commit()
+    return {"success": True}
 
 
 # ========== ОТМЕТИТЬ ПРОЧИТАННЫМ ==========
