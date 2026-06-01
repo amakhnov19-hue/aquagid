@@ -11,6 +11,7 @@ from app.api import admin_auth, admin_settings, admin_global_settings
 from app.api import admin_diagnostics
 from app.api import admin_payments
 from app.api.payment_api import router as payment_router
+from app.api.push_api import router as push_router
 
 # Синхронизация с внешними сервисами
 from app.services.sync import sync_manager
@@ -78,6 +79,7 @@ app.include_router(admin_payments.router, prefix="/api")
 app.include_router(admin_diagnostics.router)
 app.include_router(documents.router, prefix="/api")
 app.include_router(payment_router, prefix="/api")
+app.include_router(push_router, prefix="/api")
 app.include_router(telegram_router, prefix="/api/telegram")
 
 # Модуль синхронизации (Google Calendar, WebSocket)

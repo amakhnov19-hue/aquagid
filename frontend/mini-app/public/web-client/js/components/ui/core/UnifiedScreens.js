@@ -90,9 +90,14 @@ class UnifiedScreens {
             case 'quick': this.showQuickScreen(); break;
             case 'confirmation': this.showConfirmationScreen(); break;
             case 'mybookings': this.showMyBookings(); break;
-            case 'notifications': 
-                this.welcomeScreen.toggleClientNotifications(); 
-                break; 
+            case 'notifications':
+                if (window.PushNotifications) {
+                    const userId = localStorage.getItem('clientPhone') || 'guest';
+                    PushNotifications.subscribe('client', userId).then(ok => {
+                        alert(ok ? '✅ Уведомления включены!' : '❌ Не удалось включить уведомления');
+                    });
+                }
+                break;
             case 'chat':
                 window.AquaGid?.ChatService?.toggle();
                 break;

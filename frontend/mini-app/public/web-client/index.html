@@ -47,6 +47,16 @@
 
     <!-- Яндекс.Навигация -->
     <script src="/yandex-routing.js"></script>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('✅ Service Worker зарегистрирован'))
+            .catch(err => console.log('❌ Service Worker ошибка:', err));
+    }
+    </script>
+
+    <script src="/shared/js/components/PushNotifications.js"></script>
 </head>
 <body>
     <div id="app" class="loading">Загрузка...</div>

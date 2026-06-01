@@ -23,6 +23,14 @@ class WelcomeScreen extends ScreenBase {
         // Загружаем уведомления клиента
         this.loadClientNotifications();
         
+        // Проверяем статус push-уведомлений
+        setTimeout(() => {
+            const textEl = document.getElementById('push-notif-text');
+            if (textEl && localStorage.getItem('push_subscribed') === '1') {
+                textEl.textContent = '🔔 Уведомления включены';
+            }
+        }, 100);
+        
         const html = `
             <div class="screen welcome-screen">
                 <div class="container">
@@ -47,13 +55,10 @@ class WelcomeScreen extends ScreenBase {
                     </div>
                     
                     <!-- Панель уведомлений -->
-                    <div class="notifications-client" style="background: #6b6b6b; border-radius: 10px; padding: 8px 14px; margin: 15px 0; cursor: pointer;" onclick="window.AquaGid.UnifiedScreens.welcomeScreen.toggleClientNotifications()">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
-                            <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления</span>
-                            <span id="client-notif-badge" style="color: #ff6b35; font-size: 15px; font-weight: 700;">0</span>
-                        </div>
-                        <div id="client-notif-list" style="display: none; margin-top: 8px;"></div>
+                    <div class="notifications-client" style="background: #4a4a4a; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="WelcomeScreen.enablePush()">
+                        <span style="color: #fff; font-size: 15px; font-weight: 600;" id="push-notif-text">🔔 Включить уведомления</span>
                     </div>
+                    <div id="client-notif-list" style="display: none; margin-top: 8px;"></div>
                     
                     <!-- Кнопка Мои бронирования -->
                     <button class="btn-home btn-bookings" onclick="window.AquaGid.UnifiedScreens.showMyBookings()">
@@ -242,6 +247,30 @@ class WelcomeScreen extends ScreenBase {
         }
         
         list.style.display = isOpening ? 'block' : 'none';
+    }
+
+    static enablePush() {
+        if (window.PushNotifications) {
+            const userId = localStorage.getItem('clientPhone') || 'guest';
+            const textEl = document.getElementById('push-notif-text');
+            const isSubscribed = localStorage.getItem('push_subscribed') === '1';
+            
+            if (isSubscribed) {
+                // Отключаем (пока просто алерт)
+                alert('Для отключения уведомлений зайдите в настройки браузера');
+                return;
+            }
+            
+            PushNotifications.subscribe('client', userId).then(ok => {
+                if (ok) {
+                    localStorage.setItem('push_subscribed', '1');
+                    if (textEl) textEl.textContent = '🔔 Уведомления включены';
+                    alert('✅ Уведомления включены!');
+                } else {
+                    alert('❌ Не удалось включить уведомления');
+                }
+            });
+        }
     }
 
     async markAllReadClient() {
