@@ -17,6 +17,7 @@ from app.services.sync import sync_manager
 
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.google_token_refresh import GoogleTokenRefreshMiddleware
+from app.services.telegram_service import router as telegram_router
 
 app = FastAPI(
     title="AquaGid API v2.0",
@@ -77,6 +78,7 @@ app.include_router(admin_payments.router, prefix="/api")
 app.include_router(admin_diagnostics.router)
 app.include_router(documents.router, prefix="/api")
 app.include_router(payment_router, prefix="/api")
+app.include_router(telegram_router, prefix="/api/telegram")
 
 # Модуль синхронизации (Google Calendar, WebSocket)
 if sync_manager.enabled:

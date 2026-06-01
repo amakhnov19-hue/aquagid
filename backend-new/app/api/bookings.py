@@ -147,6 +147,27 @@ async def create_booking(
         from app.services.sync.websocket import ws_manager
         if boat and boat.manager_id:
             await ws_manager.send_update(boat.manager_id, "bookings_updated")
+            # Telegram-уведомление менеджеру
+            try:
+                from app.services.telegram_service import telegram_service
+                boat_info = await db.execute(
+                    text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time, b.prepayment_amount FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+                    {"bid": booking_id}
+                )
+                info = boat_info.fetchone()
+                if info:
+                    await telegram_service.notify_booking(
+                        manager_id=info[1],
+                        booking_id=booking_id,
+                        client_name=info[2] or "Клиент",
+                        boat_name=info[0],
+                        date=str(info[3]),
+                        time=str(info[4]),
+                        amount=float(info[5] or 0),
+                        db=db
+                    )
+            except Exception as e:
+                print(f"⚠️ Ошибка Telegram-уведомления: {e}")
             print(f"📡 WebSocket уведомление отправлено менеджеру {boat.manager_id}")
     except Exception as e:
         print(f"⚠️ Ошибка WebSocket: {e}")
@@ -374,6 +395,26 @@ async def cancel_booking(
     google_event_id = booking.google_event_id
     booking.status = "cancelled"
     await db.commit()
+
+    # Telegram-уведомление об отмене
+    try:
+        from app.services.telegram_service import telegram_service
+        boat_info = await db.execute(
+            text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+            {"bid": booking_id}
+        )
+        info = boat_info.fetchone()
+        if info:
+            await telegram_service.notify_cancellation(
+                manager_id=info[1],
+                booking_id=booking_id,
+                client_name=info[2] or "Клиент",
+                boat_name=info[0],
+                date=str(info[3]),
+                db=db
+            )
+    except Exception as e:
+        print(f"⚠️ Ошибка Telegram-уведомления об отмене: {e}")
     
     # Удаляем из Google Calendar
     if google_event_id:

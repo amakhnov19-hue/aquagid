@@ -76,6 +76,18 @@ async def send_message(message: MessageCreate, db: AsyncSession = Depends(get_db
     except Exception as e:
         print(f"⚠️ WebSocket error: {e}")
     
+    # Telegram-уведомление менеджеру (если админ написал)
+    if message.sender_type == 'admin' and message.receiver_type == 'manager':
+        try:
+            from app.services.telegram_service import telegram_service
+            await telegram_service.notify_admin_message(
+                manager_id=int(message.receiver_id),
+                message=message.body,
+                db=db
+            )
+        except Exception as e:
+            print(f"⚠️ Telegram уведомление менеджеру не отправлено: {e}")
+    
     return {"success": True, "id": new_id}
 
 

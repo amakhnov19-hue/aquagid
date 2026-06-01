@@ -327,6 +327,25 @@
                         <h2>📅 Google Calendar</h2>
                         <div id="google-calendar-settings"></div>
                     </div>
+
+                    <div class="settings-card">
+                        <h2>🔔 Telegram-уведомления</h2>
+                        <p style="color:#6b7280;font-size:13px;margin-bottom:8px;">
+                            Получайте уведомления о новых бронях и сообщениях в Telegram.
+                        </p>
+                        <div class="form-group">
+                            <label>Ваш Telegram ID:</label>
+                            <input type="text" id="telegramChatId" class="settings-input" value="${this.telegramChatId || ''}" placeholder="Например: 123456789">
+                            <small style="color:#666;display:block;margin-top:4px;">
+                                Как узнать: откройте <a href="https://t.me/getmyid_bot" target="_blank">@getmyid_bot</a>, нажмите Start и скопируйте ID
+                            </small>
+                        </div>
+                        <button class="btn-connect" onclick="AquaGid.ManagerSettings.saveTelegram()" 
+                            style="background: #0066CC; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">
+                            💾 Сохранить
+                        </button>
+                        <div id="tgSaveStatus" style="margin-top: 8px; font-size: 13px;"></div>
+                    </div>
                     
                     <button class="btn-save" onclick="AquaGid.ManagerSettings.saveSettings()">
                         💾 Сохранить настройки
@@ -593,6 +612,37 @@
             } catch (error) {
                 console.error('Ошибка:', error);
                 alert('❌ Ошибка отключения');
+            }
+        }
+
+        async saveTelegram() {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            const chatId = document.getElementById('telegramChatId')?.value?.trim();
+            const status = document.getElementById('tgSaveStatus');
+            
+            if (!chatId) {
+                status.innerHTML = '<span style="color:#dc3545;">❌ Введите Telegram ID</span>';
+                return;
+            }
+            
+            try {
+                const resp = await fetch('/api/telegram/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ chat_id: chatId })
+                });
+                if (resp.ok) {
+                    status.innerHTML = '<span style="color:#2e7d32;">✅ Сохранено</span>';
+                    this.telegramChatId = chatId;
+                    localStorage.setItem('telegramChatId', chatId);
+                } else {
+                    status.innerHTML = '<span style="color:#dc3545;">❌ Ошибка</span>';
+                }
+            } catch(e) {
+                status.innerHTML = '<span style="color:#dc3545;">❌ Ошибка</span>';
             }
         }
 
