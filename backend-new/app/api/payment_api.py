@@ -72,6 +72,37 @@ async def create_payment(
             {"id": booking_id_int}
         )
         await db.commit()
+        
+        # Push-уведомление менеджеру
+        try:
+            from app.api.push_api import send_push_internal
+            info = await db.execute(
+                text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+                {"bid": booking_id_int}
+            )
+            row = info.fetchone()
+            if row:
+                # Менеджеру
+                await send_push_internal(
+                    db=db,
+                    title=f"🆕 Новая бронь #{booking_id_int}",
+                    body=f"{row[2] or 'Клиент'}, {row[0]}, {row[3]} {row[4]}",
+                    url=f"/bookings/{booking_id_int}",
+                    user_type="manager",
+                    user_id=str(row[1])
+                )
+                # Клиенту
+                await send_push_internal(
+                    db=db,
+                    title="✅ Бронирование подтверждено",
+                    body=f"{row[0]}, {row[3]} в {row[4]}",
+                    url=f"/booking/{booking_id_int}",
+                    user_type="client",
+                    user_id="guest"
+                )
+        except Exception as e:
+            print(f"⚠️ Ошибка push: {e}")
+
         payment = {
             "payment_id": f"test_{order_id}",
             "payment_url": None,

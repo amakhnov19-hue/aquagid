@@ -54,7 +54,7 @@ class NotificationCenter {
                 list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Нет уведомлений</div>';
             } else {
                 list.innerHTML = notifs.map(n => `
-                    <div class="notif-center-item ${n.is_read ? '' : 'unread'}" onclick="window.open('${n.url || '/'}')">
+                    <div class="notif-center-item ${n.is_read ? '' : 'unread'}" onclick="NotificationCenter.markRead(${n.id}, '${this.userType}')">
                         <div class="notif-center-title">${n.title}</div>
                         <div class="notif-center-body">${n.body || ''}</div>
                         <div class="notif-center-time">${new Date(n.created_at).toLocaleString()}</div>
@@ -68,6 +68,18 @@ class NotificationCenter {
             subBtn.style.background = subbed ? '#10b981' : '#0066CC';
         } catch(e) {
             list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Ошибка загрузки</div>';
+        }
+    }
+
+    static async markRead(id, userType) {
+        await fetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+        document.getElementById('notif-center-close')?.click();
+        console.log('markRead вызван:', id, userType);
+        // Переходим в бронирования
+        if (userType === 'manager' && window.AquaGid?.ManagerApp) {
+            window.AquaGid.ManagerApp.switchSection('bookings');
+        } else if (userType === 'client' && window.AquaGid?.UnifiedScreens) {
+            window.AquaGid.UnifiedScreens.showMyBookings();
         }
     }
 

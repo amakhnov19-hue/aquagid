@@ -166,6 +166,21 @@ async def create_booking(
                         amount=float(info[5] or 0),
                         db=db
                     )
+
+                    # Push-уведомление менеджеру
+                    try:
+                        from app.api.push_api import send_push_internal
+                        await send_push_internal(
+                            db=db,
+                            title=f"🆕 Новая бронь #{booking_id}",
+                            body=f"{info[2] or 'Клиент'}, {info[0]}, {info[3]} {info[4]}",
+                            url=f"/bookings/{booking_id}",
+                            user_type="manager",
+                            user_id=str(info[1])
+                        )
+                    except Exception as e:
+                        print(f"⚠️ Ошибка push-уведомления: {e}")
+
             except Exception as e:
                 print(f"⚠️ Ошибка Telegram-уведомления: {e}")
             print(f"📡 WebSocket уведомление отправлено менеджеру {boat.manager_id}")

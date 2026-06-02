@@ -45,6 +45,31 @@ async def push_subscribe(
 import os
 from pywebpush import webpush, WebPushException
 
+async def send_push_internal(db, title, body, url, user_type, user_id):
+    """Внутренняя функция для отправки push из других модулей"""
+    # Сохраняем в историю
+    await db.execute(
+        text("INSERT INTO push_notifications (user_type, user_id, title, body, url) VALUES (:ut, :uid, :title, :body, :url)"),
+        {"ut": user_type, "uid": user_id, "title": title, "body": body, "url": url}
+    )
+    await db.commit()
+    
+    # Отправляем push подписчикам
+    result = await db.execute(
+        text("SELECT endpoint, keys FROM push_subscriptions WHERE user_type = :ut AND user_id = :uid"),
+        {"ut": user_type, "uid": user_id}
+    )
+    for row in result.fetchall():
+        try:
+            webpush(
+                subscription_info={"endpoint": row[0], "keys": json.loads(row[1])},
+                data=json.dumps({"title": title, "body": body, "url": url}),
+                vapid_private_key=os.getenv("VAPID_PRIVATE_KEY"),
+                vapid_claims={"sub": "mailto:support@24aquabooking.ru"}
+            )
+        except Exception as e:
+            print(f"❌ Push error: {e}")
+
 
 @router.post("/send")
 async def send_push(
@@ -58,6 +83,17 @@ async def send_push(
     user_type = data.get("user_type")
     user_id = data.get("user_id")
     
+    # 1. Сохраняем в историю ВСЕГДА (даже если нет push-подписок)
+    await db.execute(
+        text("""
+            INSERT INTO push_notifications (user_type, user_id, title, body, url)
+            VALUES (:ut, :uid, :title, :body, :url)
+        """),
+        {"ut": user_type, "uid": user_id, "title": title, "body": body, "url": url}
+    )
+    await db.commit()
+    
+    # 2. Ищем push-подписки
     query = "SELECT endpoint, keys FROM push_subscriptions WHERE 1=1"
     params = {}
     if user_type:
@@ -70,6 +106,7 @@ async def send_push(
     result = await db.execute(text(query), params)
     subscriptions = [{"endpoint": row[0], "keys": json.loads(row[1])} for row in result.fetchall()]
     
+    # 3. Отправляем push
     sent = 0
     for sub in subscriptions:
         try:
@@ -87,3 +124,77 @@ async def send_push(
                 await db.commit()
     
     return {"success": True, "sent": sent, "total": len(subscriptions)}
+
+@router.get("/notifications")
+async def get_notifications(
+    user_type: str,
+    user_id: str,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db)
+):
+    """Получить историю уведомлений"""
+    result = await db.execute(
+        text("""
+            SELECT id, title, body, url, is_read, created_at 
+            FROM push_notifications 
+            WHERE user_type = :ut AND user_id = :uid
+            ORDER BY created_at DESC 
+            LIMIT :limit
+        """),
+        {"ut": user_type, "uid": user_id, "limit": limit}
+    )
+    notifications = [
+        {
+            "id": row[0],
+            "title": row[1],
+            "body": row[2],
+            "url": row[3],
+            "is_read": row[4],
+            "created_at": str(row[5])
+        }
+        for row in result.fetchall()
+    ]
+    return {"notifications": notifications}
+
+
+@router.get("/notifications/count")
+async def get_unread_count(
+    user_type: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Количество непрочитанных уведомлений"""
+    result = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM push_notifications 
+            WHERE user_type = :ut AND user_id = :uid AND is_read = false
+        """),
+        {"ut": user_type, "uid": user_id}
+    )
+    return {"count": result.scalar()}
+
+
+@router.put("/notifications/{notif_id}/read")
+async def mark_read(notif_id: int, db: AsyncSession = Depends(get_db)):
+    """Отметить уведомление как прочитанное"""
+    await db.execute(
+        text("UPDATE push_notifications SET is_read = true WHERE id = :id"),
+        {"id": notif_id}
+    )
+    await db.commit()
+    return {"success": True}
+
+@router.delete("/notifications/clear")
+async def clear_notifications(
+    user_type: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Удалить все уведомления пользователя"""
+    await db.execute(
+        text("DELETE FROM push_notifications WHERE user_type = :ut AND user_id = :uid"),
+        {"ut": user_type, "uid": user_id}
+    )
+    await db.commit()
+    return {"success": True}
+

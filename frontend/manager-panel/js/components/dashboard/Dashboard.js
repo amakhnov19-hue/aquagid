@@ -203,26 +203,10 @@
                 <div class="dashboard-v2">
                     <!-- Панель Уведомлений -->
                     <div class="dashboard-panel notifications-panel">
-                        <div class="panel-header" onclick="AquaGid.ManagerDashboard.toggleNotifications()" style="cursor: pointer; display: flex; align-items: center; gap: 10px; position: relative;">
+                        <div class="panel-header" onclick="new NotificationCenter({userType:'manager', userId: window.managerId}).open()" style="cursor: pointer; display: flex; align-items: center; gap: 10px; position: relative;">
                             <span class="panel-icon">🔔</span>
                             <span class="panel-title">Уведомления</span>
                             ${unreadCount > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${unreadCount}</span>` : ''}
-                        </div>
-                        <div id="notification-list" style="display: none;">
-                            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                                <button onclick="AquaGid.ManagerDashboard.markAllRead(); event.stopPropagation();" style="padding: 6px 14px; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px;">✅ Прочитано</button>
-                                <button onclick="AquaGid.ManagerDashboard.showHistory(); event.stopPropagation();" style="padding: 6px 14px; background: #f1f5f9; color: #333; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px;">📋 История</button>
-                                <button onclick="AquaGid.ManagerDashboard.clearHistory(); event.stopPropagation();" style="padding: 6px 14px; background: #fff5f5; color: #c62828; border: 1px solid #ffcdd2; border-radius: 6px; cursor: pointer; font-size: 13px;">🗑️ Очистить историю</button>
-                            </div>
-                            <div id="notif-content">
-                                ${this.notifications.filter(n => !n.is_read).slice(0, 10).map(n => `
-                                    <div class="notification-item" style="padding: 8px 0; border-bottom: 1px solid #eee;">
-                                        <div style="font-weight: 600;">${n.title}</div>
-                                        <div style="font-size: 13px; color: #666;">${n.body}</div>
-                                        <div style="font-size: 11px; color: #999;">${new Date(n.created_at).toLocaleString('ru-RU')}</div>
-                                    </div>
-                                `).join('') || '<div style="color: #999; padding: 10px 0;">Нет непрочитанных уведомлений</div>'}
-                            </div>
                         </div>
                     </div>
                     
