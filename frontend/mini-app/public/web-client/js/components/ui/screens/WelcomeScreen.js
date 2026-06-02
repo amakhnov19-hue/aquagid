@@ -53,12 +53,11 @@ class WelcomeScreen extends ScreenBase {
                             ⚡ Ближайший катер
                         </button>
                     </div>
-                    
-                    <!-- Панель уведомлений -->
-                    <div class="notifications-client" style="background: #4a4a4a; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="WelcomeScreen.enablePush()">
-                        <span style="color: #fff; font-size: 15px; font-weight: 600;" id="push-notif-text">🔔 Включить уведомления</span>
+
+                    <!-- Кнопка Уведомления -->
+                    <div class="notifications-client" style="background: #4a4a4a; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="new NotificationCenter({userType:'client', userId: localStorage.getItem('clientPhone')||'guest'}).open()">
+                        <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления</span>
                     </div>
-                    <div id="client-notif-list" style="display: none; margin-top: 8px;"></div>
                     
                     <!-- Кнопка Мои бронирования -->
                     <button class="btn-home btn-bookings" onclick="window.AquaGid.UnifiedScreens.showMyBookings()">
