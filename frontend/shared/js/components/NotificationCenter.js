@@ -99,6 +99,10 @@ class NotificationCenter {
         if (!confirm('Удалить все уведомления?')) return;
         await fetch(`/api/notifications/clear?user_type=${this.userType}&user_id=${this.userId}`, { method: 'DELETE' });
         this.loadList();
+        // Обновляем дашборд
+        if (typeof loadView === 'function') {
+            loadView('dashboard');
+        }
     }
 }
 
