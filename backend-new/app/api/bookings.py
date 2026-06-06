@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import sqlalchemy
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, union_all, cast, Numeric, String, TIMESTAMP
+from sqlalchemy import select, and_, union_all, cast, Numeric, String, TIMESTAMP, text
 from sqlalchemy import Boolean
 from datetime import datetime, timedelta
 from typing import List
@@ -843,3 +843,26 @@ async def mark_booking_viewed(
     booking.viewed_at = datetime.utcnow()
     await db.commit()
     return {"message": "OK"}
+
+@router.get("/stats")
+async def get_bookings_stats(
+    db: AsyncSession = Depends(get_db)
+):
+    """Статистика броней для админ-дашборда"""
+    result = await db.execute(
+        text("""
+            SELECT 
+                COUNT(*) FILTER (WHERE status = 'active') as active,
+                COUNT(*) FILTER (WHERE status = 'active' AND booking_date = CURRENT_DATE) as today,
+                COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as week
+            FROM bookings
+        """)
+    )
+    row = result.fetchone()
+    return {
+        "active": row[0] or 0,
+        "today": row[1] or 0,
+        "cancelled": row[2] or 0,
+        "week": row[3] or 0
+    }

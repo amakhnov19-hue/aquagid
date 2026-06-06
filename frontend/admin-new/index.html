@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/manager-card.css">
     <link rel="stylesheet" href="/shared/css/chat-service.css">
+    <link rel="stylesheet" href="/shared/css/notification-center.css">
 </head>
 <body>
     <button class="hamburger" id="hamburgerBtn" onclick="document.getElementById('sidebarMenu').classList.toggle('open'); document.getElementById('sidebarOverlay').classList.toggle('active');">☰</button>
@@ -42,6 +43,16 @@
     <script src="js/components/ManagerCard.js"></script>
     <script src="js/components/PaymentSettings.js"></script>
     <script src="/shared/js/components/ChatService.js"></script>
+    <script src="/shared/js/components/PushNotifications.js"></script>
+    <script src="/shared/js/components/NotificationCenter.js"></script>
     <script src="js/app.js"></script>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('✅ SW админки зарегистрирован'))
+            .catch(err => console.log('❌ SW ошибка:', err));
+    }
+    </script>
 </body>
 </html>

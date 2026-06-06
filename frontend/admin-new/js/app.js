@@ -65,10 +65,50 @@ async function loadView(view) {
 
 
 async function renderDashboard(container) {
+    // Загружаем статистику и счётчик уведомлений
+    let stats = { active: 0, today: 0, cancelled: 0, week: 0 };
+    let unreadCount = 0;
+    
+    try {
+        const [statsResp, notifResp] = await Promise.all([
+            fetch('/api/bookings/stats'),
+            fetch('/api/notifications/count?user_type=admin&user_id=admin')
+        ]);
+        stats = await statsResp.json();
+        const notifData = await notifResp.json();
+        unreadCount = notifData.count || 0;
+    } catch(e) {}
+
     container.innerHTML = `
         <div class="card">
             <h2>📊 Дашборд</h2>
-            <p>Добро пожаловать в админ-панель!</p>
+            <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;">
+                <div class="stat-card" style="flex:1;min-width:120px;background:#f0f7ff;padding:16px;border-radius:12px;text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#0066CC;">${stats.active}</div>
+                    <div style="font-size:13px;color:#666;">Активных</div>
+                </div>
+                <div class="stat-card" style="flex:1;min-width:120px;background:#f0fff0;padding:16px;border-radius:12px;text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#2e7d32;">${stats.today}</div>
+                    <div style="font-size:13px;color:#666;">Сегодня</div>
+                </div>
+                <div class="stat-card" style="flex:1;min-width:120px;background:#fff5f5;padding:16px;border-radius:12px;text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#c62828;">${stats.cancelled}</div>
+                    <div style="font-size:13px;color:#666;">Отменено</div>
+                </div>
+                <div class="stat-card" style="flex:1;min-width:120px;background:#fff8e1;padding:16px;border-radius:12px;text-align:center;">
+                    <div style="font-size:28px;font-weight:700;color:#e65100;">${stats.week}</div>
+                    <div style="font-size:13px;color:#666;">За 7 дней</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+            <div class="dashboard-panel notifications-panel" style="cursor:pointer;" onclick="new NotificationCenter({userType:'admin', userId:'admin'}).open()">
+                <div style="display:flex;align-items:center;gap:10px;position:relative;">
+                    <span style="font-size:20px;">🔔</span>
+                    <span style="font-size:16px;font-weight:600;">Уведомления</span>
+                    ${unreadCount > 0 ? `<span style="position:absolute;top:-8px;right:-8px;background:#4caf50;color:white;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;">${unreadCount}</span>` : ''}
+                </div>
+            </div>
         </div>
     `;
 }
