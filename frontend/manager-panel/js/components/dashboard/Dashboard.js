@@ -44,9 +44,42 @@
                     this
                 );
             }
+
+            // Подписываемся на WebSocket для обновления дашборда
+            setTimeout(() => {
+                const ws = window.AquaGid?.ManagerApp?.ws;
+                if (ws) {
+                    const original = ws.onmessage;
+                    ws.onmessage = (e) => {
+                        if (original) original(e);
+                        if (e.data === 'new_chat_message' || e.data === 'bookings_updated') {
+                            this.loadDashboardData();
+                        }
+                    };
+                }
+            }, 1000);
+
+            // Слушаем push-уведомления для мгновенного обновления счётчика
+            if ('serviceWorker' in navigator && !window._swListenerAdded) {
+                window._swListenerAdded = true;
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data?.type === 'update-badge') {
+                        if (window.AquaGid?.ManagerDashboard) {
+                            window.AquaGid.ManagerDashboard.render();
+                        }
+                    }
+                });
+            }
         }
 
         async loadDashboardData() {
+            // Кеширование на 30 секунд
+            if (this._lastLoad && (Date.now() - this._lastLoad) < 30000) {
+                this.render();
+                return;
+            }
+            this._lastLoad = Date.now();
+            
             const managerId = window.managerId;
             if (!managerId) return;
             
@@ -192,12 +225,20 @@
             }
         }
         
-        render(containerId = 'dashboard-container') {
+        async render(containerId) {
+            if (!containerId) containerId = 'dashboard-container';
             const container = document.getElementById(containerId);
             if (!container) return;
-            
-            const s = this.stats;
-            const unreadCount = this.notifications.filter(n => !n.is_read).length;
+
+            // Загружаем реальный счётчик уведомлений
+            let realUnreadCount = 0;
+            console.log('Загружаем счётчик для менеджера...');
+            try {
+                const resp = await fetch('/api/notifications/count?user_type=manager&user_id=' + (window.managerId || '86'));
+                const data = await resp.json();
+                realUnreadCount = data.count || 0;
+                console.log('Счётчик загружен:', realUnreadCount);
+            } catch(e) {}
             
             container.innerHTML = `
                 <div class="dashboard-v2">
@@ -206,7 +247,7 @@
                         <div class="panel-header" onclick="new NotificationCenter({userType:'manager', userId: window.managerId}).open()" style="cursor: pointer; display: flex; align-items: center; gap: 10px; position: relative;">
                             <span class="panel-icon">🔔</span>
                             <span class="panel-title">Уведомления</span>
-                            ${unreadCount > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${unreadCount}</span>` : ''}
+                            ${realUnreadCount > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${realUnreadCount}</span>` : ''}
                         </div>
                     </div>
                     
@@ -215,12 +256,12 @@
                         <div class="panel-header" style="position: relative;">
                             <span class="panel-icon">📋</span>
                             <span class="panel-title">Активные бронирования</span>
-                            ${s.new_bookings > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${s.new_bookings}</span>` : ''}
+                            ${this.stats.new_bookings > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${this.stats.new_bookings}</span>` : ''}
                         </div>
                         <div class="panel-stats bookings-stats" style="display: flex; align-items: baseline; justify-content: space-between;">
-                            <span class="stat-attention" style="color: #e65100;">⚠️ ${s.attention_bookings}</span>
-                            <span class="stat-today" style="font-size: 32px; font-weight: 700; color: #1e293b;">${s.today_bookings}</span>
-                            <span class="stat-total" style="color: #64748b;">всего ${s.total_bookings}</span>
+                            <span class="stat-attention" style="color: #e65100;">⚠️ ${this.stats.attention_bookings}</span>
+                            <span class="stat-today" style="font-size: 32px; font-weight: 700; color: #1e293b;">${this.stats.today_bookings}</span>
+                            <span class="stat-total" style="color: #64748b;">всего ${this.stats.today_bookings}</span>
                         </div>
                         <div class="panel-footer">
                             <span>📋 Все бронирования →</span>

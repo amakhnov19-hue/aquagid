@@ -53,5 +53,13 @@
         });
     </script>
 
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(reg => console.log('✅ SW менеджера зарегистрирован'))
+            .catch(err => console.log('❌ SW ошибка:', err));
+    }
+</script>
+
 </body>
 </html>

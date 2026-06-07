@@ -30,6 +30,20 @@ REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI")
 
 oauth_states: Dict[str, Any] = {}
 
+# Кеш для Google API (60 секунд)
+_cache = {}
+CACHE_TTL = 60  # секунд
+
+def _get_cache(key):
+    if key in _cache:
+        val, ts = _cache[key]
+        if time.time() - ts < CACHE_TTL:
+            return val
+    return None
+
+def _set_cache(key, val):
+    _cache[key] = (val, time.time())
+
 
 class OAuthState:
     def __init__(self, state, manager_id, code_verifier):
@@ -343,16 +357,28 @@ def get_google_router() -> APIRouter:
     # ========== Статус ==========
     @router.get("/status/{manager_id}")
     async def calendar_status(manager_id: int, db: AsyncSession = Depends(get_db)):
+        cache_key = f"status_{manager_id}"
+        cached = _get_cache(cache_key)
+        if cached:
+            return cached
+        
         result = await db.execute(
             text("SELECT selected_calendar_id FROM manager_calendar WHERE manager_id = :manager_id"),
             {"manager_id": manager_id}
         )
         row = result.fetchone()
-        return {"connected": row is not None, "calendar_id": row[0] if row else None}
+        resp = {"connected": row is not None, "calendar_id": row[0] if row else None}
+        _set_cache(cache_key, resp)
+        return resp
 
     # ========== Список календарей ==========
     @router.get("/calendars/{manager_id}")
     async def list_calendars(manager_id: int, db: AsyncSession = Depends(get_db)):
+        cache_key = f"calendars_{manager_id}"
+        cached = _get_cache(cache_key)
+        if cached:
+            return cached
+        
         # Обновляем токен перед запросом
         await refresh_google_token_if_expired(manager_id, db)
         result = await db.execute(
@@ -390,6 +416,8 @@ def get_google_router() -> APIRouter:
             calendar_list = service.calendarList().list().execute()
         except Exception as e:
             raise HTTPException(status_code=401, detail=f"Google API error, please reconnect: {str(e)}")
+
+        _set_cache(cache_key, {"calendars": calendar_list.get("items", [])})
         
         return {"calendars": calendar_list.get("items", [])}
 

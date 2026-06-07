@@ -100,10 +100,8 @@
 
                     // Обновляем уведомления
                     if (window.AquaGid?.ManagerDashboard) {
-                        window.AquaGid.ManagerDashboard.loadNotifications().then(() => {
-                            window.AquaGid.ManagerDashboard.render();
-                        });
-                    }
+                        window.AquaGid.ManagerDashboard.render();
+}
                 } else if (event.data === 'boats_updated') {
                     console.log('🚤 Обновление катеров');
                     if (window.AquaGid?.ManagerBoats) {

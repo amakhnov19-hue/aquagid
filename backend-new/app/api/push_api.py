@@ -53,6 +53,13 @@ async def send_push_internal(db, title, body, url, user_type, user_id):
         {"ut": user_type, "uid": user_id, "title": title, "body": body, "url": url}
     )
     await db.commit()
+
+    # WebSocket уведомление менеджеру
+    try:
+        from app.services.sync.websocket import ws_manager
+        await ws_manager.send_update(int(user_id), "bookings_updated")
+    except:
+        pass
     
     # Отправляем push подписчикам
     result = await db.execute(
@@ -180,6 +187,20 @@ async def mark_read(notif_id: int, db: AsyncSession = Depends(get_db)):
     await db.execute(
         text("UPDATE push_notifications SET is_read = true WHERE id = :id"),
         {"id": notif_id}
+    )
+    await db.commit()
+    return {"success": True}
+
+@router.put("/notifications/read-all")
+async def mark_all_read(
+    user_type: str,
+    user_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Отметить все уведомления прочитанными"""
+    await db.execute(
+        text("UPDATE push_notifications SET is_read = true WHERE user_type = :ut AND user_id = :uid AND is_read = false"),
+        {"ut": user_type, "uid": user_id}
     )
     await db.commit()
     return {"success": True}

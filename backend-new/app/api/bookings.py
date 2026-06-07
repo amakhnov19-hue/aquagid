@@ -18,6 +18,24 @@ from app.models.manager_model import Manager as ManagerModel
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
+async def _delete_google_event_async(google_event_id, boat_id):
+    """Удаление из Google Calendar в фоне (не блокирует ответ клиенту)"""
+    try:
+        from app.services.sync.sync_service import sync_service
+        from app.core.database import AsyncSessionLocal
+        from app.models.boat_model import Boat as BoatModel
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            boat = await db.execute(select(BoatModel).where(BoatModel.id == boat_id))
+            boat = boat.scalar_one_or_none()
+            manager_id = boat.manager_id if boat else None
+            if manager_id:
+                await sync_service.delete_event(google_event_id, manager_id)
+                print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
+    except Exception as e:
+        print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
+
+
 @router.post("", response_model=BookingResponse)
 async def create_booking(
     booking: BookingCreate,
@@ -428,23 +446,27 @@ async def cancel_booking(
                 date=str(info[3]),
                 db=db
             )
+            
+            # Push-уведомление менеджеру об отмене
+            try:
+                from app.api.push_api import send_push_internal
+                await send_push_internal(
+                    db=db,
+                    title=f"❌ Отмена брони #{booking_id}",
+                    body=f"{info[2] or 'Клиент'}, {info[0]}, {info[3]}",
+                    url=f"/bookings/{booking_id}",
+                    user_type="manager",
+                    user_id=str(info[1])
+                )
+            except Exception as e:
+                print(f"⚠️ Ошибка push отмены: {e}")
     except Exception as e:
         print(f"⚠️ Ошибка Telegram-уведомления об отмене: {e}")
     
-    # Удаляем из Google Calendar
+    # Удаляем из Google Calendar в фоне
     if google_event_id:
-        try:
-            from app.services.sync.sync_service import sync_service
-            boat_result = await db.execute(
-                select(BoatModel).where(BoatModel.id == booking.boat_id)
-            )
-            boat = boat_result.scalar_one_or_none()
-            manager_id = boat.manager_id if boat else None
-            if manager_id:
-                await sync_service.delete_event(google_event_id, manager_id)
-                print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
-        except Exception as e:
-            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
+        import asyncio
+        asyncio.ensure_future(_delete_google_event_async(google_event_id, booking.boat_id))
     
     return {"message": "Бронирование отменено", "id": booking_id}
 
