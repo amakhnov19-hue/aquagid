@@ -1,16 +1,17 @@
 /**
- * NotificationCenter — независимый центр уведомлений
- * Подключается в любом кабинете (клиент, менеджер, админ)
+ * NotificationCenter v2.1 — Центр уведомлений
+ * Логика:
+ * - Все уведомления новые (без подсветки is_read)
+ * - При клике: переход по url → удаление уведомления → счётчик -1
+ * - Типы: бронирование → раздел "Бронирования", сообщение → чат
  */
 class NotificationCenter {
     constructor(options = {}) {
         this.userType = options.userType || 'client';
         this.userId = options.userId || 'guest';
-        this.container = null;
     }
 
     async open() {
-        // Удаляем старое окно если есть
         const old = document.getElementById('notif-center-modal');
         if (old) old.remove();
 
@@ -28,7 +29,6 @@ class NotificationCenter {
                 </div>
                 <div class="notif-center-footer">
                     <button id="notif-center-subscribe">🔔 Включить push-уведомления</button>
-                    <button id="notif-center-clear">🗑 Очистить все</button>
                 </div>
             </div>
         `;
@@ -36,7 +36,6 @@ class NotificationCenter {
 
         document.getElementById('notif-center-close').onclick = () => modal.remove();
         document.getElementById('notif-center-subscribe').onclick = () => this.subscribe();
-        document.getElementById('notif-center-clear').onclick = () => this.clearAll();
 
         await this.loadList();
     }
@@ -46,23 +45,27 @@ class NotificationCenter {
         const subBtn = document.getElementById('notif-center-subscribe');
         
         try {
-            const resp = await fetch(`/api/notifications?user_type=${this.userType}&user_id=${this.userId}&limit=20`);
+            const resp = await fetch(`/api/notifications?user_type=${this.userType}&user_id=${this.userId}&limit=50`);
             const data = await resp.json();
             const notifs = data.notifications || [];
 
             if (notifs.length === 0) {
                 list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Нет уведомлений</div>';
             } else {
-                list.innerHTML = notifs.map(n => `
-                    <div class="notif-center-item ${n.is_read ? '' : 'unread'}" onclick="NotificationCenter.markRead(${n.id}, '${this.userType}')">
-                        <div class="notif-center-title">${n.title}</div>
-                        <div class="notif-center-body">${n.body || ''}</div>
-                        <div class="notif-center-time">${new Date(n.created_at).toLocaleString()}</div>
-                    </div>
-                `).join('');
+                list.innerHTML = notifs.map(n => {
+                    const safeUrl = (n.url || '').replace(/'/g, "\\'");
+                    return `
+                        <div class="notif-center-item" 
+                             onclick="window._nc.handleClick(${n.id}, '${safeUrl}')">
+                            <div class="notif-center-title">${this.esc(n.title)}</div>
+                            <div class="notif-center-body-text">${this.esc(n.body || '')}</div>
+                            <div class="notif-center-time">${new Date(n.created_at).toLocaleString()}</div>
+                        </div>
+                    `;
+                }).join('');
+                window._nc = this;
             }
 
-            // Статус подписки
             const subbed = localStorage.getItem('push_subscribed') === '1';
             subBtn.textContent = subbed ? '✅ Уведомления включены' : '🔔 Включить push-уведомления';
             subBtn.style.background = subbed ? '#10b981' : '#0066CC';
@@ -71,15 +74,33 @@ class NotificationCenter {
         }
     }
 
-    static async markRead(id, userType) {
-        await fetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+    async handleClick(id, url) {
+        await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
         document.getElementById('notif-center-close')?.click();
-        console.log('markRead вызван:', id, userType);
-        // Переходим в бронирования
-        if (userType === 'manager' && window.AquaGid?.ManagerApp) {
-            window.AquaGid.ManagerApp.switchSection('bookings');
-        } else if (userType === 'client' && window.AquaGid?.UnifiedScreens) {
-            window.AquaGid.UnifiedScreens.showMyBookings();
+        await this.updateBadge();
+
+        if (url) {
+            if (this.userType === 'manager' && window.AquaGid?.ManagerApp) {
+                if (url.includes('chat') || url.includes('message')) {
+                    AquaGid.ManagerApp.switchSection('chat');
+                } else {
+                    AquaGid.ManagerApp.switchSection('bookings');
+                }
+            } else if (this.userType === 'admin') {
+                if (url.includes('chat') || url.includes('message')) {
+                    if (typeof loadView === 'function') loadView('chat');
+                } else {
+                    if (typeof loadView === 'function') loadView('dashboard');
+                }
+            } else if (this.userType === 'client' && window.AquaGid?.UnifiedScreens) {
+                if (url.includes('chat') || url.includes('message')) {
+                    if (window.AquaGid.ChatService?.toggle) {
+                        AquaGid.ChatService.toggle();
+                    }
+                } else {
+                    AquaGid.UnifiedScreens.showMyBookings();
+                }
+            }
         }
     }
 
@@ -95,14 +116,26 @@ class NotificationCenter {
         }
     }
 
-    async clearAll() {
-        if (!confirm('Удалить все уведомления?')) return;
-        await fetch(`/api/notifications/clear?user_type=${this.userType}&user_id=${this.userId}`, { method: 'DELETE' });
-        this.loadList();
-        // Обновляем дашборд
-        if (typeof loadView === 'function') {
-            loadView('dashboard');
+    async updateBadge() {
+        try {
+            const resp = await fetch(`/api/notifications/count?user_type=${this.userType}&user_id=${this.userId}`);
+            const data = await resp.json();
+            const count = data.count || 0;
+            const badge = document.getElementById('notif-badge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'flex' : 'none';
+            }
+            return count;
+        } catch(e) {
+            console.error('updateBadge error:', e);
         }
+    }
+
+    esc(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 }
 

@@ -128,8 +128,10 @@
                 this.ws = new WebSocket(wsUrl);
                 this.ws.onopen = () => console.log('✅ ChatService WS:', this.role);
                 this.ws.onmessage = (e) => {
-                    if ((e.data === 'new_chat_message' || e.data === 'update') && this.isOpen) {
-                        this.loadHistory();
+                    if (e.data === 'new_chat_message' || e.data === 'update') {
+                        if (this.isOpen || document.getElementById('chat-modal')) {
+                            this.loadHistory();
+                        }
                     }
                 };
                 this.ws.onclose = () => console.log('🔌 ChatService WS closed');
@@ -143,7 +145,9 @@
             try {
                 const url = this.role === 'admin'
                     ? `/api/messages/admin/dialogs`
-                    : `/api/messages?client_phone=${encodeURIComponent(this.userId)}`;
+                    : this.role === 'manager'
+                        ? `/api/messages?manager_id=${encodeURIComponent(this.userId)}`
+                        : `/api/messages?client_phone=${encodeURIComponent(this.userId)}`;
                 const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token') || '';
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const response = await fetch(url, { headers });
@@ -235,7 +239,7 @@
                 <div class="chat-modal-window">
                     <div class="chat-service-header">
                         <span>💬 Поддержка</span>
-                        <button onclick="document.getElementById('chat-modal').remove(); AquaGid.ChatService.isOpen = false;">✕</button>
+                        <button onclick="document.getElementById('chat-modal').remove(); AquaGid.ChatService.isOpen = false; if(window.AquaGid?.ManagerApp)AquaGid.ManagerApp.switchSection('dashboard');">✕</button>
                     </div>
                     <div class="chat-service-messages" id="chat-modal-msgs">${historyHtml}</div>
                     <div class="chat-service-input">
@@ -372,6 +376,8 @@
             const token = localStorage.getItem('admin_token');
             const isMobile = window.innerWidth < 768;
             this._currentDialog = senderId;
+            this._activeDialogType = senderType || 'client';
+            this._activeDialogId = senderId;            
 
             // Меняем статус
             fetch(`/api/messages/admin/dialog/${senderId}/status?status=viewed`, {
@@ -450,9 +456,9 @@
                 },
                 body: JSON.stringify({
                     sender_type: 'admin',
-                    sender_id: '0',
-                    receiver_type: 'client',
-                    receiver_id: senderId,
+                    sender_id: 'admin',
+                    receiver_type: this._activeDialogType || 'client',
+                    receiver_id: this._activeDialogId || senderId,
                     type: 'chat',
                     title: 'Ответ поддержки',
                     body: input.value.trim()
@@ -500,7 +506,7 @@
         }
 
         renderMessages() {
-            const container = document.getElementById('chat-service-msgs');
+            const container = document.getElementById('chat-modal-msgs') || document.getElementById('chat-service-msgs');
             if (!container) return;
             container.innerHTML = `
                 <div class="chat-service-msg support">

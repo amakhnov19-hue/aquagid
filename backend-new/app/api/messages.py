@@ -87,6 +87,22 @@ async def send_message(message: MessageCreate, db: AsyncSession = Depends(get_db
             )
         except Exception as e:
             print(f"⚠️ Telegram уведомление менеджеру не отправлено: {e}")
+
+    
+    # Push-уведомление получателю, если админ написал
+    if message.sender_type == 'admin':
+        try:
+            from app.api.push_api import send_push_internal
+            await send_push_internal(
+                db=db,
+                title="💬 Сообщение от поддержки",
+                body=message.body[:100] if message.body else '',
+                url="/chat",
+                user_type=message.receiver_type,
+                user_id=message.receiver_id
+            )
+        except Exception as e:
+            print(f"⚠️ Ошибка push получателю: {e}")
     
     return {"success": True, "id": new_id}
 

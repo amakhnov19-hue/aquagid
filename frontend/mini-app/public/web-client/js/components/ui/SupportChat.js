@@ -8,6 +8,13 @@
     const VERSION = '20260223_01';
     
     class SupportChat {
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         constructor() {
             this.version = VERSION;
             this.isOpen = false;
@@ -261,11 +268,11 @@
             if (type === 'support') {
                 messageDiv.innerHTML = `
                     <div class="support-chat__avatar">${this.config.supportAvatar}</div>
-                    <div class="support-chat__bubble">${text}</div>
+                    <div class="support-chat__bubble">${this.escapeHtml(text)}</div>
                 `;
             } else {
                 messageDiv.innerHTML = `
-                    <div class="support-chat__bubble">${text}</div>
+                    <div class="support-chat__bubble">${this.escapeHtml(text)}</div>
                     <div class="support-chat__avatar">👤</div>
                 `;
             }
@@ -314,13 +321,13 @@
                     return `
                         <div class="support-chat__message support-chat__message--support">
                             <div class="support-chat__avatar">${this.config.supportAvatar}</div>
-                            <div class="support-chat__bubble">${msg.text}</div>
+                            <div class="support-chat__bubble">${this.escapeHtml(msg.text)}</div>
                         </div>
                     `;
                 } else {
                     return `
                         <div class="support-chat__message support-chat__message--user">
-                            <div class="support-chat__bubble">${msg.text}</div>
+                            <div class="support-chat__bubble">${this.escapeHtml(msg.text)}</div>
                             <div class="support-chat__avatar">👤</div>
                         </div>
                     `;

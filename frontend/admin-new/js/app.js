@@ -62,7 +62,14 @@ async function loadView(view) {
     }
 }
 
+async function refreshDashboard() {
+    const content = document.getElementById('content');
+    if (content && currentView === 'dashboard') {
+        await renderDashboard(content);
+    }
+}
 
+window.refreshDashboard = refreshDashboard;
 
 async function renderDashboard(container) {
     // Загружаем статистику и счётчик уведомлений
@@ -709,5 +716,39 @@ document.querySelector('.nav').addEventListener('click', (e) => {
 document.getElementById('logoutBtn').addEventListener('click', () => {
     logout();
 });
+
+// Глобальный WebSocket для админа (синхронизация)
+(function initAdminWs() {
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${location.host}/api/sync/ws/admin`);
+    
+    ws.onopen = () => console.log('✅ Админ WebSocket подключён');
+    
+    ws.onmessage = (e) => {
+        if (e.data === 'new_chat_message') {
+            // Обновляем дашборд если мы на нём
+            if (currentView === 'dashboard') {
+                refreshDashboard();
+            }
+            // Обновляем чат если мы в нём
+            if (currentView === 'chat' && window.AquaGid?.ChatService) {
+                window.AquaGid.ChatService.renderAdminChat(document.getElementById('content'));
+            }
+        }
+        if (e.data === 'bookings_updated') {
+            // Обновляем статистику
+            if (currentView === 'dashboard') {
+                refreshDashboard();
+            }
+        }
+    };
+    
+    ws.onclose = () => {
+        console.log('🔌 Админ WebSocket закрыт, переподключение...');
+        setTimeout(initAdminWs, 5000);
+    };
+    
+    ws.onerror = (err) => console.error('❌ Админ WebSocket ошибка:', err);
+})();
 
 loadView('dashboard');

@@ -205,6 +205,16 @@ async def mark_all_read(
     await db.commit()
     return {"success": True}
 
+@router.delete("/notifications/{notif_id}")
+async def delete_notification(notif_id: int, db: AsyncSession = Depends(get_db)):
+    """Удалить одно уведомление по ID"""
+    await db.execute(
+        text("DELETE FROM push_notifications WHERE id = :id"),
+        {"id": notif_id}
+    )
+    await db.commit()
+    return {"success": True}
+
 @router.delete("/notifications/clear")
 async def clear_notifications(
     user_type: str,
