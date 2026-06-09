@@ -47,6 +47,8 @@ async def get_all_managers(
             "referral_code": m.referral_code,
             "referral_discount_percent": m.referral_discount_percent or 10,
             "referral_mode": m.referral_mode or 'all_boats',
+            "messengers": m.messengers or {},
+            "telegram_data": m.telegram_data or {},            
         }
         for m in managers
     ]

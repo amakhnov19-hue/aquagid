@@ -62,6 +62,14 @@ async function loadView(view) {
     }
 }
 
+window.openChatWithManager = async function(managerId) {
+    if (!window.AquaGid?.ChatService) return;
+    window.AquaGid.ChatService._activeDialogType = 'manager';
+    window.AquaGid.ChatService._activeDialogId = managerId;
+    window.AquaGid.ChatService._currentDialog = managerId;
+    await window.AquaGid.ChatService._adminOpenDialog(managerId, 'manager');
+};
+
 async function refreshDashboard() {
     const content = document.getElementById('content');
     if (content && currentView === 'dashboard') {
@@ -130,24 +138,17 @@ async function renderManagers(container) {
                 <div style="overflow-x: auto;">
                     <table class="data-table">
                         <thead>
-                            <tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Метод расчёта</th><th>Статус</th><th>Действия</th></tr>
+                            <tr><th>ID</th><th>Имя</th><th>Связь</th><th>Статус</th><th>Действия</th></tr>
                         </thead>
                         <tbody>
                             ${managers.map(m => `
                                 <tr data-manager-id="${m.id}">
                                     <td>${m.id}</td>
                                     <td>${this?.escapeHtml ? this.escapeHtml(m.name || '—') : m.name || '—'}</td>
-                                    <td>
-                                        <a href="tel:${m.phone || ''}" class="phone-link" data-phone="${m.phone || ''}" style="text-decoration: none; color: #3b82f6;">
-                                            ${m.phone || '—'}
-                                        </a>
-                                        <button class="copy-phone-btn" data-phone="${m.phone || ''}" style="margin-left: 8px; padding: 2px 6px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">📋</button>
-                                    </td>
-                                    <td>
-                                        <select class="pricing-method-select" data-manager-id="${m.id}" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #d1d5db;">
-                                            <option value="percent" ${m.pricing_method === 'percent' ? 'selected' : ''}>Процентный (%)</option>
-                                            <option value="margin" ${m.pricing_method === 'margin' ? 'selected' : ''}>Фиксированная маржа</option>
-                                        </select>
+                                    <td style="text-align: center;">
+                                        <a href="tel:${m.phone || ''}" title="Позвонить" style="text-decoration: none; font-size: 18px;">📞</a>
+                                        ${(m.messengers?.telegram || m.telegram_data?.username) ? `<a href="https://t.me/${(m.messengers?.telegram || m.telegram_data?.username).replace('@', '')}" target="_blank" title="Написать в Telegram" style="text-decoration: none; margin-left: 8px; display: inline-block; vertical-align: middle;">` + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#2AABEE"/><path d="M5.5 11.5L17 6l-3.5 13-3-4.5-5 2.5 4-5.5z" fill="white"/></svg>` + `</a>` : ''}
+                                        <button onclick="window.AdminApp.openChatWithManager('${m.id}')" title="Чат" style="background: none; border: none; cursor: pointer; font-size: 18px; margin-left: 8px;">💬</button>
                                     </td>
                                     <td>
                                         <button class="status-toggle" data-manager-id="${m.id}" data-status="${m.status}" style="background: none; border: none; cursor: pointer;">

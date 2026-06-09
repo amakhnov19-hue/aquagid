@@ -90,21 +90,33 @@ async def send_message(message: MessageCreate, db: AsyncSession = Depends(get_db
 
     
     # Push-уведомление получателю, если админ написал
+    print(f"🔍 DEBUG: sender_type={message.sender_type}, receiver_type={message.receiver_type}, receiver_id={message.receiver_id}", flush=True)
     if message.sender_type == 'admin':
         try:
             from app.api.push_api import send_push_internal
+            
+            # Определяем реальный тип получателя по БД
+            print(f"🔍 PUSH CHECK: sender={message.sender_type}, recv_type={message.receiver_type}, recv_id={message.receiver_id}", flush=True)
+            resolved_type = message.receiver_type
+            if message.receiver_type == 'client':
+                # Проверим — может это менеджер?
+                check = await db.execute(
+                    text("SELECT id FROM managers WHERE id = :uid"),
+                    {"uid": int(message.receiver_id) if message.receiver_id.isdigit() else 0}
+                )
+                if check.fetchone():
+                    resolved_type = 'manager'
+            
             await send_push_internal(
                 db=db,
                 title="💬 Сообщение от поддержки",
                 body=message.body[:100] if message.body else '',
                 url="/chat",
-                user_type=message.receiver_type,
+                user_type=resolved_type,
                 user_id=message.receiver_id
             )
         except Exception as e:
             print(f"⚠️ Ошибка push получателю: {e}")
-    
-    return {"success": True, "id": new_id}
 
 
 # ========== ПОЛУЧЕНИЕ СООБЩЕНИЙ ==========

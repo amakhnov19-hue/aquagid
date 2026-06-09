@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # JWT
     JWT_SECRET: str = "your-secret-key"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 480
     
     # SMS
     SMS_PROVIDER: Optional[str] = None
