@@ -63,8 +63,9 @@
     <div id="app" class="loading">Загрузка...</div>
 
     <!-- Контейнеры для чата и документации -->
-    <div id="support-chat-container"></div>
     <div id="documentation-container"></div>
+    <div id="weather-widget-container"></div>
+    <!-- Чат поддержки: в разработке -->
     <div id="my-bookings-container" style="display: none;"></div>
 
     <!-- ========== ЯДРО (ОБЯЗАТЕЛЬНО ПЕРВЫМИ!) ========== -->
@@ -116,8 +117,6 @@
     <!-- ========== UI КОМПОНЕНТЫ ========== -->
     <script src="js/components/ui/DesignSystem.js"></script>
     <script src="js/components/ui/Documentation.js"></script>
-    <script src="/shared/js/components/ChatService.js"></script>
-    <script src="js/components/ui/SupportChat.js"></script>
     <script src="js/components/ui/MyBookings.js"></script>
     <script src="js/components/ui/CancelBooking.js"></script>
     <script src="js/components/ui/WeatherWidget.js"></script>
@@ -176,17 +175,5 @@
         });
     </script>
 
-    <!-- ========== ЧАТ ПОДДЕРЖКИ ========== -->
-    <script>
-        // Инициализация чата поддержки
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.AquaGid?.SupportChat) {
-                window.AquaGid.SupportChat.render();
-                console.log('✅ Чат поддержки инициализирован');
-            } else {
-                console.warn('⚠️ SupportChat не загружен');
-            }
-        });
-    </script>
 </body>
 </html>

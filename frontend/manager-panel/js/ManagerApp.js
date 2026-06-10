@@ -597,9 +597,6 @@
                         <div class="menu-item" onclick="AquaGid.ManagerApp.switchSection('bookings'); this.parentElement.parentElement.remove()">
                             📋 Бронирования
                         </div>
-                        <div class="menu-item" onclick="AquaGid.ManagerApp.switchSection('chat'); this.parentElement.parentElement.remove()">
-                            💬 Чат
-                        </div>
                         <div class="menu-item" onclick="AquaGid.ManagerApp.showDocuments(); this.parentElement.parentElement.remove()">
                             📜 Порядок работы с платформой
                         </div>
@@ -607,34 +604,6 @@
                 `;
                 document.body.appendChild(menuDiv);
                 
-            }
-        }
-
-        /**
-         * Открыть чат
-         */
-        openChat() {
-            const chatMenu = document.getElementById('chat-menu');
-            if (chatMenu) {
-                chatMenu.remove();
-            } else {
-                const menu = document.createElement('div');
-                menu.id = 'chat-menu';
-                menu.innerHTML = `
-                    <div class="chat-menu-header">
-                        <h3>Выберите чат</h3>
-                        <button onclick="this.parentElement.parentElement.remove()">✕</button>
-                    </div>
-                    <div class="chat-menu-items">
-                        <div class="chat-menu-item" onclick="AquaGid.ManagerApp.openManagersChat()">
-                            👥 Чат менеджеров
-                        </div>
-                        <div class="chat-menu-item" onclick="AquaGid.ManagerApp.openAdminChat()">
-                            👨‍💼 Чат с админом
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(menu);
             }
         }
 
@@ -800,13 +769,7 @@
                 case SECTIONS.BOOKINGS:
                         return '<div id="bookings-container"></div>';
                 case SECTIONS.CHAT:
-                    setTimeout(() => {
-                        if (window.AquaGid?.ChatService) {
-                            window.AquaGid.ChatService.initForRole('manager', window.managerId, localStorage.getItem('managerName'));
-                            window.AquaGid.ChatService.openModal();
-                        }
-                    }, 100);
-                    return '';
+                    return this.renderDashboard();
                 case SECTIONS.SETTINGS:
                     return '<div id="settings-container"></div>';
                 default:

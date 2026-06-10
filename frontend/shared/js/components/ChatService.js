@@ -128,10 +128,8 @@
                 this.ws = new WebSocket(wsUrl);
                 this.ws.onopen = () => console.log('✅ ChatService WS:', this.role);
                 this.ws.onmessage = (e) => {
-                    if (e.data === 'new_chat_message' || e.data === 'update') {
-                        if (this.isOpen || document.getElementById('chat-modal')) {
-                            this.loadHistory();
-                        }
+                    if ((e.data === 'new_chat_message' || e.data === 'update') && this.isOpen) {
+                        this.loadHistory();
                     }
                 };
                 this.ws.onclose = () => console.log('🔌 ChatService WS closed');
@@ -145,9 +143,7 @@
             try {
                 const url = this.role === 'admin'
                     ? `/api/messages/admin/dialogs`
-                    : this.role === 'manager'
-                        ? `/api/messages?manager_id=${encodeURIComponent(this.userId)}`
-                        : `/api/messages?client_phone=${encodeURIComponent(this.userId)}`;
+                    : `/api/messages?client_phone=${encodeURIComponent(this.userId)}`;
                 const token = localStorage.getItem('admin_token') || localStorage.getItem('access_token') || '';
                 const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
                 const response = await fetch(url, { headers });
@@ -239,7 +235,7 @@
                 <div class="chat-modal-window">
                     <div class="chat-service-header">
                         <span>💬 Поддержка</span>
-                        <button onclick="document.getElementById('chat-modal').remove(); AquaGid.ChatService.isOpen = false; if(window.AquaGid?.ManagerApp)AquaGid.ManagerApp.switchSection('dashboard');">✕</button>
+                        <button onclick="document.getElementById('chat-modal').remove(); AquaGid.ChatService.isOpen = false;">✕</button>
                     </div>
                     <div class="chat-service-messages" id="chat-modal-msgs">${historyHtml}</div>
                     <div class="chat-service-input">
@@ -374,20 +370,16 @@
 
         async _adminOpenDialog(senderId, senderType) {
             const token = localStorage.getItem('admin_token');
+            const isMobile = window.innerWidth < 768;
             this._currentDialog = senderId;
-            this._activeDialogType = senderType || 'client';
-            this._activeDialogId = senderId;
 
-            // Меняем статус диалога
+            // Меняем статус
             fetch(`/api/messages/admin/dialog/${senderId}/status?status=viewed`, {
                 method: 'PUT',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            // Отмечаем уведомления админа прочитанными
-            fetch(`/api/notifications/read-all?user_type=admin&user_id=admin`, { method: 'PUT' });
-
-            // Обновляем цвет в списке
+            // Цвет в списке
             document.querySelectorAll('.dialog-item').forEach(item => {
                 if (item.dataset.sid === senderId) {
                     item.style.background = '#f9fafb';
@@ -396,22 +388,54 @@
                 }
             });
 
-            // Загружаем историю и открываем модальное окно
+            if (isMobile) {
+                const content = document.getElementById('content');
+                content.innerHTML = `
+                    <div class="card" id="chatMessages">
+                        <button class="btn-back-chat" onclick="AquaGid.ChatService._currentDialog=null; AquaGid.ChatService.renderAdminChat(document.getElementById('content'));">← Назад к списку</button>
+                        <p>Загрузка...</p>
+                    </div>`;
+            }
+
             const response = await fetch(`/api/messages?client_phone=${encodeURIComponent(senderId)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const messages = await response.json();
-            
-            const chatMsgs = Array.isArray(messages) ? messages.filter(m => m.type === 'chat').reverse() : [];
-            this.messages = chatMsgs.map(m => ({
-                text: m.body || m.title,
-                type: m.sender_type === 'admin' ? 'user' : 'support',
-                time: m.created_at
-            }));
+            let clientName = (messages.find(m => m.sender_type === 'client' || m.sender_type === 'manager')?.title || '').replace('Сообщение от ', '') || 
+    (senderType === 'manager' ? 'Менеджер' : 'Клиент');
 
-            // Открываем модальное окно (как у менеджера)
-            this.isOpen = true;
-            this.openModal();
+            const msgContainer = document.getElementById('chatMessages');
+            if (msgContainer) {
+                msgContainer.innerHTML = `
+                    ${isMobile ? `<button class="btn-close-chat" onclick="AquaGid.ChatService._currentDialog=null; AquaGid.ChatService.renderAdminChat(document.getElementById('content'));" style="float:right;background:none;border:none;font-size:20px;cursor:pointer;">✕</button>` : ''}
+                    <h3>💬 ${this.escapeHtml(clientName)} <span style="font-size:14px;color:#6b7280;">${senderId}${senderType === 'manager' ? ' (менеджер)' : ''}</span>
+                    </h3>
+                    <div class="admin-chat-messages" style="max-height:${isMobile ? '60vh' : '400px'};">
+                        ${messages.reverse().map(m => `
+                            <div style="margin-bottom:8px;text-align:${m.sender_type === 'admin' ? 'right' : 'left'};">
+                                <div style="display:inline-block;padding:8px 12px;border-radius:12px;max-width:70%;
+                                            background:${m.sender_type === 'admin' ? '#0066CC' : '#e5e7eb'};
+                                            color:${m.sender_type === 'admin' ? 'white' : '#333'};">
+                                    ${this.escapeHtml(m.body || m.title)}
+                                </div>
+                                <div style="font-size:10px;color:#9ca3af;">${this.formatTime(m.created_at)}</div>
+                            </div>`).join('')}
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <input type="text" id="adminChatInput" placeholder="Ответ..." style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                        <button class="btn btn-primary" id="adminSendBtn">➤</button>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <button class="btn btn-sm" id="adminDeleteBtn" style="background:#dc2626;color:white;">❌ Удалить</button>
+                    </div>`;
+
+                document.getElementById('adminSendBtn').onclick = () => this._adminSendReply(senderId);
+                document.getElementById('adminDeleteBtn').onclick = () => this._adminDeleteDialog(senderId);
+            }
+
+            document.querySelectorAll('.dialog-item').forEach(el => {
+                if (el.dataset.sid === senderId) el.style.background = '#e0e7ff';
+            });
         }
 
         async _adminSendReply(senderId) {
@@ -426,9 +450,9 @@
                 },
                 body: JSON.stringify({
                     sender_type: 'admin',
-                    sender_id: 'admin',
-                    receiver_type: this._activeDialogType || 'client',
-                    receiver_id: this._activeDialogId || senderId,
+                    sender_id: '0',
+                    receiver_type: 'client',
+                    receiver_id: senderId,
                     type: 'chat',
                     title: 'Ответ поддержки',
                     body: input.value.trim()
@@ -476,7 +500,7 @@
         }
 
         renderMessages() {
-            const container = document.getElementById('chat-modal-msgs') || document.getElementById('chat-service-msgs');
+            const container = document.getElementById('chat-service-msgs');
             if (!container) return;
             container.innerHTML = `
                 <div class="chat-service-msg support">

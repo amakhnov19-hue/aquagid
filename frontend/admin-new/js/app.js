@@ -53,31 +53,14 @@ async function loadView(view) {
             await renderDocuments(content);
             break;
         case 'chat':
-            if (window.AquaGid?.ChatService) {
-                window.AquaGid.ChatService.renderAdminChat(content);
-            }
+            content.innerHTML = '<div class="card"><h2>💬 Чат</h2><p style="text-align:center;padding:40px;">🚧 В разработке</p></div>';
             break;                   
         default:
             content.innerHTML = '<div class="card">Раздел в разработке</div>';
     }
 }
 
-window.openChatWithManager = async function(managerId) {
-    if (!window.AquaGid?.ChatService) return;
-    window.AquaGid.ChatService._activeDialogType = 'manager';
-    window.AquaGid.ChatService._activeDialogId = managerId;
-    window.AquaGid.ChatService._currentDialog = managerId;
-    await window.AquaGid.ChatService._adminOpenDialog(managerId, 'manager');
-};
 
-async function refreshDashboard() {
-    const content = document.getElementById('content');
-    if (content && currentView === 'dashboard') {
-        await renderDashboard(content);
-    }
-}
-
-window.refreshDashboard = refreshDashboard;
 
 async function renderDashboard(container) {
     // Загружаем статистику и счётчик уведомлений
@@ -138,17 +121,24 @@ async function renderManagers(container) {
                 <div style="overflow-x: auto;">
                     <table class="data-table">
                         <thead>
-                            <tr><th>ID</th><th>Имя</th><th>Связь</th><th>Статус</th><th>Действия</th></tr>
+                            <tr><th>ID</th><th>Имя</th><th>Телефон</th><th>Метод расчёта</th><th>Статус</th><th>Действия</th></tr>
                         </thead>
                         <tbody>
                             ${managers.map(m => `
                                 <tr data-manager-id="${m.id}">
                                     <td>${m.id}</td>
                                     <td>${this?.escapeHtml ? this.escapeHtml(m.name || '—') : m.name || '—'}</td>
-                                    <td style="text-align: center;">
-                                        <a href="tel:${m.phone || ''}" title="Позвонить" style="text-decoration: none; font-size: 18px;">📞</a>
-                                        ${(m.messengers?.telegram || m.telegram_data?.username) ? `<a href="https://t.me/${(m.messengers?.telegram || m.telegram_data?.username).replace('@', '')}" target="_blank" title="Написать в Telegram" style="text-decoration: none; margin-left: 8px; display: inline-block; vertical-align: middle;">` + `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#2AABEE"/><path d="M5.5 11.5L17 6l-3.5 13-3-4.5-5 2.5 4-5.5z" fill="white"/></svg>` + `</a>` : ''}
-                                        <button onclick="window.AdminApp.openChatWithManager('${m.id}')" title="Чат" style="background: none; border: none; cursor: pointer; font-size: 18px; margin-left: 8px;">💬</button>
+                                    <td>
+                                        <a href="tel:${m.phone || ''}" class="phone-link" data-phone="${m.phone || ''}" style="text-decoration: none; color: #3b82f6;">
+                                            ${m.phone || '—'}
+                                        </a>
+                                        <button class="copy-phone-btn" data-phone="${m.phone || ''}" style="margin-left: 8px; padding: 2px 6px; background: #e5e7eb; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">📋</button>
+                                    </td>
+                                    <td>
+                                        <select class="pricing-method-select" data-manager-id="${m.id}" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #d1d5db;">
+                                            <option value="percent" ${m.pricing_method === 'percent' ? 'selected' : ''}>Процентный (%)</option>
+                                            <option value="margin" ${m.pricing_method === 'margin' ? 'selected' : ''}>Фиксированная маржа</option>
+                                        </select>
                                     </td>
                                     <td>
                                         <button class="status-toggle" data-manager-id="${m.id}" data-status="${m.status}" style="background: none; border: none; cursor: pointer;">
@@ -717,39 +707,5 @@ document.querySelector('.nav').addEventListener('click', (e) => {
 document.getElementById('logoutBtn').addEventListener('click', () => {
     logout();
 });
-
-// Глобальный WebSocket для админа (синхронизация)
-(function initAdminWs() {
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${wsProtocol}//${location.host}/api/sync/ws/admin`);
-    
-    ws.onopen = () => console.log('✅ Админ WebSocket подключён');
-    
-    ws.onmessage = (e) => {
-        if (e.data === 'new_chat_message') {
-            // Обновляем дашборд если мы на нём
-            if (currentView === 'dashboard') {
-                refreshDashboard();
-            }
-            // Обновляем чат если мы в нём
-            if (currentView === 'chat' && window.AquaGid?.ChatService) {
-                window.AquaGid.ChatService.renderAdminChat(document.getElementById('content'));
-            }
-        }
-        if (e.data === 'bookings_updated') {
-            // Обновляем статистику
-            if (currentView === 'dashboard') {
-                refreshDashboard();
-            }
-        }
-    };
-    
-    ws.onclose = () => {
-        console.log('🔌 Админ WebSocket закрыт, переподключение...');
-        setTimeout(initAdminWs, 5000);
-    };
-    
-    ws.onerror = (err) => console.error('❌ Админ WebSocket ошибка:', err);
-})();
 
 loadView('dashboard');
