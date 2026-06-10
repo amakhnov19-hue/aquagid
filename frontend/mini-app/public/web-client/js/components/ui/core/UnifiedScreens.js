@@ -274,9 +274,7 @@ class UnifiedScreens {
         };
         this.currentFlow = null;
         
-        // Очищаем localStorage
-        localStorage.removeItem('clientName');
-        localStorage.removeItem('clientPhone');
+        // Очищаем данные бронирования (но не авторизацию!)
         localStorage.removeItem('clientEmail');
         localStorage.removeItem('clientTelegram');
         

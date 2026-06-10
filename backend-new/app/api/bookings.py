@@ -204,7 +204,7 @@ async def create_booking(
             print(f"📡 WebSocket уведомление отправлено менеджеру {boat.manager_id}")
     except Exception as e:
         print(f"⚠️ Ошибка WebSocket: {e}")
-    
+
     # Получаем данные менеджера
     manager_result = await db.execute(
         select(ManagerModel).where(ManagerModel.id == boat.manager_id)
@@ -407,6 +407,21 @@ async def confirm_payment(
                 print(f"📡 WebSocket отправлен после активации брони #{booking_id}")
     except Exception as e:
         print(f"⚠️ Ошибка WebSocket при confirm_payment: {e}")
+        
+    # Push-уведомление клиенту о подтверждении
+    try:
+        from app.api.push_api import send_push_internal
+        if booking.client_phone:
+            await send_push_internal(
+                db=db,
+                title="✅ Бронирование подтверждено",
+                body="Спасибо за бронирование!",
+                url=f"/booking/{booking_id}",
+                user_type="client",
+                user_id=booking.client_phone.replace('+', '').replace(' ', '').replace('-', '')
+            )
+    except Exception as e:
+        print(f"⚠️ Ошибка push клиенту: {e}")
     
     return {"message": "Бронирование активировано", "id": booking_id, "status": "active"}
 

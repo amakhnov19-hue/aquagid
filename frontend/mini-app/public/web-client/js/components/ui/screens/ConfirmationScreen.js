@@ -67,7 +67,7 @@ class ConfirmationScreen extends ScreenBase {
                     
                     <div class="input-group">
                         <label for="client-name">Имя *</label>
-                        <input type="text" id="client-name" class="client-input" placeholder="Введите ваше имя" value="${booking.client?.name || ''}">
+                        <input type="text" id="client-name" class="client-input" placeholder="Введите ваше имя" value="${booking.client?.name || localStorage.getItem('clientName') || ''}">
                     </div>
 
                     <div class="input-group">
@@ -85,7 +85,7 @@ class ConfirmationScreen extends ScreenBase {
                     
                     <div class="input-group">
                         <label for="client-phone">Телефон *</label>
-                        <input type="tel" id="client-phone" class="client-input" placeholder="+7 (___) ___-__-__" value="${booking.client?.phone || ''}">
+                        <input type="tel" id="client-phone" class="client-input" placeholder="+7 (___) ___-__-__" value="${booking.client?.phone || localStorage.getItem('clientPhone') || ''}">
                     </div>
 
                     <div class="input-group">
@@ -103,15 +103,6 @@ class ConfirmationScreen extends ScreenBase {
                     <div class="input-group">
                         <label for="client-email">Email (для чека)</label>
                         <input type="email" id="client-email" class="client-input" placeholder="example@mail.ru" value="${booking.client?.email || ''}">
-                    </div>
-                    
-                    <div class="agreement-checkbox">
-                        <input type="checkbox" id="agreement-check">
-                        <label for="agreement-check">
-                            Я согласен с 
-                            <a href="/docs/offer.html" target="_blank">условиями бронирования</a> и 
-                            <a href="/docs/privacy.html" target="_blank">политикой обработки данных</a>
-                        </label>
                     </div>
                     
                     <div style="display: flex; justify-content: center; margin-top: 16px;">
@@ -134,7 +125,6 @@ class ConfirmationScreen extends ScreenBase {
         const email = document.getElementById('client-email')?.value.trim();
         const messengerType = document.getElementById('client-messenger-type')?.value;
         const messengerContact = document.getElementById('client-messenger-contact')?.value.trim();
-        const agreement = document.getElementById('agreement-check')?.checked;
         
         if (name || phone) {
             localStorage.setItem('clientName', name || '');
@@ -148,8 +138,7 @@ class ConfirmationScreen extends ScreenBase {
         const phoneValid = phone && phone.replace(/\D/g, '').length >= 10;
         const passengers = document.getElementById('client-passengers')?.value;
         const passengersValid = passengers && parseInt(passengers) > 0;
-        const agreementValid = agreement;
-        const isValid = nameValid && phoneValid && passengersValid && agreementValid;
+        const isValid = nameValid && phoneValid && passengersValid;
         
         const payButton = document.querySelector('.payment-button, .btn-pay, [id*="pay"], .pay-button');
         if (payButton) {
@@ -176,13 +165,26 @@ class ConfirmationScreen extends ScreenBase {
 
     async confirmBooking() {
         console.log('✅ Подтверждение бронирования');
+
+        // Проверка согласий для неавторизованных
+        if (!localStorage.getItem('aquagid-docs-accepted')) {
+            const terms = document.getElementById('consent-terms-confirm')?.checked;
+            const pd = document.getElementById('consent-pd-confirm')?.checked;
+            const geo = document.getElementById('consent-geo-confirm')?.checked;
+            if (!terms || !pd || !geo) {
+                alert('⚠️ Примите все три условия использования');
+                return;
+            }
+            localStorage.setItem('aquagid-docs-accepted', '1');
+            localStorage.setItem('aquagid-pd-accepted', '1');
+            localStorage.setItem('aquagid-geo-accepted', '1');
+        }
         
         const name = document.getElementById('client-name')?.value.trim();
         const phone = document.getElementById('client-phone')?.value.trim();
         const email = document.getElementById('client-email')?.value.trim();
         const messengerType = document.getElementById('client-messenger-type')?.value;
         const messengerContact = document.getElementById('client-messenger-contact')?.value.trim();
-        const agreement = document.getElementById('agreement-check')?.checked;
         
         if (!name) {
             alert('Пожалуйста, введите имя');
@@ -194,11 +196,6 @@ class ConfirmationScreen extends ScreenBase {
             return;
         }
         
-        if (!agreement) {
-            alert('Необходимо согласие с условиями бронирования');
-            return;
-        }
-
         const passengers = parseInt(document.getElementById('client-passengers')?.value) || 0;
         if (!passengers || passengers < 1) {
             alert('Пожалуйста, выберите количество гостей');
@@ -413,9 +410,6 @@ class ConfirmationScreen extends ScreenBase {
         localStorage.removeItem('clientPhone');
         localStorage.removeItem('clientEmail');
         localStorage.removeItem('clientTelegram');
-        
-        const agreementCheck = document.getElementById('agreement-check');
-        if (agreementCheck) agreementCheck.checked = false;
         
         if (window.AquaGid?.UnifiedScreens?.booking) {
             window.AquaGid.UnifiedScreens.booking.client = {};

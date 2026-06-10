@@ -53,6 +53,7 @@ async def send_push_internal(db, title, body, url, user_type, user_id):
         {"ut": user_type, "uid": user_id, "title": title, "body": body, "url": url}
     )
     await db.commit()
+    print(f"🔔 PUSH CREATED: user_type={user_type}, user_id={user_id}, title={title}", flush=True)
 
     # WebSocket уведомление менеджеру
     try:

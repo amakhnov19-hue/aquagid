@@ -18,15 +18,10 @@ class CancelBooking {
                     <button class="close-modal">✕</button>
                 </div>
                 <div class="cancel-modal-body">
-                    <div class="cancel-rules">
-                        <h4>Правила отмены:</h4>
-                        <ul>
-                            <li>За 24 часа и более — полный возврат предоплаты</li>
-                            <li>Деньги возвращаются в течение 3 банковских дней на карту, с которой была произведена оплата</li>
-                            <li>Менее чем за 24 часа — предоплата не возвращается</li>
-                            <li>В день бронирования — отмена невозможна</li>
-                        </ul>
-                    </div>
+                    <p style="font-size:12px;color:#666;margin-bottom:12px;">
+                        Условия отмены — см. 
+                        <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle(); return false;" style="color:#0066cc;">Пользовательское соглашение</a>
+                    </p>
                     <div class="cancel-reason">
                         <label>Причина отмены (можно выбрать несколько):</label>
                         <div class="reason-checkboxes">

@@ -25,10 +25,10 @@
             
             try {
                 console.log('🚀 loadBookings START');
-                console.log('📱 phone from localStorage:', localStorage.getItem('userPhone'));
+                console.log('📱 phone from localStorage:', localStorage.getItem('clientPhone') || localStorage.getItem('userPhone'));
                 console.log('🖨️ saved fingerprint:', localStorage.getItem('userFingerprint'));
                 
-                let phone = localStorage.getItem('userPhone');
+                let phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
                 const savedFingerprint = localStorage.getItem('userFingerprint');
                 const expires = localStorage.getItem('userExpires');
                 
@@ -198,7 +198,8 @@
             }
             
             // ПОКАЗЫВАЕМ ФОРМУ ВВОДА ТЕЛЕФОНА (если нет номера)
-            const phone = localStorage.getItem('userPhone');
+            const phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
+            // Если телефон уже есть в аккаунте — не показываем форму ввода
             if (!phone) {
                 container.innerHTML = `
                     <div class="my-bookings phone-input">
@@ -218,13 +219,7 @@
             const html = `
                 <div class="my-bookings">
                     <div class="bookings-header">
-                        <div class="phone-info">
-                            <span class="phone-label">📱 Номер для поиска:</span>
-                            <span class="phone-value">${maskedPhone}</span>
-                            <button class="change-phone" onclick="AquaGid.MyBookings.clearPhone()">
-                                ✏️ Изменить
-                            </button>
-                        </div>
+                        <span style="color:#666;font-size:13px;">📱 ${maskedPhone}</span>
                     </div>
                     
                     <div class="bookings-tabs">
@@ -314,6 +309,7 @@
             
             // Сохраняем телефон и fingerprint
             localStorage.setItem('userPhone', phone);
+            localStorage.setItem('clientPhone', phone);            
             const fingerprint = await window.BrowserFingerprint.generate();
             localStorage.setItem('userFingerprint', fingerprint);
             
@@ -324,15 +320,6 @@
             localStorage.setItem('userExpires', seasonEnd.toISOString());
             
             this.loadBookings('active');
-        }
-        
-        /**
-         * Очистить телефон и начать заново
-         */
-        clearPhone() {
-            localStorage.removeItem('userPhone');
-            this.bookings = [];
-            this.render();
         }
         
         /**

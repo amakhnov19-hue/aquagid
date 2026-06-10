@@ -67,6 +67,8 @@
     <div id="weather-widget-container"></div>
     <!-- Чат поддержки: в разработке -->
     <div id="my-bookings-container" style="display: none;"></div>
+    <!-- Кнопка входа клиента -->
+    <button id="client-login-btn" style="position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:#10b981;color:white;border:none;font-size:24px;cursor:pointer;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;" title="Войти">👤</button>
 
     <!-- ========== ЯДРО (ОБЯЗАТЕЛЬНО ПЕРВЫМИ!) ========== -->
     <script src="js/components/core/APIClient.js"></script>
@@ -120,6 +122,7 @@
     <script src="js/components/ui/MyBookings.js"></script>
     <script src="js/components/ui/CancelBooking.js"></script>
     <script src="js/components/ui/WeatherWidget.js"></script>
+    <script src="js/components/ui/ClientAuth.js"></script>
 
     <!-- ========== ПЛАТЕЖНЫЙ МОДУЛЬ ========== -->
     <script src="js/components/payment/PaymentGateway.js"></script>

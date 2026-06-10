@@ -77,11 +77,12 @@ async def create_payment(
         try:
             from app.api.push_api import send_push_internal
             info = await db.execute(
-                text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+                text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time, b.client_phone FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
                 {"bid": booking_id_int}
             )
             row = info.fetchone()
             if row:
+                print(f"🔍 PAYMENT ROW: {row}", flush=True)
                 # Менеджеру
                 await send_push_internal(
                     db=db,
@@ -98,7 +99,7 @@ async def create_payment(
                     body=f"{row[0]}, {row[3]} в {row[4]}",
                     url=f"/booking/{booking_id_int}",
                     user_type="client",
-                    user_id="guest"
+                    user_id=(row[5] or "guest").replace('+', '').replace(' ', '').replace('-', '')
                 )
         except Exception as e:
             print(f"⚠️ Ошибка push: {e}")
