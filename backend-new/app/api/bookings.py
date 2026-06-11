@@ -441,50 +441,74 @@ async def cancel_booking(
         raise HTTPException(status_code=404, detail="Booking not found")
     
     google_event_id = booking.google_event_id
+    client_phone = booking.client_phone
     booking.status = "cancelled"
     await db.commit()
 
-    # Telegram-уведомление об отмене
+    # Push-уведомление менеджеру об отмене (быстрое)
     try:
-        from app.services.telegram_service import telegram_service
+        from app.api.push_api import send_push_internal
         boat_info = await db.execute(
             text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
             {"bid": booking_id}
         )
         info = boat_info.fetchone()
         if info:
-            await telegram_service.notify_cancellation(
-                manager_id=info[1],
-                booking_id=booking_id,
-                client_name=info[2] or "Клиент",
-                boat_name=info[0],
-                date=str(info[3]),
-                db=db
+            await send_push_internal(
+                db=db,
+                title=f"❌ Отмена брони #{booking_id}",
+                body=f"{info[2] or 'Клиент'}, {info[0]}, {info[3]}",
+                url=f"/bookings/{booking_id}",
+                user_type="manager",
+                user_id=str(info[1])
             )
-            
-            # Push-уведомление менеджеру об отмене
-            try:
-                from app.api.push_api import send_push_internal
+
+            # Push-уведомление клиенту об отмене
+            if client_phone:
                 await send_push_internal(
                     db=db,
-                    title=f"❌ Отмена брони #{booking_id}",
-                    body=f"{info[2] or 'Клиент'}, {info[0]}, {info[3]}",
-                    url=f"/bookings/{booking_id}",
-                    user_type="manager",
-                    user_id=str(info[1])
+                    title="❌ Бронирование отменено",
+                    body=f"{info[0]}, {info[3]}",
+                    url=f"/booking/{booking_id}",
+                    user_type="client",
+                    user_id=client_phone.replace('+', '').replace(' ', '').replace('-', '')
                 )
-            except Exception as e:
-                print(f"⚠️ Ошибка push отмены: {e}")
     except Exception as e:
-        print(f"⚠️ Ошибка Telegram-уведомления об отмене: {e}")
-    
+        print(f"⚠️ Ошибка push отмены: {e}")
+
+    # Telegram-уведомление в фоне (медленное)
+    import asyncio
+    asyncio.ensure_future(_send_telegram_cancellation(booking_id))
+
     # Удаляем из Google Calendar в фоне
     if google_event_id:
-        import asyncio
         asyncio.ensure_future(_delete_google_event_async(google_event_id, booking.boat_id))
     
     return {"message": "Бронирование отменено", "id": booking_id}
 
+async def _send_telegram_cancellation(booking_id: int):
+    """Фоновая отправка Telegram-уведомления об отмене"""
+    try:
+        from app.services.telegram_service import telegram_service
+        from app.core.database import async_session_maker
+        async with async_session_maker() as db:
+            boat_info = await db.execute(
+                text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+                {"bid": booking_id}
+            )
+            info = boat_info.fetchone()
+            if info:
+                await telegram_service.notify_cancellation(
+                    manager_id=info[1],
+                    booking_id=booking_id,
+                    client_name=info[2] or "Клиент",
+                    boat_name=info[0],
+                    date=str(info[3]),
+                    db=db
+                )
+    except Exception as e:
+        print(f"⚠️ Ошибка Telegram (фон): {e}")
+    
 @router.post("/complete-expired")
 async def complete_expired_bookings(db: AsyncSession = Depends(get_db)):
     """Завершает все активные бронирования, время которых истекло, переносит в архив, удаляет из Google Calendar"""

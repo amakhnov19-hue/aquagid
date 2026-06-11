@@ -57,7 +57,7 @@ class WelcomeScreen extends ScreenBase {
                     ${localStorage.getItem('clientPhone') ? `
                     <!-- Кнопка Уведомления -->
                     <div class="notifications-client" style="background: #4a4a4a; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="new NotificationCenter({userType:'client', userId: localStorage.getItem('clientPhone')}).open()">
-                        <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления</span>
+                        <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления <span id="client-notif-badge" style="background:#dc3545;color:#fff;border-radius:10px;padding:2px 7px;font-size:12px;margin-left:6px;display:none;"></span></span>
                     </div>
                     
                     <!-- Кнопка Мои бронирования -->
@@ -153,25 +153,20 @@ class WelcomeScreen extends ScreenBase {
     }
 
     async loadClientNotifications() {
-        let phone = localStorage.getItem('userPhone') || localStorage.getItem('clientPhone');
+        const phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
         if (!phone) return;
         
-        // Нормализуем: добавляем + если начинается с 7
-        if (phone.startsWith('7') && !phone.startsWith('+')) {
-            phone = '+' + phone;
-        }
-        
         try {
-            const response = await fetch(`/api/messages?client_phone=${encodeURIComponent(phone)}`);
-            if (response.ok) {
-                this.clientNotifications = await response.json();
-                const unread = this.clientNotifications.filter(n => !n.is_read).length;
-                const badge = document.getElementById('client-notif-badge');
-                if (badge) badge.textContent = unread;
+            const resp = await fetch(`/api/notifications/count?user_type=client&user_id=${phone}`);
+            const data = await resp.json();
+            const count = data.count || 0;
+            const badge = document.getElementById('client-notif-badge');
+            if (badge) {
+                badge.textContent = count;
+                badge.style.display = count > 0 ? 'inline-block' : 'none';
             }
-
         } catch (e) {
-            console.error('Ошибка загрузки уведомлений:', e);
+            console.error('Ошибка загрузки счётчика:', e);
         }
     }
     
