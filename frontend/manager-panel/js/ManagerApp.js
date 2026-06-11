@@ -87,42 +87,38 @@
             };
             
             this.ws.onmessage = (event) => {
+                if (event.data === 'new_chat_message') {
+                    if (AquaGid.ChatService?.isOpen) {
+                        AquaGid.ChatService.loadMessages();
+                    }
+                    return;
+                }
                 if (event.data === 'update') {
                     console.log('🔄 Обновление календаря');
                     if (window.AquaGid?.ManagerCalendar) {
                         window.AquaGid.ManagerCalendar.loadCalendarData();
                     }
-
-                    // Обновляем список бронирований
-                    if (window.AquaGid?.ManagerBookings) {
-                        window.AquaGid.ManagerBookings.loadBookings();
-                    }
-
-                    // Обновляем уведомления
                     if (window.AquaGid?.ManagerDashboard) {
-                        window.AquaGid.ManagerDashboard.render();
-}
+                        window.AquaGid.ManagerDashboard._lastLoad = null;
+                        window.AquaGid.ManagerDashboard.loadDashboardData();
+                    }
                 } else if (event.data === 'boats_updated') {
                     console.log('🚤 Обновление катеров');
                     if (window.AquaGid?.ManagerBoats) {
                         window.AquaGid.ManagerBoats.loadBoatsFromAPI();
                     }
                     if (window.AquaGid?.ManagerDashboard) {
+                        window.AquaGid.ManagerDashboard._lastLoad = null;
                         window.AquaGid.ManagerDashboard.loadDashboardData();
                     }
                 } else if (event.data === 'bookings_updated') {
-                    console.log('📋 Обновление бронирований');
+                    console.log('📋 WS: bookings_updated');
                     if (window.AquaGid?.ManagerDashboard) {
+                        window.AquaGid.ManagerDashboard._lastLoad = null;
                         window.AquaGid.ManagerDashboard.loadDashboardData();
                     }
                     if (window.AquaGid?.ManagerBookings) {
-                        window.AquaGid.ManagerBookings.render('bookings-container');
-                    }
-                    // Обновляем уведомления
-                    if (window.AquaGid?.ManagerDashboard) {
-                        window.AquaGid.ManagerDashboard.loadNotifications().then(() => {
-                            window.AquaGid.ManagerDashboard.render();
-                        });
+                        window.AquaGid.ManagerBookings.loadBookings();
                     }
                 } else if (event.data === 'pong') {
                     // keep-alive

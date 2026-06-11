@@ -51,7 +51,7 @@ app.add_middleware(
 
 # Middleware
 app.add_middleware(GoogleTokenRefreshMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=300)
 
 # Роутеры API
 app.include_router(boats.router, prefix="/api")

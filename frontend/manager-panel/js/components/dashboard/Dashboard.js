@@ -11,10 +11,10 @@
         constructor() {
             this.version = VERSION;
             this.stats = {
-                today_bookings: 0,
-                total_bookings: 0,
-                attention_bookings: 0,
+                today_upcoming: 0,
+                attention_boats: 0,
                 new_bookings: 0,
+                active_total: 0,
                 total_boats: 0,
                 active_boats: 0,
                 maintenance_boats: 0,
@@ -110,11 +110,10 @@
                 // 5. Подсчёт статистики
                 const today = new Date().toISOString().split('T')[0];
                 const now = new Date();
-                const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 30, 0);
                 
-                let todayBookings = 0;
-                let totalActive = 0;
-                let attentionBookings = 0;
+                let todayUpcoming = 0;
+                let activeTotal = 0;
+                let attentionBoats = boats.filter(b => b.is_refueling || b.has_maintenance || b.is_breakdown).length;
                 
                 this.bookings.forEach(b => {
                     if (b.status !== 'active') return;
@@ -122,12 +121,12 @@
                     const start = new Date(b.booking_date + 'T' + b.start_time);
                     const end = new Date(start.getTime() + b.duration_minutes * 60000);
                     
-                    // Только текущие + будущие (не прошедшие)
+                    // Только будущие (не прошедшие)
                     if (end <= now) return;
                     
-                    totalActive++;
-                    if (b.booking_date === today) todayBookings++;
-                    if (b.needsAttention) attentionBookings++;
+                    activeTotal++;
+                    // Сегодня и время старта позже текущего
+                    if (b.booking_date === today && start > now) todayUpcoming++;
                 });
                 
                 const newBookings = this.bookings.filter(b => b.isNew && b.status === 'active').length;
@@ -139,10 +138,10 @@
                 const blockedBoats = boats.filter(b => b.is_active === false && b.is_breakdown === false).length;
                 
                 this.stats = {
-                    today_bookings: todayBookings,
-                    total_bookings: totalActive,
-                    attention_bookings: attentionBookings,
+                    today_upcoming: todayUpcoming,
+                    attention_boats: attentionBoats,
                     new_bookings: newBookings,
+                    active_total: activeTotal,
                     total_boats: totalBoats,
                     active_boats: activeBoats,
                     maintenance_boats: maintenanceBoats,
@@ -253,18 +252,15 @@
                     
                     <!-- Панель Бронирования -->
                     <div class="dashboard-panel bookings-panel" onclick="AquaGid.ManagerApp.switchSection('bookings')">
-                        <div class="panel-header" style="position: relative;">
-                            <span class="panel-icon">📋</span>
-                            <span class="panel-title">Активные бронирования</span>
-                            ${this.stats.new_bookings > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${this.stats.new_bookings}</span>` : ''}
+                        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span class="panel-title" style="display: flex; align-items: center; gap: 8px;">📋 Активные бронирования</span>
+                            ${this.stats.new_bookings > 0 ? `<span class="badge-new" style="background:#4caf50;color:#fff;border-radius:12px;padding:2px 10px;font-size:13px;font-weight:700;">+${this.stats.new_bookings}</span>` : ''}
                         </div>
-                        <div class="panel-stats bookings-stats" style="display: flex; align-items: baseline; justify-content: space-between;">
-                            <span class="stat-attention" style="color: #e65100;">⚠️ ${this.stats.attention_bookings}</span>
-                            <span class="stat-today" style="font-size: 32px; font-weight: 700; color: #1e293b;">${this.stats.today_bookings}</span>
-                            <span class="stat-total" style="color: #64748b;">всего ${this.stats.today_bookings}</span>
-                        </div>
-                        <div class="panel-footer">
-                            <span>📋 Все бронирования →</span>
+                        <div class="panel-stats" style="display: flex; gap: 16px; margin-top: 8px; font-size: 14px; color: #64748b;">
+                            ${this.stats.attention_boats > 0 ? `<span title="Катера на заправке/обслуживании">⛽🔧 ${this.stats.attention_boats} на обслуживании</span>` : ''}
+                            ${this.stats.today_upcoming > 0 ? `<span title="Бронирований на сегодня">📅 Сегодня: ${this.stats.today_upcoming}</span>` : ''}
+                            ${this.stats.active_total > 0 ? `<span title="Всего активных бронирований">📋 Всего: ${this.stats.active_total}</span>` : ''}
+                            ${this.stats.attention_boats === 0 && this.stats.today_upcoming === 0 && this.stats.active_total === 0 ? `<span>Нет активных бронирований</span>` : ''}
                         </div>
                     </div>
                     

@@ -474,6 +474,10 @@ class ManagerBookings {
                 }
                 // Обновляем локально
                 booking.viewed_at = new Date().toISOString();
+                if (window.AquaGid?.ManagerDashboard) {
+                    window.AquaGid.ManagerDashboard._lastLoad = null;
+                    window.AquaGid.ManagerDashboard.loadDashboardData();
+                }
                 // Перерисовываем таблицу
                 const container = document.getElementById('bookings-container');
                 if (container) this.renderContent(container);
