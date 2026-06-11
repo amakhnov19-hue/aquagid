@@ -5,7 +5,6 @@ class WeatherWidget {
     constructor() {
         this.latitude = 59.9343;  // СПб по умолчанию
         this.longitude = 30.3351;
-        this.weatherData = null;
         this.isExpanded = false;
         this.isRendered = false;
         this.lastPressure = null;
@@ -21,65 +20,65 @@ class WeatherWidget {
 
     async fetchWeather() {
         try {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${this.latitude}&longitude=${this.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,wind_speed_10m,wind_gusts_10m,wind_direction_10m,cloudcover,pressure_msl,surface_pressure&timezone=Europe%2FMoscow&forecast_days=1`;
-            
+            const url = `/api/weather?lat=${this.latitude}&lon=${this.longitude}`;
             const response = await fetch(url);
             const data = await response.json();
-            this.weatherData = data.current;
-
-            // Обновляем lastPressure для тренда (добавить эти 3 строки)
-            if (!this.lastPressure && this.weatherData.surface_pressure) {
-                this.lastPressure = this.weatherData.surface_pressure;
-            }
-
-            if (!this.isRendered) {
-                this.render();
-                this.isRendered = true;
-            }
-            this.updateDisplay();
-
-        } catch (error) {
-            console.error('Ошибка загрузки погоды:', error);
+            
+            if (data.error) throw new Error(data.error);
+            
+            this.currentTemp = data.temp;
+            this.condition = data.condition;
+            this.icon = data.icon;
+        } catch (e) {
+            console.error('Ошибка загрузки погоды:', e);
         }
+        
+        this.updateDisplay();
     }
 
     updateDisplay() {
         const widget = document.getElementById('weather-widget');
-        if (!widget || !this.weatherData) return;
+        if (!widget || this.currentTemp === undefined) return;
 
-        const temp = Math.round(this.weatherData.temperature_2m);
-        const icon = this.getWeatherIcon(this.weatherData);
-        const pressureTrend = this.getPressureTrend(this.weatherData.surface_pressure);
-        const windDirection = this.getWindDirection(this.weatherData.wind_direction_10m);
-        const skyCondition = this.getSkyCondition(this.weatherData);
+        const temp = Math.round(this.currentTemp);
+        const icon = this.icon ? `<img src="${this.icon}" style="width:32px;height:32px;">` : '🌤️';
+        const condition = this.getConditionText(this.condition);
 
         if (!this.isExpanded) {
             widget.innerHTML = `
                 <div class="weather-compact" onclick="window.weatherWidget.toggle()" style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 24px;">${icon}</span>
+                    ${icon}
                     <span style="font-weight: bold; font-size: 16px;">${temp}°C</span>
                 </div>
             `;
         } else {
             widget.innerHTML = `
                 <div class="weather-expanded" onclick="window.weatherWidget.toggle()" style="color: #333; background: white; border-radius: 20px; padding: 16px; min-width: 220px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <span style="font-size: 36px;">${icon}</span>
-                        <div>
-                            <div style="font-size: 24px; font-weight: bold;">${temp}°C</div>
-                            <div style="font-size: 14px; color: #666;">Ощущается как ${Math.round(this.weatherData.apparent_temperature)}°C</div>
-                        </div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        ${icon}
+                        <span style="font-weight: bold; font-size: 24px;">${temp}°C</span>
                     </div>
-                    <div style="font-size: 14px; line-height: 1.8;">
-                        <div>🌥️ ${skyCondition}</div>
-                        <div>💨 Ветер: ${Math.round(this.weatherData.wind_speed_10m)} м/с, ${windDirection}</div>
-                        <div>💧 Влажность: ${this.weatherData.relative_humidity_2m}%</div>
-                        <div>📊 Давление: ${Math.round(this.weatherData.surface_pressure / 1.333)} мм рт.ст. ${pressureTrend}</div>
-                    </div>
-                    <div style="font-size: 12px; color: #999; margin-top: 15px; text-align: center;">Нажмите, чтобы свернуть</div>
+                    <div style="font-size: 14px; color: #666;">${condition}</div>
                 </div>
             `;
         }
+    }
+
+    getConditionText(condition) {
+        const map = {
+            'clear': '☀️ Ясно',
+            'partly-cloudy': '⛅ Малооблачно',
+            'cloudy': '☁️ Облачно',
+            'overcast': '☁️ Пасмурно',
+            'drizzle': '🌧️ Морось',
+            'light-rain': '🌧️ Небольшой дождь',
+            'rain': '🌧️ Дождь',
+            'heavy-rain': '🌧️ Сильный дождь',
+            'thunderstorm-with-rain': '⛈️ Гроза',
+            'snow': '❄️ Снег',
+            'wet-snow': '🌨️ Мокрый снег'
+        };
+        return map[condition] || condition || '—';
     }
 
     getWindDirection(degrees) {
