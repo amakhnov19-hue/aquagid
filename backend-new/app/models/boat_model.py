@@ -38,6 +38,7 @@ class Boat(Base):
     maintenance_end = Column(DateTime, nullable=True)
     is_refueling = Column(Boolean, default=False)
     is_breakdown = Column(Boolean, default=False)
+    require_approval = Column(Boolean, default=False)
     refuel_end_time = Column(DateTime, nullable=True)
 
     pricing_method = Column(String(20), default='percent')

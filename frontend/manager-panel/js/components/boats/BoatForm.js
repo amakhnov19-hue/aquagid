@@ -46,6 +46,19 @@
                 };
             }
             this.render('boat-form-modal');
+            
+            // Загружаем require_approval ДО рендера
+            if (this.boat?.id) {
+                try {
+                    const appResp = await fetch(`/api/boats/${this.boat.id}/approval-status`);
+                    if (appResp.ok) {
+                        const appData = await appResp.json();
+                        this.boat.require_approval = appData.require_approval;
+                    }
+                } catch(e) {}
+            }
+            
+            this.render('boat-form-modal');
         }
         
         render(containerId) {
@@ -73,6 +86,16 @@
                             <textarea id="boatDescription" class="form-control" rows="3" maxlength="250" oninput="document.getElementById('descCounter').textContent = this.value.length">${isEdit ? this.boat.description_short || '' : ''}</textarea>
                             <div class="counter"><span id="descCounter">0</span>/250</div>
                         </div>
+
+                        <!-- Чекбокс скрыт до реализации логики подтверждения -->
+                        <!--
+                        <div class="form-group require-approval-block">
+                            <label>
+                                <input type="checkbox" id="boatRequireApproval" ...>
+                                🔔 Требовать подтверждение брони менеджером
+                            </label>
+                        </div>
+                        --> 
                         
                         <div class="form-row">
                             <div class="form-group half">
@@ -99,7 +122,7 @@
                             </div>
                         </div>
 
-                                                <div class="form-row">
+                        <div class="form-row">
                             <div class="form-group half">
                                 <label>
                                     <input type="checkbox" id="boatHasAudio" ${isEdit && this.boat.has_audio ? 'checked' : ''}>
@@ -126,6 +149,7 @@
                                     🍽️ Посуда/Бокалы
                                 </label>
                             </div>
+                                                      
                         </div>
 
                         <!-- Плановое ТО -->
@@ -255,6 +279,16 @@
             }
             
             document.getElementById('boatPhotos')?.addEventListener('change', (e) => this.handlePhotoUpload(e));
+            /*
+            document.getElementById('boatRequireApproval')?.addEventListener('change', async (e) => {
+                if (!this.boat?.id) return;
+                const token = localStorage.getItem('access_token') || '';
+                await fetch(`/api/boats/${this.boat.id}/toggle-approval`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+            }); 
+            */
             this.updatePhotoCounter();
         }
 
@@ -640,10 +674,32 @@
                 
                 map.geoObjects.add(placemark);
                 
-                placemark.events.add('dragend', () => {
+                placemark.events.add('dragend', async () => {
                     const coords = placemark.geometry.getCoordinates();
                     this.tempLat = coords[0];
                     this.tempLon = coords[1];
+                    
+                    // Обратное геокодирование — получить адрес по координатам
+                    try {
+                        const token = localStorage.getItem('access_token') || '';
+                        const resp = await fetch(`/api/geocode`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ lat: coords[0], lon: coords[1], reverse: true })
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data.address) {
+                                document.getElementById('boatAddress').value = data.address;
+                                this.lastGeocodedAddress = data.address;
+                            }
+                        }
+                    } catch(e) {
+                        console.error('Ошибка обратного геокодирования:', e);
+                    }
                 });
                 
                 this.currentMap = map;

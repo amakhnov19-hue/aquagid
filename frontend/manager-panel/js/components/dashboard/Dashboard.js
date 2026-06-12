@@ -163,11 +163,12 @@
             
             try {
                 const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-                const response = await fetch(`/api/messages?manager_id=${managerId}`, {
+                const response = await fetch(`/api/notifications?user_type=manager&user_id=${managerId}&limit=50`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (response.ok) {
-                    this.notifications = await response.json();
+                    const data = await response.json();
+                    this.notifications = data.notifications || [];
                     console.log(`🔔 Загружено ${this.notifications.length} уведомлений`);
                 }
             } catch (e) {
@@ -317,6 +318,12 @@
                             <span>⚙️ ${this.calendarConnected ? 'Настройки календаря' : 'Подключить календарь'} →</span>
                         </div>
                     </div>
+                    <div style="text-align:center;margin-top:16px;">
+                        <button onclick="window.location.reload(true)" 
+                            style="padding:8px 20px;background:none;color:#9ca3af;border:1px solid #e5e7eb;border-radius:20px;cursor:pointer;font-size:13px;">
+                            🔄 Полная перезагрузка
+                        </button>
+                    </div>
                 </div>
             `;
             
@@ -375,7 +382,7 @@
             const token = localStorage.getItem('access_token') || localStorage.getItem('token');
             
             try {
-                const response = await fetch(`/api/messages/history?manager_id=${managerId}`, {
+                const response = await fetch(`/api/notifications/clear?user_type=manager&user_id=${managerId}`, {
                     method: 'DELETE',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });

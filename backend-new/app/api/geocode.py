@@ -1,46 +1,56 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 import aiohttp
 from app.core.config import settings
 
-router = APIRouter(prefix="/geocode", tags=["geocode"])
+router = APIRouter(tags=["geocode"])
+
+class GeocodeRequest(BaseModel):
+    address: Optional[str] = None
+    lat: Optional[float] = None
+    lon: Optional[float] = None
+    reverse: Optional[bool] = False
 
 @router.post("")
-async def geocode_address(address: str):
-    """
-    Преобразовать адрес в координаты через Яндекс.Геокодер
-    """
+async def geocode_address(data: GeocodeRequest):
+    """Прямое и обратное геокодирование через Яндекс"""
     if not settings.YANDEX_GEOCODER_API_KEY:
-        raise HTTPException(status_code=500, detail="YANDEX_GEOCODER_API_KEY not configured")
+        raise HTTPException(status_code=500, detail="API key not configured")
     
     url = "https://geocode-maps.yandex.ru/1.x/"
     params = {
         "apikey": settings.YANDEX_GEOCODER_API_KEY,
-        "geocode": address,
         "format": "json",
-        "results": 1
+        "results": "1",
+        "lang": "ru_RU"
     }
     
+    if data.reverse and data.lat and data.lon:
+        params["geocode"] = f"{data.lon},{data.lat}"
+        params["sco"] = "longlat"
+        params["kind"] = "house"
+    elif data.address:
+        params["geocode"] = data.address
+    else:
+        raise HTTPException(status_code=400, detail="Укажите address или lat+lon")
+    
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as response:
-            if response.status != 200:
-                raise HTTPException(status_code=400, detail="Geocoding failed")
+        async with session.get(url, params=params) as resp:
+            if resp.status != 200:
+                raise HTTPException(status_code=502, detail="Geocoder error")
             
-            data = await response.json()
-            
+            result = await resp.json()
             try:
-                # Парсим ответ
-                feature_member = data["response"]["GeoObjectCollection"]["featureMember"]
-                if not feature_member:
-                    return {"lat": None, "lon": None, "found": False}
-                
-                pos = feature_member[0]["GeoObject"]["Point"]["pos"]
-                lon, lat = map(float, pos.split())
+                feature = result["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+                coords = feature["Point"]["pos"].split()
+                lon, lat = float(coords[0]), float(coords[1])
+                address = feature["metaDataProperty"]["GeocoderMetaData"]["text"]
                 
                 return {
                     "lat": lat,
                     "lon": lon,
-                    "address": feature_member[0]["GeoObject"]["metaDataProperty"]["GeocoderMetaData"]["text"],
-                    "found": True
+                    "address": address
                 }
-            except (KeyError, IndexError, ValueError):
-                return {"lat": None, "lon": None, "found": False}
+            except (KeyError, IndexError):
+                raise HTTPException(status_code=404, detail="Не найдено")

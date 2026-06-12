@@ -114,6 +114,7 @@ async def get_boats(
             "agent_price": float(boat.agent_price) if boat.agent_price else None,
             "is_refueling": boat.is_refueling,
             "is_breakdown": boat.is_breakdown,
+            "require_approval": getattr(boat, 'require_approval', False),
             "refuel_end_time": boat.refuel_end_time.isoformat() if boat.refuel_end_time else None,
             "has_maintenance": boat.has_maintenance,
             "maintenance_start": boat.maintenance_start.isoformat() if boat.maintenance_start else None,
@@ -232,9 +233,10 @@ async def get_boat(
     
     # Получаем катер
     boat_result = await db.execute(
-        select(BoatModel).where(BoatModel.id == boat_id)
+        text("SELECT *, require_approval FROM boats WHERE id = :id"),
+        {"id": boat_id}
     )
-    boat = boat_result.scalar_one_or_none()
+    boat = boat_result.fetchone()
     
     if not boat:
         raise HTTPException(status_code=404, detail="Boat not found")
@@ -281,6 +283,7 @@ async def get_boat(
         "agent_price": float(boat.agent_price) if boat.agent_price else None,
         "is_refueling": boat.is_refueling,
         "is_breakdown": boat.is_breakdown,
+        "require_approval": boat._mapping.get("require_approval", False),
         "photos": [
             {
                 "id": photo.id,
@@ -736,6 +739,38 @@ async def toggle_breakdown(
     
     await db.commit()
     return {"message": "OK", "is_breakdown": boat.is_breakdown}
+
+@router.get("/{boat_id}/approval-status")
+async def get_approval_status(
+    boat_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Получить статус require_approval"""
+    result = await db.execute(
+        text("SELECT require_approval FROM boats WHERE id = :id"),
+        {"id": boat_id}
+    )
+    row = result.fetchone()
+    return {"require_approval": row[0] if row else False}
+
+@router.post("/{boat_id}/toggle-approval")
+async def toggle_approval(
+    boat_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Включить/выключить требование подтверждения брони"""
+    await db.execute(
+        text("UPDATE boats SET require_approval = NOT COALESCE(require_approval, false) WHERE id = :id"),
+        {"id": boat_id}
+    )
+    await db.commit()
+    
+    result = await db.execute(
+        text("SELECT require_approval FROM boats WHERE id = :id"),
+        {"id": boat_id}
+    )
+    row = result.fetchone()
+    return {"require_approval": row[0] if row else False}
 
 @router.post("/check-refuel-expired")
 async def check_refuel_expired(db: AsyncSession = Depends(get_db)):
