@@ -505,6 +505,38 @@ async def add_boat_photo(
         "saved_to_disk": photo_url_data.startswith("data:image")
     }
 
+@router.put("/{boat_id}/photos/reorder")
+async def reorder_photos(
+    boat_id: int,
+    data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    """Обновить порядок фото и главное фото"""
+    photo_urls = data.get("photo_urls", [])
+    
+    # Удаляем старые записи о порядке
+    await db.execute(
+        text("DELETE FROM boat_photos WHERE boat_id = :bid"),
+        {"bid": boat_id}
+    )
+    
+    # Вставляем с новым порядком
+    for i, url in enumerate(photo_urls):
+        await db.execute(
+            text("INSERT INTO boat_photos (boat_id, photo_url, display_order) VALUES (:bid, :url, :order)"),
+            {"bid": boat_id, "url": url, "order": i}
+        )
+    
+    # Обновляем main_photo_url у катера
+    if photo_urls:
+        await db.execute(
+            text("UPDATE boats SET main_photo_url = :url WHERE id = :bid"),
+            {"bid": boat_id, "url": photo_urls[0]}
+        )
+    
+    await db.commit()
+    return {"success": True, "main_photo_url": photo_urls[0] if photo_urls else None}
+
 @router.delete("/{boat_id}/photos")
 async def delete_boat_photos(
     boat_id: int,

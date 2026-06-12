@@ -175,7 +175,7 @@ class QuickScreen extends ScreenBase {
         try {
             // Загружаем все катера
             const refCode = localStorage.getItem('aquagid-ref');
-            const url = refCode ? `/api/boats/client?ref=${encodeURIComponent(refCode)}` : '/api/boats/client';
+            const url = refCode ? `/api/boats/client?ref=${encodeURIComponent(refCode)}&_t=${Date.now()}` : `/api/boats/client?_t=${Date.now()}`;
             const response = await fetch(url);
             const boats = await response.json();
             

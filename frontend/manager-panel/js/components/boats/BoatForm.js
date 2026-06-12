@@ -190,15 +190,25 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Фотографии (не более 5)</label>
+                            <label>Фотографии (не более 7)</label>
                             <div class="photo-upload">
                                 <input type="file" id="boatPhotos" accept="image/*" multiple>
                                 <div class="photo-hint">
                                     <span>📸 Формат: JPG, PNG, GIF</span>
                                     <span>⚖️ Макс. размер: 15MB</span>
                                 </div>
+                                ${this.boat && this.boat.photos && this.boat.photos.length > 1 ? `
+                                <div class="form-group" style="margin-top:12px;">
+                                    <label>⭐ Главное фото:</label>
+                                    <select id="mainPhotoSelect" class="form-input" onchange="AquaGid.BoatForm.reorderPhotos(this.value)">
+                                        ${this.boat.photos.map((photo, i) => `
+                                            <option value="${i}" ${i === 0 ? 'selected' : ''}>Фото ${i + 1}</option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+                                ` : ''}
                                 <div class="photo-counter" id="photoCounter">
-                                    <span id="currentPhotoCount">0</span>/5 фото
+                                    <span id="currentPhotoCount">0</span>/7 фото
                                 </div>
                                 <div class="photo-preview" id="photoPreview">
                                     ${this.renderPhotoPreviews()}
@@ -260,8 +270,9 @@
         
         renderPhotoPreviews() {
             if (!this.boat || !this.boat.photos || this.boat.photos.length === 0) return '';
-            return this.boat.photos.map(photo => `
-                <div class="photo-thumb">
+            return this.boat.photos.map((photo, i) => `
+                <div class="photo-thumb" style="${i === 0 ? 'border: 3px solid #4caf50;' : ''}">
+                    ${i === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#4caf50;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1;">⭐</span>' : ''}
                     <img src="${photo}" alt="preview">
                     <button class="remove-photo" onclick="this.parentElement.remove(); AquaGid.BoatForm.updatePhotoCounter()">✕</button>
                 </div>
@@ -272,7 +283,7 @@
             const files = event.target.files;
             const preview = document.getElementById('photoPreview');
             const currentPhotos = preview.children.length;
-            const maxPhotos = 5;
+            const maxPhotos = 7;
             
             if (currentPhotos + files.length > maxPhotos) {
                 alert(`Можно загрузить не более ${maxPhotos} фото.`);
@@ -317,13 +328,13 @@
             const fileInput = document.getElementById('boatPhotos');
             const photoUploadDiv = document.querySelector('.photo-upload');
             
-            if (count >= 5) {
+            if (count >= 7) {
                 if (fileInput) fileInput.style.display = 'none';
                 if (photoUploadDiv && !document.getElementById('maxPhotosMessage')) {
                     const message = document.createElement('div');
                     message.id = 'maxPhotosMessage';
                     message.style.cssText = 'background: #fff3cd; color: #856404; padding: 10px; border-radius: 6px; margin-top: 10px; text-align: center;';
-                    message.innerHTML = '📸 Максимум 5 фотографий загружено.';
+                    message.innerHTML = '📸 Максимум 7 фотографий загружено.';
                     photoUploadDiv.appendChild(message);
                 }
             } else {
@@ -424,11 +435,6 @@
                         body: JSON.stringify(boatData)
                     });
                     if (!response.ok) throw new Error('Ошибка обновления');
-                    
-                    await fetch(`/api/boats/${boatData.id}/photos`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
                 } else {
                     const response = await fetch('/api/boats', {
                         method: 'POST',
@@ -443,32 +449,54 @@
                     boatId = newBoat.id;
                 }
 
-                let firstPhotoUrl = null;
-                if (photos.length > 0 && boatId) {
-                    for (let i = 0; i < photos.length; i++) {
-                        const response = await fetch(`/api/boats/${boatId}/photos`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            },
-                            body: JSON.stringify({ photo_url: photos[i], display_order: i })
-                        });
-                        if (response.ok && i === 0) {
-                            const result = await response.json();
-                            firstPhotoUrl = result.photo_url;
-                        }
-                    }
-                }
+                // Фото: разделяем новые (data:) и существующие (https://)
+                const newPhotos = photos.filter(p => p.startsWith('data:'));
+                const existingUrls = photos.filter(p => !p.startsWith('data:'));
                 
-                if (firstPhotoUrl) {
+                // Обновляем main_photo_url из первого фото (существующего или нового)
+                const mainPhotoUrl = existingUrls[0] || (photos[0]?.startsWith('data:') ? null : photos[0]);
+                if (mainPhotoUrl && boatId) {
                     await fetch(`/api/boats/${boatId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`
                         },
-                        body: JSON.stringify({ ...boatData, main_photo_url: firstPhotoUrl })
+                        body: JSON.stringify({ main_photo_url: mainPhotoUrl })
+                    });
+                }
+                
+                // Загружаем только новые фото
+                if (newPhotos.length > 0 && boatId) {
+                    if (existingUrls.length === 0) {
+                        await fetch(`/api/boats/${boatId}/photos`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                    }
+                    for (let i = 0; i < newPhotos.length; i++) {
+                        const displayOrder = existingUrls.length + i;
+                        await fetch(`/api/boats/${boatId}/photos`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ photo_url: newPhotos[i], display_order: displayOrder })
+                        });
+                    }
+                }
+
+                // Отправляем финальный порядок на сервер
+                const allUrls = this.boat?.photos?.filter(p => !p.startsWith('data:')) || [];
+                if (allUrls.length > 0 && boatId) {
+                    await fetch(`/api/boats/${boatId}/photos/reorder`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ photo_urls: allUrls })
                     });
                 }
                 
@@ -481,6 +509,36 @@
                 alert('❌ Ошибка сохранения катера');
             }
         }
+
+        async reorderPhotos(index) {
+            if (!this.boat || !this.boat.photos) return;
+            const idx = parseInt(index);
+            const photos = [...this.boat.photos];
+            const [moved] = photos.splice(idx, 1);
+            photos.unshift(moved);
+            this.boat.photos = photos;
+            this.photoOrderChanged = true;
+            
+            const preview = document.getElementById('photoPreview');
+            if (preview) {
+                preview.innerHTML = this.renderPhotoPreviews();
+            }
+            
+            // Отправляем новый порядок на сервер
+            if (this.boat.id) {
+                const token = localStorage.getItem('access_token') || '';
+                const existingUrls = photos.filter(p => !p.startsWith('data:'));
+                if (existingUrls.length === 0) return;
+                await fetch(`/api/boats/${this.boat.id}/photos/reorder`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ photo_urls: existingUrls })
+                });
+            }
+        }        
 
         async geocodeAddress(autoSave = false) {
             const address = document.getElementById('boatAddress')?.value;
