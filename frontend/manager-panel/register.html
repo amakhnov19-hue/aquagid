@@ -188,6 +188,82 @@
             }
         }
 
+        function showConsentModal(callback) {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:10000;';
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:16px;padding:24px;width:360px;text-align:left;">
+                    <h3 style="margin-top:0;">📜 Условия использования</h3>
+                    <div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:16px;">
+                        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
+                            <input type="checkbox" id="modal-consent-terms" style="margin-top:3px;width:18px;height:18px;flex-shrink:0;">
+                            <span style="font-size:13px;line-height:1.5;">
+                                Я принимаю условия Договора оказания услуг (Публичной оферты) и даю Согласие на обработку персональных данных в соответствии с Политикой конфиденциальности.
+                            </span>
+                        </label>
+                    </div>
+                    <button id="modal-continue" disabled style="width:100%;padding:12px;background:#0066CC;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;opacity:0.5;">
+                        Продолжить
+                    </button>
+                    <button id="modal-cancel" style="width:100%;padding:10px;background:#e5e7eb;border:none;border-radius:8px;margin-top:8px;cursor:pointer;">
+                        Отмена
+                    </button>
+                </div>`;
+            document.body.appendChild(modal);
+            
+            const chk = document.getElementById('modal-consent-terms');
+            const btn = document.getElementById('modal-continue');
+            chk.onchange = () => {
+                btn.disabled = !chk.checked;
+                btn.style.opacity = chk.checked ? '1' : '0.5';
+            };
+            document.getElementById('modal-continue').onclick = () => {
+                modal.remove();
+                callback();
+            };
+            document.getElementById('modal-cancel').onclick = () => modal.remove();
+        }
+
+        async function doRegister(fullName, password, companyName, managerPhone, managerEmail) {
+            showLoading(true);
+            try {
+                const registerResponse = await fetch('/api/admin/register-manager', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        token, full_name: fullName, password,
+                        phone: inviteData?.phone || '',
+                        consent_terms: true, consent_pd: true
+                    })
+                });
+                if (!registerResponse.ok) { const e = await registerResponse.json(); throw new Error(e.detail || 'Ошибка'); }
+                const reg = await registerResponse.json();
+                
+                await fetch(`/api/managers/${reg.manager_id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ company_name: companyName, phone: managerPhone, email: managerEmail, full_name: fullName })
+                });
+                
+                const login = await fetch('/api/managers/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login: managerPhone, password })
+                });
+                const loginResult = await login.json();
+                localStorage.setItem('token', loginResult.token);
+                localStorage.setItem('managerId', loginResult.id);
+                localStorage.setItem('managerName', fullName);
+                
+                document.getElementById('registerFormContainer').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
+                setTimeout(() => { window.location.href = '/'; }, 2000);
+            } catch(e) {
+                showError(e.message);
+            }
+            showLoading(false);
+        }
+
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -207,77 +283,9 @@
                 return;
             }
 
-            showLoading(true);
-
-            try {
-                // 1. Регистрируем менеджера
-                const registerResponse = await fetch('/api/admin/register-manager', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        token: token,
-                        full_name: fullName,
-                        password: password,
-                        phone: inviteData?.phone || ''
-                    })
-                });
-
-                if (!registerResponse.ok) {
-                    const error = await registerResponse.json();
-                    throw new Error(error.detail || 'Ошибка регистрации');
-                }
-
-                const registerResult = await registerResponse.json();
-                const managerId = registerResult.manager_id;
-
-                // 2. Обновляем профиль
-                const profileResponse = await fetch(`/api/managers/${managerId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        company_name: companyName,
-                        phone: managerPhone,
-                        email: managerEmail,
-                        full_name: fullName
-                    })
-                });
-
-                if (!profileResponse.ok) {
-                    throw new Error('Ошибка сохранения профиля');
-                }
-
-                // 3. Авторизуем нового менеджера (через email)
-                const loginResponse = await fetch('/api/managers/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        login: managerEmail,
-                        password: password
-                    })
-                });
-
-                if (!loginResponse.ok) {
-                    throw new Error('Ошибка авторизации');
-                }
-
-                const loginResult = await loginResponse.json();
-                localStorage.setItem('token', loginResult.token);
-                localStorage.setItem('managerId', loginResult.id);
-                localStorage.setItem('managerName', fullName);
-
-                // Успех!
-                document.getElementById('registerFormContainer').style.display = 'none';
-                document.getElementById('success').style.display = 'block';
-                showLoading(false);
-
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
-                
-            } catch (error) {
-                showError(error.message);
-                showLoading(false);
-            }
+            showConsentModal(() => {
+                doRegister(fullName, password, companyName, managerPhone, managerEmail);
+            });
         });
 
         function showError(message) {
@@ -289,7 +297,6 @@
 
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
-            document.getElementById('submitBtn').disabled = show;
         }
 
         checkInvite();

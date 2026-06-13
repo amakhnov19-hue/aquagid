@@ -64,11 +64,10 @@
 
     <!-- Контейнеры для чата и документации -->
     <div id="documentation-container"></div>
-    <div id="weather-widget-container" style="display:none;"></div>
+    <!-- Кнопка документов (вместо погоды) -->
+    <button id="docs-floating-btn" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle();" style="position:fixed;bottom:50px;left:20px;width:72px;height:72px;border-radius:50%;background:#1e293b;color:white;border:none;font-size:11px;font-weight:600;cursor:pointer;z-index:9997;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;padding:0;">📜<br>Док-ты</button>
     <!-- Чат поддержки: в разработке -->
     <div id="my-bookings-container" style="display: none;"></div>
-    <!-- Кнопка входа клиента -->
-    <button id="client-login-btn" style="position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:#10b981;color:white;border:none;font-size:24px;cursor:pointer;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:none;" title="Войти">👤</button>
 
     <!-- ========== ЯДРО (ОБЯЗАТЕЛЬНО ПЕРВЫМИ!) ========== -->
     <script src="js/components/core/APIClient.js"></script>

@@ -69,16 +69,6 @@ class WelcomeScreen extends ScreenBase {
                     </p>
                     ` : ''}
 
-                    <!-- Кнопка документации (показывается только после принятия согласий) -->
-                    <div id="docs-button-wrapper" style="display: ${localStorage.getItem('aquagid-docs-accepted') ? 'block' : 'none'};">
-                        <button class="btn-home btn-documentation" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle()">
-                            📜 Условия, права и согласия
-                        </button>
-                        <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
-                            Договор оферты, политика конфиденциальности, согласие на обработку ПД — всё по 152-ФЗ
-                        </p>
-                    </div>
-                    
                     <!-- Информационный блок -->
                     <div class="info-block">
                         <p style="font-size: 12px; color: #888; text-align: center; margin-top: 20px;">
@@ -87,26 +77,6 @@ class WelcomeScreen extends ScreenBase {
                         </p>
                     </div>
 
-                    <!-- Баннер согласий -->
-                    <div id="consent-banner" class="consent-banner" style="display: ${localStorage.getItem('aquagid-docs-accepted') && localStorage.getItem('aquagid-geo-accepted') && localStorage.getItem('aquagid-pd-accepted') ? 'none' : 'block'}; background: #f8f9fa; border-radius: 12px; padding: 16px; margin: 16px 0; text-align: left; font-size: 13px; border: 1px solid #e0e0e0;">
-                        <p style="margin: 0 0 12px 0; font-weight: 600;">📜 Условия использования</p>
-                        
-                        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; cursor: pointer;">
-                            <input type="checkbox" id="consent-terms" onchange="window.AquaGid.UnifiedScreens.welcomeScreen.acceptConsents()" style="margin-top: 2px;">
-                            <span>Принимаю <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle(); return false;" style="color: #0066cc;">условия и оферту</a></span>
-                        </label>
-                        
-                        <label style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; cursor: pointer;">
-                            <input type="checkbox" id="consent-pd" onchange="window.AquaGid.UnifiedScreens.welcomeScreen.acceptConsents()" style="margin-top: 2px;">
-                            <span>Согласен на <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle(); return false;" style="color: #0066cc;">обработку персональных данных</a> (152-ФЗ)</span>
-                        </label>
-                        
-                        <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-                            <input type="checkbox" id="consent-geo" onchange="window.AquaGid.UnifiedScreens.welcomeScreen.acceptConsents()" style="margin-top: 2px;">
-                            <span>Согласен на определение местоположения (для поиска ближайших катеров и маршрута до причала; координаты не сохраняются)</span>
-                        </label>
-                    </div>
-                    
                     <!-- Кнопка полной перезагрузки -->
                     <div style="text-align:center;margin-top:16px;">
                         <a href="javascript:void(0)" onclick="window.location.reload(true)" 
@@ -129,27 +99,6 @@ class WelcomeScreen extends ScreenBase {
             }
         }, 500);
         
-    }
-
-    /**
-     * Принять согласия и скрыть баннер
-     */
-    acceptConsents() {
-        const terms = document.getElementById('consent-terms')?.checked;
-        const pd = document.getElementById('consent-pd')?.checked;
-        const geo = document.getElementById('consent-geo')?.checked;
-        
-        if (terms) localStorage.setItem('aquagid-docs-accepted', '1');
-        if (pd) localStorage.setItem('aquagid-pd-accepted', '1');
-        if (geo) localStorage.setItem('aquagid-geo-accepted', '1');
-        
-        // Скрываем баннер только когда ВСЕ три согласия приняты
-        if (terms && pd && geo) {
-            const banner = document.getElementById('consent-banner');
-            if (banner) banner.style.display = 'none';
-            const docsBtn = document.getElementById('docs-button-wrapper');
-            if (docsBtn) docsBtn.style.display = 'block';
-        }
     }
 
     async loadClientNotifications() {

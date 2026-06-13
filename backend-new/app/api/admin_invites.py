@@ -7,6 +7,7 @@ from app.core.database import get_db
 from sqlalchemy import text
 from sqlalchemy import select
 from app.core.security import get_password_hash  # ← ЗАМЕНЯЕМ bcrypt
+import os
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -42,8 +43,9 @@ async def create_manager_invite(
         "expires_at": expires_at
     })
     await db.commit()
-    
-    invite_url = f"https://manager.experimental.24aquabooking.ru/register/{token}"
+
+    base_url = os.getenv("BASE_URL", "https://manager.beta.24aquabooking.ru")
+    invite_url = f"{base_url}/register/{token}"
     
     return InviteResponse(
         invite_url=invite_url,
@@ -84,6 +86,8 @@ class ManagerRegisterRequest(BaseModel):
     full_name: str
     password: str
     phone: str
+    consent_terms: bool = False   
+    consent_pd: bool = False       
 
 class ManagerRegisterResponse(BaseModel):
     manager_id: int
@@ -136,6 +140,23 @@ async def register_manager(
         "password_hash": hashed_password
     })
     manager_id = result.fetchone()[0]
+
+    # Логируем согласия менеджера
+    if request.consent_terms and request.consent_pd:
+        for consent_type, doc_ver in [('terms', 'manager_v1'), ('pd', 'manager_v1')]:
+            await db.execute(
+                text("""
+                    INSERT INTO user_consents (user_type, user_id, action, consent_type, doc_version, client_name)
+                    VALUES ('manager', :uid, 'accepted', :ct, :ver, :name)
+                """),
+                {
+                    "uid": str(manager_id),
+                    "ct": consent_type,
+                    "ver": doc_ver,
+                    "name": request.full_name
+                }
+            )
+        await db.commit()
     
     # Помечаем приглашение как использованное
     await db.execute(

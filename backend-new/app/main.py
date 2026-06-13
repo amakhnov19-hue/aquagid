@@ -69,6 +69,8 @@ app.include_router(terminal_pins.router, prefix="/api")
 app.include_router(maintenance_api.router, prefix="/api")
 from app.api import weather_api
 app.include_router(weather_api.router, prefix="/api")
+from app.api import consent_api
+app.include_router(consent_api.router, prefix="/api/consent")
 
 # Админские роутеры
 app.include_router(admin_invites.router, prefix="/api", tags=["admin"])
