@@ -82,7 +82,8 @@ async def delete_manager(
     """Удалить менеджера и все его катера (включая фото на диске)"""
     
     import os
-    from app.models.boat_model import Boat, BoatPhoto
+    from app.models.boat_model import Boat
+    from app.models.boat_photo_model import BoatPhoto
     
     # Получаем список фото для удаления с диска
     photos_result = await db.execute(

@@ -290,6 +290,12 @@ async def get_available_boats(
                 "main_photo_url": boat.main_photo_url,
                 "description_short": boat.description_short,
                 "boarding_address": boat.boarding_address,
+                "has_canopy": boat.has_canopy,
+                "has_toilet": boat.has_toilet,
+                "has_audio": boat.has_audio,
+                "has_fridge": boat.has_fridge,
+                "has_blankets": boat.has_blankets,
+                "has_kitchenware": boat.has_kitchenware,
                 "manager_name": manager.full_name if manager else None,
                 "manager_company": manager.company_name if manager else None,
                 "manager_phone": manager.phone if manager else None

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
 from app.services.modulbank import ModulBankService
+from app.services import tbank
 
 router = APIRouter(tags=["payments"])
 
@@ -20,7 +21,7 @@ async def create_payment(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ):
-    booking_id = data.get("booking_id")
+    booking_id = int(data.get("booking_id", 0))
     amount = data.get("amount")
     description = data.get("description", f"Бронирование #{booking_id}")
     client_name = data.get("client_name", "")
@@ -29,7 +30,7 @@ async def create_payment(
 
     result = await db.execute(
         text("""
-            SELECT bt.manager_id, pa.bank, pa.merchant_id, pa.secret_key, pa.test_mode
+            SELECT bt.manager_id, COALESCE(pa.bank, 'test') as bank, pa.merchant_id, pa.secret_key, pa.test_mode
             FROM bookings b
             JOIN boats bt ON b.boat_id = bt.id
             LEFT JOIN managers m ON bt.manager_id = m.id
@@ -39,11 +40,13 @@ async def create_payment(
         {"booking_id": booking_id}
     )
     row = result.fetchone()
+    print(f"🔍 CREATE PAYMENT: booking_id={booking_id}, amount={amount}", flush=True)
     
     if not row:
         return {"success": False, "error": "Booking not found"}
 
     manager_id, bank, merchant_id, secret_key, test_mode = row
+    print(f"🔍 BANK CHECK: bank={bank}, merchant={merchant_id}, secret={secret_key[:10] if secret_key else 'None'}", flush=True)
     
     if not bank:
         bank = "test"
@@ -52,7 +55,16 @@ async def create_payment(
     callback_url = f"{base_url}/api/webhook/modulbank"
     order_id = f"{booking_id}_{int(datetime.now().timestamp())}"
 
-    if bank == "modulbank" and merchant_id and secret_key:
+    if bank == "tbank" and merchant_id and secret_key:
+        amount_kopecks = int(amount)
+        success_url = f"{base_url}?payment=success&booking={booking_id}"
+        fail_url = f"{base_url}?payment=fail&booking={booking_id}"
+        result = await tbank.init_payment(amount_kopecks, order_id, description, success_url, fail_url)
+        if result.get("success"):
+            return result
+        return {"success": False, "error": result.get("error", "TBank error")}
+        
+    elif bank == "modulbank" and merchant_id and secret_key:
         service = ModulBankService(merchant_id, secret_key, test_mode if test_mode is not None else True)
         payment = await service.create_payment(
             amount=amount,
@@ -82,7 +94,6 @@ async def create_payment(
             )
             row = info.fetchone()
             if row:
-                print(f"🔍 PAYMENT ROW: {row}", flush=True)
                 # Менеджеру
                 await send_push_internal(
                     db=db,

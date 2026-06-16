@@ -105,6 +105,20 @@ class ConfirmationScreen extends ScreenBase {
                         <input type="email" id="client-email" class="client-input" placeholder="example@mail.ru" value="${booking.client?.email || ''}">
                     </div>
                     
+                    ${!localStorage.getItem('clientPhone') ? `
+                    <div style="background:#f8f9fa;border-radius:12px;padding:16px;margin-top:16px;text-align:left;font-size:13px;border:1px solid #e0e0e0;">
+                        <p style="font-weight:600;margin:0 0 12px;">📜 Условия использования</p>
+                        <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;cursor:pointer;">
+                            <input type="checkbox" id="confirm-terms" style="margin-top:2px;">
+                            <span>Принимаю условия <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle();" style="color:#0066cc;">Договора оферты</a> и даю <a href="javascript:void(0)" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle();" style="color:#0066cc;">Согласие на обработку ПД</a></span>
+                        </label>
+                        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="confirm-geo" style="margin-top:2px;">
+                            <span>Согласен на определение местоположения для поиска ближайшего катера</span>
+                        </label>
+                    </div>
+                    ` : ''}
+                    
                     <div style="display: flex; justify-content: center; margin-top: 16px;">
                         <button class="btn-confirm" onclick="window.currentConfirmationScreen.confirmBooking()">
                             ✅ Подтвердить и перейти к оплате
@@ -167,13 +181,26 @@ class ConfirmationScreen extends ScreenBase {
         console.log('✅ Подтверждение бронирования');
 
         // Проверка согласий для неавторизованных
-        if (!localStorage.getItem('aquagid-docs-accepted')) {
-            const terms = document.getElementById('consent-terms-confirm')?.checked;
-            const pd = document.getElementById('consent-pd-confirm')?.checked;
-            const geo = document.getElementById('consent-geo-confirm')?.checked;
-            if (!terms || !pd || !geo) {
-                alert('⚠️ Примите все три условия использования');
+        if (!localStorage.getItem('clientPhone')) {
+            const terms = document.getElementById('confirm-terms')?.checked;
+            const geo = document.getElementById('confirm-geo')?.checked;
+            if (!terms || !geo) {
+                alert('⚠️ Примите условия использования');
                 return;
+            }
+            // Сохраняем согласия в БД
+            const phone = document.getElementById('client-phone')?.value?.replace(/\D/g, '') || '';
+            const name = document.getElementById('client-name')?.value || '';
+            if (phone) {
+                for (const type of ['terms', 'pd', 'geo']) {
+                    try {
+                        await fetch('/api/consent/give', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ user_type: 'client', user_id: phone, consent_type: type, client_name: name })
+                        });
+                    } catch(e) {}
+                }
             }
             localStorage.setItem('aquagid-docs-accepted', '1');
             localStorage.setItem('aquagid-pd-accepted', '1');

@@ -45,9 +45,8 @@
                     photos: boat.main_photo_url ? [boat.main_photo_url] : []
                 };
             }
-            this.render('boat-form-modal');
             
-            // Загружаем require_approval ДО рендера
+            // Загружаем require_approval перед рендером
             if (this.boat?.id) {
                 try {
                     const appResp = await fetch(`/api/boats/${this.boat.id}/approval-status`);
@@ -599,6 +598,14 @@
                     
                     this.tempLat = latNum;
                     this.tempLon = lonNum;
+                    
+                    // Обновляем карту если уже открыта
+                    if (this.currentMap) {
+                        this.currentMap.setCenter([latNum, lonNum]);
+                        if (this.currentPlacemark) {
+                            this.currentPlacemark.geometry.setCoordinates([latNum, lonNum]);
+                        }
+                    }
                     
                     coordsSpan.textContent = `${latNum.toFixed(6)}, ${lonNum.toFixed(6)}`;
                     

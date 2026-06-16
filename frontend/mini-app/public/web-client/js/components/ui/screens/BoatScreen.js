@@ -243,7 +243,7 @@ class BoatScreen extends ScreenBase {
                         <div class="boat-price" style="font-weight: 700; color: #0066CC;">${this.getDisplayPrice(boat)}</div>
                     </div>
                     
-                    <button class="boat-details-button" data-boat-id="${boat.id}" style="margin-top: 12px; width: 100%;">
+                    <button class="boat-details-button" data-boat-id="${boat.id}" style="margin-top: 12px; width: 100%; padding: 12px; background: #0066CC; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">
                         🔍 Подробнее
                     </button>
                 </div>

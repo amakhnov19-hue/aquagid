@@ -13,42 +13,45 @@ class QuickScreen extends ScreenBase {
      */
     async show() {
         console.log('⚡ QuickScreen.show START');
-        
         if (!this.container) return;
-        
+
         this.container.innerHTML = `
             <div class="screen quick-screen">
                 <h2 class="screen-title">⚡ Ближайший катер</h2>
-                
                 <div class="home-button-container">
-                    <button class="btn-home" onclick="window.AquaGid.UnifiedScreens.showWelcomeScreen()">
-                        🏠 В начало
-                    </button>
+                    <button class="btn-home" onclick="window.AquaGid.UnifiedScreens.showWelcomeScreen()">🏠 В начало</button>
                 </div>
-                
                 <div class="quick-options">
                     <div class="address-input-container">
-                        <input type="text" id="manual-address" placeholder="Введите адрес (например: Санкт-Петербург, Невский пр. 1)">
-                        <button id="search-address-btn" class="btn-secondary">🔍 Найти катера по адресу</button>
+                        <input type="text" id="manual-address" placeholder="Или введите адрес вручную">
+                        <button id="search-address-btn" class="btn-secondary">🔍 Найти по адресу</button>
                     </div>
                 </div>
-                
                 <div id="quick-content">
-                    <div class="loading">Запрашиваем ваше местоположение...</div>
+                    <div class="loading">Определяем местоположение...</div>
                 </div>
-            </div>
-        `;
-        
-        // Добавляем обработчик для кнопки поиска по адресу
+            </div>`;
+
         document.getElementById('search-address-btn')?.addEventListener('click', () => this.searchByAddress());
-        
-        // Запрашиваем геолокацию только если пользователь дал согласие
-        if (localStorage.getItem('aquagid-geo-accepted') === 'true') {
-            await this.requestLocation();
+
+        // Сразу пробуем геолокацию (браузер сам спросит разрешение)
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    this.userLocation = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+                    this.findNearestBoats();
+                },
+                () => {
+                    document.getElementById('quick-content').innerHTML = 
+                        '<p style="text-align:center;color:#666;padding:20px;">Не удалось определить местоположение.<br>Введите адрес вручную ☝️</p>';
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         } else {
-            this.showAddressInput('Введите ваш адрес для поиска ближайших катеров:');
+            document.getElementById('quick-content').innerHTML = 
+                '<p style="text-align:center;color:#666;padding:20px;">Геолокация не поддерживается.<br>Введите адрес вручную ☝️</p>';
         }
-        
+
         console.log('⚡ QuickScreen.show END');
     }
 
@@ -487,9 +490,16 @@ class QuickScreen extends ScreenBase {
                             <p>💰 ${boat.price_per_hour} ₽/час</p>
                             <p class="walk-time">🚶 ${boat.walk_time_minutes} мин пешком</p>
                             ${boat.distance_km ? `<p class="distance">📏 ${boat.distance_km} км</p>` : ''}
-                            <p class="available-hours">⏳ Доступен всего ${boat.max_available_hours} часов</p>
+                            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;">
+                                ${boat.has_canopy ? '<span>🏖️</span>' : ''}
+                                ${boat.has_toilet ? '<span>🚻</span>' : ''}
+                                ${boat.has_audio ? '<span>🔊</span>' : ''}
+                                ${boat.has_fridge ? '<span>❄️</span>' : ''}
+                                ${boat.has_blankets ? '<span>🛏️</span>' : ''}
+                                ${boat.has_kitchenware ? '<span>🍽️</span>' : ''}
+                            </div>
                             
-                            <button class="btn-details" onclick="event.stopPropagation(); window.currentQuickScreen?.showBoatDetails(${boat.id})">
+                            <button class="btn-details" onclick="event.stopPropagation(); window.currentQuickScreen?.showBoatDetails(${boat.id})" style="width:100%;padding:12px;background:#0066CC;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;">
                                 🔍 Подробнее
                             </button>
                         </div>

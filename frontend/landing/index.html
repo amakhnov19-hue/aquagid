@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Мгновенная аренда катеров | Без звонков</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #004C99 0%, #0066CC 50%, #0088EE 100%);
+            color: #fff;
+            min-height: 100vh;
+            line-height: 1.4;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+
+        /* Hero */
+        .hero { text-align: center; padding: 50px 0 30px; }
+        .badge { display: inline-block; background: rgba(255,255,255,0.15); backdrop-filter: blur(4px); padding: 8px 20px; border-radius: 30px; font-size: 0.9rem; font-weight: 500; margin-bottom: 20px; }
+        h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 12px; }
+        .hero-sub { font-size: 1.1rem; opacity: 0.9; max-width: 500px; margin: 0 auto; }
+
+        /* Кнопки */
+        .actions-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+        .btn-action {
+            flex: 1;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            text-align: center;
+            background: #fff;
+            color: #0066CC;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+        .btn-action:active {
+            transform: translateY(0);
+        }
+
+        /* Панель Ближайший катер */
+        .quick-panel { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 24px 20px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.2); }
+        .quick-panel h2 { font-size: 1.3rem; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; justify-content: center; }
+
+        /* Катера */
+        .boats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .boat-card { background: rgba(255,255,255,0.1); border-radius: 14px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .boat-card:hover, .boat-card.selected { border-color: #fff; background: rgba(255,255,255,0.2); }
+        .boat-card-img { height: 120px; background-size: cover; background-position: center; }
+        .boat-card-info { padding: 10px; }
+        .boat-card-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+        .boat-card-meta { font-size: 0.75rem; opacity: 0.8; }
+
+        .btn-book { background: #fff; color: #0066CC; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; }
+
+        /* Подвал */
+        .footer { text-align: center; padding: 30px 0; font-size: 0.85rem; opacity: 0.8; }
+        .footer .email { font-size: 1.2rem; font-weight: 700; margin-top: 8px; }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 1.8rem; }
+            .boats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="hero">
+        <div class="badge">⚡ 100% онлайн — звонки не нужны</div>
+        <h1>МГНОВЕННЫЙ СЕРВИС<br>АРЕНДЫ КАТЕРОВ</h1>
+        <p class="hero-sub">Забронируй катер за 3 клика. Без менеджеров, без «перезвоним».</p>
+    </div>
+
+    <div class="actions-row">
+        <button class="btn-action" onclick="goToApp('fromDate')">📅 Выбери дату</button>
+        <button class="btn-action" onclick="goToApp('fromBoat')">🚤 Выбери катер</button>
+    </div>
+
+    <div class="quick-panel">
+        <h2>⚡ Ближайшие катера</h2>
+        <p style="text-align:center;font-size:1rem;margin-bottom:4px;">Ждут вас на причале по адресу:</p>
+        <p id="quick-pier" style="text-align:center;font-size:1.2rem;font-weight:600;margin-bottom:16px;">выберите катер</p>
+        <div class="boats-grid" id="boats-grid">Загрузка...</div>
+        <button class="btn-book" id="btn-quick-book" onclick="goToApp('quick')">Забронировать сейчас — без звонка</button>
+    </div>
+
+    <div class="footer">
+        <p>🕒 Ежедневно с 09:00 до 24:00</p>
+        <p>По вопросам бронирования:</p>
+        <p class="email">bronirovania.servis@yandex.ru</p>
+    </div>
+</div>
+
+<script>
+    const APP_URL = 'https://beta.24aquabooking.ru';
+    let boatsData = [];
+    let carouselIndex = 0;
+    let carouselTimer = null;
+
+    function goToApp(mode) {
+        const boat = boatsData[carouselIndex];
+        const boatId = boat ? boat.id : '';
+        const url = boatId ? `${APP_URL}?mode=${mode}&boat=${boatId}` : `${APP_URL}?mode=${mode}`;
+        window.location.href = url;
+    }
+
+    async function loadBoats() {
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+            
+            const resp = await fetch(`/api/availability/boats?booking_date=${today}&start_time=${time}&duration_minutes=120`);
+            const data = await resp.json();
+            boatsData = (data.boats || []).slice(0, 4);
+            
+            const grid = document.getElementById('boats-grid');
+            if (!boatsData.length) {
+                grid.innerHTML = '<p style="text-align:center;padding:20px;">Нет свободных катеров сейчас</p>';
+                return;
+            }
+
+            renderBoats();
+            startCarousel();
+
+        } catch(e) {
+            document.getElementById('boats-grid').innerHTML = '<p>Ошибка загрузки</p>';
+        }
+    }
+
+    function renderBoats() {
+        const grid = document.getElementById('boats-grid');
+        grid.innerHTML = boatsData.map((b, i) => `
+            <div class="boat-card ${i === carouselIndex ? 'selected' : ''}" data-index="${i}" onclick="selectBoatManual(${i})">
+                <div class="boat-card-img" style="background-image:url('${b.main_photo_url || ''}')"></div>
+                <div class="boat-card-info">
+                    <div class="boat-card-name">${b.name}</div>
+                    <div class="boat-card-meta">👥 ${b.capacity || '?'} чел · 💰 ${b.price_per_hour ? b.price_per_hour.toLocaleString() + ' ₽/ч' : ''}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        updatePier();
+    }
+
+    function updatePier() {
+        const boat = boatsData[carouselIndex];
+        document.getElementById('quick-pier').textContent = boat ? (boat.boarding_address || 'Уточняется') : 'Выберите катер';
+    }
+
+    function selectBoatManual(index) {
+        carouselIndex = index;
+        renderBoats();
+        resetCarousel();
+    }
+
+    function startCarousel() {
+        carouselTimer = setInterval(() => {
+            carouselIndex = (carouselIndex + 1) % boatsData.length;
+            renderBoats();
+        }, 5000);
+    }
+
+    function resetCarousel() {
+        clearInterval(carouselTimer);
+        startCarousel();
+    }
+
+    loadBoats();
+</script>
+</script>
+</body>
+</html>

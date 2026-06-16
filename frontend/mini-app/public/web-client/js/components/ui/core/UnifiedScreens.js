@@ -118,12 +118,6 @@ class UnifiedScreens {
         startBooking(mode = 'quick') {
         console.log('🚀 startBooking', mode);
 
-        // Проверяем, приняты ли условия
-        if (!localStorage.getItem('aquagid-docs-accepted')) {
-            alert('📜 Пожалуйста, примите условия использования внизу экрана.');
-            return;
-        }
-        
         this.resetBooking();
         this.currentFlow = mode;
         
@@ -154,7 +148,28 @@ class UnifiedScreens {
      * Показать экран приветствия
      */
     showWelcomeScreen() {
-        // Не пушим новую запись, если мы уже на приветствии (защита от двойного pushState)
+        // Проверяем параметры от лендинга
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        const boatId = urlParams.get('boat');
+        
+        if (mode === 'quick') {
+            window.history.replaceState({}, '', window.location.pathname);
+            this.startBooking('quick');
+            return;
+        }
+        if (mode === 'fromBoat') {
+            window.history.replaceState({}, '', window.location.pathname);
+            this.startBooking('fromBoat');
+            return;
+        }
+        if (mode === 'fromDate') {
+            window.history.replaceState({}, '', window.location.pathname);
+            this.startBooking('fromDate');
+            return;
+        }
+        
+        // Не пушим новую запись, если мы уже на приветствии
         if (history.state?.screen !== 'welcome') {
             history.pushState({ screen: 'welcome' }, '', window.location.pathname);
         }

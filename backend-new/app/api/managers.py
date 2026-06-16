@@ -24,9 +24,11 @@ async def login_manager(
     request: LoginRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    # Ищем менеджера по email
+    # Ищем менеджера по email ИЛИ телефону
     result = await db.execute(
-        select(Manager).where(Manager.email == request.login)
+        select(Manager).where(
+            (Manager.email == request.login) | (Manager.phone == request.login)
+        )
     )
     manager = result.scalar_one_or_none()
     
