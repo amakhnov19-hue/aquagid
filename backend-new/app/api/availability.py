@@ -365,6 +365,45 @@ async def get_available_dates(
         "dates": available_dates
     }
 
+@router.get("/available-dates-with-slots")
+async def get_available_dates_with_slots(
+    boat_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Возвращает только даты, на которые есть свободные слоты (окно 90 дней)"""
+    from datetime import date, timedelta, datetime
+    
+    today = date.today()
+    
+    global_result = await db.execute(
+        text("SELECT season_start, season_end FROM global_settings LIMIT 1")
+    )
+    global_row = global_result.fetchone()
+    if not global_row or not global_row[0] or not global_row[1]:
+        return {"dates": []}
+    
+    season_start = datetime.strptime(global_row[0], "%Y-%m-%d").date()
+    season_end = datetime.strptime(global_row[1], "%Y-%m-%d").date()
+    
+    start = max(today, season_start)
+    end = min(start + timedelta(days=90), season_end)
+    
+    available_dates = []
+    current = start
+    
+    while current <= end:
+        if boat_id:
+            slots = await get_available_slots_internal(boat_id, current, db)
+            if slots and len(slots) > 0:
+                available_dates.append(current.isoformat())
+        else:
+            slots = await get_available_slots_global(current, db)
+            if slots.get("slots") and len(slots["slots"]) > 0:
+                available_dates.append(current.isoformat())
+        current += timedelta(days=1)
+    
+    return {"dates": available_dates}
+
 
 @router.get("/available-slots")
 async def get_available_slots(

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy import text
 from app.core.database import get_db
 from app.models.manager_settings_model import ManagerSettings
 from pydantic import BaseModel
@@ -78,6 +79,46 @@ async def update_settings(
         settings.notify_reviews = data.notify_reviews
     if data.notify_admin is not None:
         settings.notify_admin = data.notify_admin
+
+    # Проверка конфликтов при изменении границ работы
+    if data.work_end is not None or data.work_start is not None:
+        from app.models.booking_model import Booking as BookingModel
+        from app.models.boat_model import Boat as BoatModel
+        
+        boats_result = await db.execute(
+            select(BoatModel.id).where(BoatModel.manager_id == manager_id)
+        )
+        boat_ids = [row[0] for row in boats_result.fetchall()]
+        
+        if boat_ids:
+            bookings_result = await db.execute(
+                select(BookingModel).where(
+                    BookingModel.boat_id.in_(boat_ids),
+                    BookingModel.status == 'active'
+                )
+            )
+            active_bookings = bookings_result.scalars().all()
+            
+            new_end = data.work_end if data.work_end is not None else settings.work_end
+            new_start = data.work_start if data.work_start is not None else settings.work_start
+            
+            from datetime import datetime, timedelta
+            end_time = datetime.strptime(new_end, "%H:%M").time()
+            start_time = datetime.strptime(new_start, "%H:%M").time()
+            
+            conflicts = []
+            for b in active_bookings:
+                b_end = (datetime.combine(datetime.today(), b.start_time) + timedelta(minutes=b.duration_minutes)).time()
+                if b_end > end_time:
+                    conflicts.append(f"Бронь #{b.id} заканчивается в {b_end} позже {new_end}")
+                if b.start_time < start_time:
+                    conflicts.append(f"Бронь #{b.id} начинается в {b.start_time} раньше {new_start}")
+            
+            if conflicts:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Невозможно изменить границы. Конфликты: {'; '.join(conflicts[:3])}"
+                )
     
     await db.commit()
     await db.refresh(settings)

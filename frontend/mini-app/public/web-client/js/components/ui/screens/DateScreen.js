@@ -35,26 +35,23 @@ class DateScreen extends ScreenBase {
     async loadAvailableDates() {
         console.log('📅 loadAvailableDates START');
         const boatId = this.app.booking.boat?.id;
-        const url = boatId ? `/api/availability/available-dates?boat_id=${boatId}` : '/api/availability/available-dates';
+        const url = boatId 
+            ? `/api/availability/available-dates-with-slots?boat_id=${boatId}`
+            : '/api/availability/available-dates-with-slots';
         
         try {
             const response = await fetch(url);
             const data = await response.json();
             
-            if (data.success && data.dates) {
+            if (data.dates) {
                 this.availableDates = data.dates;
-                console.log('📅 availableDates обновлены, количество:', this.availableDates.length);
-                
-                // Пересоздаём календарь с новыми датами
-                this.renderCalendar();  // это метод, который создаёт календарь заново
+                this.renderCalendar();
             } else {
                 this.availableDates = [];
             }
-            
         } catch (error) {
             console.error('❌ Ошибка загрузки дат:', error);
             this.availableDates = [];
-            this.showError('Не удалось загрузить доступные даты');
         }
     }
 
@@ -149,7 +146,7 @@ class DateScreen extends ScreenBase {
             const todayClass = isToday ? 'today' : '';
             
             if (isPast || !isAvailable) {
-                html += `<div class="date-item disabled" data-date="${dateStr}">${day}</div>`;
+                html += '<div class="date-item empty"></div>';
             } else {
                 html += `
                     <div class="date-item available ${isSelected} ${todayClass}" data-date="${dateStr}">

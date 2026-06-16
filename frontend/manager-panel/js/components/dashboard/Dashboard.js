@@ -12,7 +12,7 @@
             this.version = VERSION;
             this.stats = {
                 today_upcoming: 0,
-                attention_boats: 0,
+                attention_bookings: 0,
                 new_bookings: 0,
                 active_total: 0,
                 total_boats: 0,
@@ -94,11 +94,13 @@
                 const boatsRes = await fetch(`/api/boats?manager_id=${managerId}`);
                 const boats = boatsRes.ok ? await boatsRes.json() : [];
                 this.boats = boats;
+                console.log('boats with breakdown:', boats.filter(b => b.is_breakdown));                
                 
                 // 3. ID сломанных катеров
-                const brokenBoatIds = new Set(
+                let brokenBoatIds = new Set(
                     boats.filter(b => b.is_breakdown).map(b => b.id)
                 );
+                console.log('brokenBoatIds:', [...brokenBoatIds]);
                 
                 // 4. Добавляем флаги для каждой брони
                 this.bookings = bookings.map(b => ({
@@ -113,20 +115,17 @@
                 
                 let todayUpcoming = 0;
                 let activeTotal = 0;
-                let attentionBoats = boats.filter(b => b.is_refueling || b.has_maintenance || b.is_breakdown).length;
+                let attentionBookings = 0;  // вместо attentionBoats
                 
                 this.bookings.forEach(b => {
                     if (b.status !== 'active') return;
-                    
                     const start = new Date(b.booking_date + 'T' + b.start_time);
                     const end = new Date(start.getTime() + b.duration_minutes * 60000);
-                    
-                    // Только будущие (не прошедшие)
                     if (end <= now) return;
                     
                     activeTotal++;
-                    // Сегодня и время старта позже текущего
                     if (b.booking_date === today && start > now) todayUpcoming++;
+                    if (brokenBoatIds.has(b.boat_id)) attentionBookings++;  // считаем брони
                 });
                 
                 const newBookings = this.bookings.filter(b => b.isNew && b.status === 'active').length;
@@ -139,7 +138,7 @@
                 
                 this.stats = {
                     today_upcoming: todayUpcoming,
-                    attention_boats: attentionBoats,
+                    attention_bookings: attentionBookings,
                     new_bookings: newBookings,
                     active_total: activeTotal,
                     total_boats: totalBoats,
@@ -149,6 +148,7 @@
                 };
                 
                 await this.loadCalendarStatus();
+                console.log('stats:', JSON.stringify(this.stats));
                 this.render();
                 await this.loadNotifications();
                 
@@ -258,10 +258,10 @@
                             ${this.stats.new_bookings > 0 ? `<span class="badge-new" style="background:#4caf50;color:#fff;border-radius:12px;padding:2px 10px;font-size:13px;font-weight:700;">+${this.stats.new_bookings}</span>` : ''}
                         </div>
                         <div class="panel-stats" style="display: flex; gap: 16px; margin-top: 8px; font-size: 14px; color: #64748b;">
-                            ${this.stats.attention_boats > 0 ? `<span title="Катера на заправке/обслуживании">⛽🔧 ${this.stats.attention_boats} на обслуживании</span>` : ''}
+                            ${this.stats.attention_bookings > 0 ? `<span title="Бронирований сломанных катеров">⚠️ ${this.stats.attention_bookings} требуют внимания</span>` : ''}
                             ${this.stats.today_upcoming > 0 ? `<span title="Бронирований на сегодня">📅 Сегодня: ${this.stats.today_upcoming}</span>` : ''}
                             ${this.stats.active_total > 0 ? `<span title="Всего активных бронирований">📋 Всего: ${this.stats.active_total}</span>` : ''}
-                            ${this.stats.attention_boats === 0 && this.stats.today_upcoming === 0 && this.stats.active_total === 0 ? `<span>Нет активных бронирований</span>` : ''}
+                            ${this.stats.attention_bookings === 0 && this.stats.today_upcoming === 0 && this.stats.active_total === 0 ? `<span>Нет активных бронирований</span>` : ''}
                         </div>
                     </div>
                     

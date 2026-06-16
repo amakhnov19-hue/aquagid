@@ -288,7 +288,8 @@ async def get_bookings(
                 "id": boat.id,
                 "name": boat.name,
                 "capacity": boat.capacity,
-                "boarding_address": boat.boarding_address
+                "boarding_address": boat.boarding_address,
+                "is_breakdown": boat.is_breakdown
             } if boat else None
         })
     

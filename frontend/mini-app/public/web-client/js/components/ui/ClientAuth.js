@@ -48,13 +48,13 @@
                 </div>
                 <div style="margin-bottom:16px;">
                     <label style="font-size:12px;color:#666;">Мессенджер</label>
-                    <div style="display:flex;gap:8px;margin-top:4px;">
-                        <select id="prof-messenger-type" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;">
+                        <select id="prof-messenger-type" style="flex:1;min-width:100px;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
                             <option value="">Не выбран</option>
                             <option value="telegram" ${messengerType === 'telegram' ? 'selected' : ''}>Telegram</option>
                             <option value="max" ${messengerType === 'max' ? 'selected' : ''}>Макс</option>
                         </select>
-                        <input type="text" id="prof-messenger-contact" value="${escapeHtml(messengerContact)}" placeholder="@username" style="flex:2;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
+                        <input type="text" id="prof-messenger-contact" value="${escapeHtml(messengerContact)}" placeholder="@username"  style="flex:1;min-width:0;padding:8px;border:1px solid #d1d5db;border-radius:6px;">
                     </div>
                 </div>
                 

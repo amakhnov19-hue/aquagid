@@ -720,19 +720,27 @@ async def toggle_breakdown(
     action = data.get('action')
     
     if action == 'start':
+
+        # Уведомление менеджеру
+        from app.api.push_api import send_push_internal
+        boat_info = await db.execute(
+            select(BoatModel).where(BoatModel.id == boat_id)
+        )
+        boat_data = boat_info.scalar_one_or_none()
+        if boat_data:
+            await send_push_internal(
+                db=db,
+                title="⚠️ Поломка катера",
+                body=f"{boat_data.name} — требуется внимание",
+                url=f"/boats",
+                user_type="manager",
+                user_id=str(boat_data.manager_id)
+            )
+
         boat.is_breakdown = True
         boat.is_active = False
         # Помечаем будущие брони как требующие внимания
-        await db.execute(
-            text("""
-                UPDATE bookings 
-                SET cancellation_requested = true 
-                WHERE boat_id = :boat_id 
-                AND status = 'active'
-                AND (booking_date + start_time) > NOW()
-            """),
-            {"boat_id": boat_id}
-        )
+        
     else:
         boat.is_breakdown = False
         boat.is_active = True

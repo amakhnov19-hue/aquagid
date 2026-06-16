@@ -143,6 +143,7 @@ class ConfirmationScreen extends ScreenBase {
         if (name || phone) {
             localStorage.setItem('clientName', name || '');
             localStorage.setItem('clientPhone', phone || '');
+            console.log('SAVING email:', email);
             localStorage.setItem('clientEmail', email || '');
             localStorage.setItem('clientMessengerType', messengerType || '');
             localStorage.setItem('clientMessengerContact', messengerContact || '');
@@ -384,40 +385,45 @@ class ConfirmationScreen extends ScreenBase {
                     </div>
                 </div>
 
-                <div style="width: 100%;">
-                    ${window.paymentUI?.renderPaymentBlock(prepaymentAmount, {
-                        onSuccess: async (paymentResult) => {
-                            console.log('💰 Оплата успешна:', paymentResult);
-                            const bookingId = apiResult.id;  // ← вот правильный ID!
-                            console.log('🔄 confirm-payment bookingId:', bookingId);
-                            if (bookingId) {
-                                try {
-                                    await fetch(`/api/bookings/${bookingId}/confirm-payment`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ status: 'active' })
-                                    });
-                                } catch (e) {
-                                    console.error('Ошибка смены статуса:', e);
-                                }
-                            }
-                            this.clearClientData();
-                            if (window.AquaGid?.ManagerDashboard) {
-                                window.AquaGid.ManagerDashboard.loadDashboardData();
-                            }
-                            window.AquaGid.UnifiedScreens.showSuccessScreen();
-                        },
-                        onError: (error) => {
-                            console.log('Ошибка оплаты:', error);
-                            alert('Оплата не прошла. Попробуйте ещё раз.');
-                        }
-                    }) || '<div class="error">Платёжный модуль не загружен</div>'}
+                <div style="width: 100%; text-align: center; margin-top: 16px;">
+                    <button onclick="window.currentConfirmationScreen.payWithTBank(${prepaymentAmount}, '${apiResult.id}')" 
+                        style="width: 100%; padding: 16px; background: #0066CC; color: #fff; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer;">
+                        💳 Оплатить ${prepaymentAmount.toLocaleString()} ₽
+                    </button>
+                    <p style="font-size: 12px; color: #888; margin-top: 8px;">
+                        Вы будете перенаправлены на защищённую платёжную форму Т-банка
+                    </p>
                 </div>
             </div>
         `;
         
         this.container.innerHTML = html;
         window.currentConfirmationScreen = this;
+    }
+
+    async payWithTBank(amount, bookingId) {
+        const orderId = `booking_${bookingId}`;
+        const amountKopecks = Math.round(amount * 100);
+        
+        try {
+            const resp = await fetch('/api/create-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    booking_id: parseInt(bookingId),
+                    amount: amountKopecks,
+                    description: `Бронирование катера #${bookingId}`
+                })
+            });
+            const data = await resp.json();
+            if (data.success && data.payment_url) {
+                window.location.href = data.payment_url;
+            } else {
+                alert('Ошибка создания платежа: ' + (data.error || 'Неизвестная ошибка'));
+            }
+        } catch(e) {
+            alert('Ошибка соединения с банком');
+        }
     }
 
     clearClientData() {
@@ -435,7 +441,7 @@ class ConfirmationScreen extends ScreenBase {
         
         localStorage.removeItem('clientName');
         localStorage.removeItem('clientPhone');
-        localStorage.removeItem('clientEmail');
+        //localStorage.removeItem('clientEmail');
         localStorage.removeItem('clientTelegram');
         
         if (window.AquaGid?.UnifiedScreens?.booking) {

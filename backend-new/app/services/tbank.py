@@ -34,7 +34,7 @@ def generate_token(params: dict) -> str:
     return hashlib.sha256(token_str.encode()).hexdigest()
 
 
-async def init_payment(amount_kopecks: int, order_id: str, description: str = "Бронирование катера") -> dict:
+async def init_payment(amount_kopecks: int, order_id: str, description: str = "Бронирование катера", success_url: str = None, fail_url: str = None) -> dict:
     """Инициировать платёж, получить ссылку на платёжную форму"""
     
     params = {
@@ -45,6 +45,11 @@ async def init_payment(amount_kopecks: int, order_id: str, description: str = "�
         "Language": "ru",
         "PayType": "O",
     }
+
+    if success_url:
+        params["SuccessURL"] = success_url
+    if fail_url:
+        params["FailURL"] = fail_url
     
     params["Token"] = generate_token(params)
     

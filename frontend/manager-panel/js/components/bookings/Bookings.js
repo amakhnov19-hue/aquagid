@@ -101,6 +101,7 @@ class ManagerBookings {
                 id: b.id,
                 boatId: b.boat_id,
                 boatName: b.boat?.name || `Катер #${b.boat_id}`,
+                boat: b.boat,
                 date: b.booking_date,
                 time: b.start_time ? b.start_time.slice(0, 5) : '',
                 duration: b.duration_minutes / 60,
@@ -409,6 +410,8 @@ class ManagerBookings {
                     backgroundColor = '#fff3e0';  // запрошена отмена — приоритет
                 } else if (!b.viewed_at) {
                     backgroundColor = '#e8f5e9';  // новая, не просмотрена
+                } else if (b.boat?.is_breakdown) {
+                    backgroundColor = '#f3e5f5';  // сломанный катер — фиолетовый
                 }
             }
             
