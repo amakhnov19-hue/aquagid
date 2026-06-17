@@ -5,22 +5,6 @@
  */
 
 (function() {
-    function createButton() {
-        const old = document.getElementById('client-login-btn');
-        if (old) old.remove();
-
-        const phone = localStorage.getItem('clientPhone');
-        if (!phone) return; // Нет телефона — кнопка не нужна
-
-        const btn = document.createElement('div');
-        btn.id = 'client-login-btn';
-        btn.style.cssText = 'position:fixed;bottom:50px;right:20px;width:72px;height:72px;border-radius:50%;background:#0066CC;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;z-index:9998;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
-        btn.textContent = '👤';
-        btn.title = 'Профиль';
-        btn.onclick = showProfile;
-        document.body.appendChild(btn);
-    }
-
     function showProfile() {
         const phone = localStorage.getItem('clientPhone') || '';
         const name = localStorage.getItem('clientName') || '';
@@ -109,10 +93,5 @@
         return div.innerHTML;
     }
 
-    // Запуск когда DOM готов
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', createButton);
-    } else {
-        createButton();
-    }
+window.AquaGid.ClientAuth = { showProfile: showProfile };
 })();

@@ -3,18 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <!-- Yandex.Metrika counter -->
-    <script type="text/javascript">
-        (function(m,e,t,r,i,k,a){
-            m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-            m[i].l=1*new Date();
-            for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-            k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-        })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=109409407', 'ym');
-        ym(109409407, 'init', {clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-    </script>
-    <noscript><div><img src="https://mc.yandex.ru/watch/109409407" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-    <!-- /Yandex.Metrika counter -->
     <title>Мгновенная аренда катеров | Без звонков</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -48,17 +36,19 @@
             border: none;
             cursor: pointer;
             text-align: center;
-            background: #fff;
-            color: #0066CC;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(180deg, #0a3d6b 0%, #051c30 100%);
+            color: #FF8C00;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
             transition: transform 0.15s, box-shadow 0.15s;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
         .btn-action:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5), 0 4px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15);
         }
         .btn-action:active {
             transform: translateY(0);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
         }
 
         /* Панель Ближайший катер */
@@ -74,7 +64,19 @@
         .boat-card-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
         .boat-card-meta { font-size: 0.75rem; opacity: 0.8; }
 
-        .btn-book { background: #fff; color: #0066CC; width: 100%; padding: 16px; border-radius: 14px; font-size: 18px; font-weight: 700; border: none; cursor: pointer; }
+        .btn-book {
+            background: linear-gradient(180deg, #0a3d6b 0%, #051c30 100%);
+            color: #FF8C00;
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
 
         /* Подвал */
         .footer { text-align: center; padding: 30px 0; font-size: 0.85rem; opacity: 0.8; }
@@ -90,7 +92,7 @@
 <div class="container">
     <div class="hero">
         <div class="badge">⚡ 100% онлайн — звонки не нужны</div>
-        <h1>МГНОВЕННЫЙ СЕРВИС<br>АРЕНДЫ КАТЕРОВ</h1>
+        <h1>СЕРВИС МГНОВЕННОГО БРОНИРОВАНИЯ<br>АРЕНДЫ КАТЕРА</h1>
         <p class="hero-sub">Забронируй катер за 3 клика. Без менеджеров, без «перезвоним».</p>
     </div>
 
@@ -104,13 +106,13 @@
         <p style="text-align:center;font-size:1rem;margin-bottom:4px;">Ждут вас на причале по адресу:</p>
         <p id="quick-pier" style="text-align:center;font-size:1.2rem;font-weight:600;margin-bottom:16px;">выберите катер</p>
         <div class="boats-grid" id="boats-grid">Загрузка...</div>
-        <button class="btn-book" id="btn-quick-book" onclick="goToApp('quick')">Забронировать сейчас — без звонка</button>
+        <button class="btn-book" id="btn-quick-book" onclick="goToApp('quick')">Забронировать сейчас</button>
     </div>
 
     <div class="footer">
         <p>🕒 Ежедневно с 09:00 до 24:00</p>
         <p>По вопросам бронирования:</p>
-        <p class="email"><a href="mailto:bronirovania.servis@yandex.ru" style="color:#fff;text-decoration:underline;">bronirovania.servis@yandex.ru</a></p>
+        <p class="email"><a href="mailto:bronirovania.servis@yandex.ru" style="color:#FF8C00;text-decoration:underline;">bronirovania.servis@yandex.ru</a></p>
     </div>
 </div>
 
@@ -121,10 +123,7 @@
     let carouselTimer = null;
 
     function goToApp(mode) {
-        const boat = boatsData[carouselIndex];
-        const boatId = boat ? boat.id : '';
-        const url = boatId ? `${APP_URL}?mode=${mode}&boat=${boatId}` : `${APP_URL}?mode=${mode}`;
-        window.location.href = url;
+        window.location.href = APP_URL;
     }
 
     async function loadBoats() {
@@ -158,7 +157,7 @@
                 <div class="boat-card-img" style="background-image:url('${b.main_photo_url || ''}')"></div>
                 <div class="boat-card-info">
                     <div class="boat-card-name">${b.name}</div>
-                    <div class="boat-card-meta">👥 ${b.capacity || '?'} чел · 💰 ${b.price_per_hour ? b.price_per_hour.toLocaleString() + ' ₽/ч' : ''}</div>
+                    <div class="boat-card-meta">👥 Вместимость: ${b.capacity || '?'} чел.</div>
                 </div>
             </div>
         `).join('');
@@ -191,6 +190,18 @@
 
     loadBoats();
 </script>
+
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=109409407', 'ym');
+    ym(109409407, 'init', {clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
 </script>
+<noscript><div><img src="https://mc.yandex.ru/watch/109409407" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->    
+
 </body>
 </html>

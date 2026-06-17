@@ -37,11 +37,6 @@
                 adminMessages: true
             };
 
-            // Погода
-            this.weather = {
-                showWeather: false
-            };
-            
             // Google Calendar
             this.googleCalendar = {
                 connected: false,
@@ -100,14 +95,6 @@
                         reviews: data.notify_reviews ?? true,
                         adminMessages: data.notify_admin ?? true
                     };
-
-                    // Загружаем настройку погоды из localStorage
-                    const showWeather = localStorage.getItem('showWeather') === '1';
-                    this.weather = { showWeather };
-                    
-                    if (showWeather && !window.weatherWidget) {
-                        new WeatherWidget();
-                    }
 
                     console.log('Данные из API:', data);
                     
@@ -311,15 +298,6 @@
                                     min="1" 
                                     max="${this.globalLimits.maxDurationGlobal || 12}">
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="settings-card">
-                        <h2>🌤️ Погода</h2>
-                        
-                        <div class="notification-item">
-                            <label for="showWeather">Показывать виджет погоды</label>
-                            <input type="checkbox" id="showWeather" ${this.weather?.showWeather ? 'checked' : ''} onchange="AquaGid.ManagerSettings.toggleWeather()">
                         </div>
                     </div>
                     
@@ -676,22 +654,6 @@
             this.notifications.reviews = document.getElementById('notifyReviews')?.checked || false;
             this.notifications.adminMessages = document.getElementById('notifyAdmin')?.checked || false;
 
-            this.weather.showWeather = document.getElementById('showWeather')?.checked || false;
-            
-            // Сохраняем в localStorage (настройка локальная)
-            localStorage.setItem('showWeather', this.weather.showWeather ? '1' : '0');
-            
-            // Включаем/выключаем виджет
-            if (this.weather.showWeather) {
-                if (!window.weatherWidget) {
-                    new WeatherWidget();
-                }
-            } else {
-                const w = document.getElementById('weather-widget');
-                if (w) w.remove();
-                window.weatherWidget = null;
-            }
-            
             try {
                 const response = await fetch(`/api/settings/${managerId}`, {
                     method: 'PUT',
@@ -727,13 +689,6 @@
             }
         }
 
-        toggleWeather() {
-            const checkbox = document.getElementById('showWeather');
-            if (checkbox) {
-                this.weather.showWeather = checkbox.checked;
-            }
-        }
-        
         disconnectGoogle() {
             if (confirm('Отключить Google Calendar?')) {
                 this.googleCalendar.connected = false;

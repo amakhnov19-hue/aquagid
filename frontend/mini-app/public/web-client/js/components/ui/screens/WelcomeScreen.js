@@ -68,18 +68,27 @@ class WelcomeScreen extends ScreenBase {
                         </button>
                     </div>
 
-                    <!-- Кнопка Уведомления -->
-                    <div class="notifications-client" style="background: #6b7280; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="(() => { const phone = localStorage.getItem('clientPhone'); if (!phone) { const p = prompt('Введите номер телефона:'); if (p) { localStorage.setItem('clientPhone', p.replace(/\D/g, '')); location.reload(); } return; } new NotificationCenter({userType:'client', userId: phone}).open(); })()">
-                        <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления <span id="client-notif-badge" style="background:#dc3545;color:#fff;border-radius:10px;padding:2px 7px;font-size:12px;margin-left:6px;display:none;"></span></span>
-                    </div>
-                    
-                    <!-- Кнопка Мои бронирования -->
-                    <button class="btn-home btn-bookings" onclick="window.AquaGid.UnifiedScreens.showMyBookings()">
+                    <!-- Кнопка Мои бронирования (всегда видна) -->
+                    <button class="btn-home btn-bookings" onclick="window.AquaGid.UnifiedScreens.showMyBookings()" style="padding: 14px; font-size: 16px;">
                         📋 Мои бронирования
                     </button>
-                    <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
-                        Просмотр, отмена и управление бронированиями
-                    </p>
+
+                    ${localStorage.getItem('clientPhone') ? `
+                    <!-- Кнопка Уведомления (только после авторизации) -->
+                    <button class="btn-home" onclick="new NotificationCenter({userType:'client', userId: localStorage.getItem('clientPhone')}).open()" style="background: #FFC107; color: #333; padding: 12px; font-size: 15px; font-weight: 600;">
+                        🔔 Уведомления <span id="client-notif-badge" style="background:#dc3545;color:#fff;border-radius:10px;padding:2px 7px;font-size:12px;margin-left:6px;display:none;"></span>
+                    </button>
+                    
+                    <!-- Кнопка Документы (только после авторизации) -->
+                    <button class="btn-home" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle();" style="background: #6b7280; color: #fff; padding: 12px; font-size: 15px;">
+                        📜 Документы
+                    </button>
+                    
+                    <!-- Кнопка Профиль (только после авторизации) -->
+                    <button class="btn-home" onclick="window.AquaGid.ClientAuth.showProfile()" style="background: #0066CC; color: #fff; padding: 12px; font-size: 15px;">
+                        👤 Профиль
+                    </button>
+                    ` : ''}
 
                     <!-- Информационный блок -->
                     <div class="info-block">

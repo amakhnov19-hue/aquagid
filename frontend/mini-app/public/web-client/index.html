@@ -11,171 +11,136 @@
     <meta name="theme-color" content="#0066CC">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes">
     
-    <!-- Иконки для iOS (на случай, если манифест не поддерживается) -->
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <title>АкваГид — аренда катеров</title>
     
-    <!-- ========== СТИЛИ ========== -->
+    <!-- Критические стили грузим сразу -->
     <link rel="stylesheet" href="css/base.css">
     <link rel="stylesheet" href="css/welcome.css">
     <link rel="stylesheet" href="css/date.css">
     <link rel="stylesheet" href="css/time.css">
     <link rel="stylesheet" href="css/duration.css">
     <link rel="stylesheet" href="css/boats.css">
-    <link rel="stylesheet" href="css/quick.css">  <!-- новая строка -->
+    <link rel="stylesheet" href="css/quick.css">
     <link rel="stylesheet" href="css/confirmation.css">
     <link rel="stylesheet" href="css/success.css">
     <link rel="stylesheet" href="css/navigation.css">
     <link rel="stylesheet" href="css/my-bookings.css">
     <link rel="stylesheet" href="css/documentation.css"> 
     <link rel="stylesheet" href="/shared/css/notification-center.css">
-
-    <!-- Меню навигации -->
     <link rel="stylesheet" href="css/navigation-menu.css">
-    <!-- Экспериментальные фактуры (можно отключить) -->
     <link rel="stylesheet" href="css/textures.css">
-    <!-- Мобильная адаптация -->
     <link rel="stylesheet" href="css/mobile.css">
     <link rel="stylesheet" href="css/messenger.css">
     <link rel="stylesheet" href="/shared/css/chat-service.css">
 
-    <script src="js/services/TokenService.js"></script>
-
-    <script src="/js/utils/escape.js"></script>
-
-    <!-- Яндекс.Карты JavaScript API -->
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=c3669ae8-5204-4ea4-afd9-6cde0a8d4dbc&lang=ru_RU" type="text/javascript"></script>
-
-    <!-- Яндекс.Навигация -->
-    <script src="/yandex-routing.js"></script>
-
+    <!-- Яндекс.Карты загружаем позже -->
     <script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js')
-            .then(reg => console.log('✅ Service Worker зарегистрирован'))
-            .catch(err => console.log('❌ Service Worker ошибка:', err));
-    }
+        // Показываем загрузку сразу
+        document.getElementById('app').innerHTML = '<div style="text-align:center;padding:40px;">🚤 Загрузка...</div>';
     </script>
-
-    <script src="/shared/js/components/PushNotifications.js"></script>
 </head>
 <body>
-    <div id="app" class="loading">Загрузка...</div>
+    <div id="app" class="loading">🚤 Загрузка...</div>
 
-    <!-- Контейнеры для чата и документации -->
     <div id="documentation-container"></div>
-    <!-- Кнопка документов (вместо погоды) -->
-    <button id="docs-floating-btn" onclick="history.pushState({screen:'docs'},'',window.location.pathname); window.AquaGid.Documentation.toggle();" style="position:fixed;bottom:50px;left:20px;width:72px;height:72px;border-radius:50%;background:#1e293b;color:white;border:none;font-size:11px;font-weight:600;cursor:pointer;z-index:9997;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;padding:0;">📜<br>Док-ты</button>
-    <!-- Чат поддержки: в разработке -->
+    <div id="weather-widget-container" style="display:none;"></div>
     <div id="my-bookings-container" style="display: none;"></div>
 
-    <!-- ========== ЯДРО (ОБЯЗАТЕЛЬНО ПЕРВЫМИ!) ========== -->
-    <script src="js/components/core/APIClient.js"></script>
-    <script src="js/components/business/TimeService.js"></script>
-    <script src="js/components/business/PaymentService.js"></script>
-    <script src="js/services/PricingService.js"></script>
+    <script src="js/services/TokenService.js" defer></script>
+    <script src="/js/utils/escape.js" defer></script>
+    <script src="/shared/js/components/PushNotifications.js" defer></script>
 
-    <!-- ========== КОНФИГУРАЦИЯ ДОМЕНОВ ========== -->
-    <script src="js/config/domains.js"></script>
-    
-    <!-- ========== КОНФИГУРАЦИЯ API ========== -->
-    <script src="js/config/api_config.js"></script>
-    <!-- ========== КОНФИГУРАЦИЯ ЯНДЕКСА ========== -->
-    <script src="js/config/yandex_config.js"></script>
-    <!-- ========== КОНСТАНТЫ ========== -->
-    <script src="js/config/app_constants.js"></script>
-    <script src="js/utils/api_client.js"></script>
-
-    <!-- ========== УТИЛИТЫ ========== -->
-    <script src="js/utils/fingerprint.js"></script>
-    <script src="js/utils/securityLogger.js"></script>
-    
-    <!-- ========== СЕРВИСЫ ========== -->
-    <script src="js/services/manager_service.js"></script>
-    <script src="js/services/boat_service.js"></script>
-    <script src="js/services/booking_service.js"></script>
-    <script src="js/services/settings_service.js"></script>
-    <script src="js/services/MessengerService.js"></script>
-    <script src="js/components/business/AvailabilityService.js"></script>
-    <script src="js/components/business/BoatRanking.js"></script>
-    <script src="/shared/js/components/NotificationCenter.js"></script>
-    
-    <!-- ========== БАЗОВЫЙ КЛАСС ========== -->
-    <script src="js/components/ui/core/ScreenBase.js"></script>
-    
-    <!-- ========== ЭКРАНЫ ========== -->
-    <script src="js/components/ui/screens/WelcomeScreen.js"></script>
-    <script src="js/components/ui/screens/DateScreen.js"></script>
-    <script src="js/components/ui/screens/TimeScreen.js"></script>
-    <script src="js/components/ui/screens/DurationScreen.js"></script>
-    <script src="js/components/ui/screens/BoatScreen.js"></script>
-    <script src="js/components/ui/screens/ConfirmationScreen.js?v=20260501"></script>
-    <script src="js/components/ui/screens/SuccessScreen.js"></script>
-    <script src="js/components/ui/TestChecklist.js?v=20260501b"></script>
-    <script src="js/components/ui/screens/QuickScreen.js"></script>
-    <script src="js/components/ui/screens/MyBookingsScreen.js"></script>
-    
-    <!-- ========== UI КОМПОНЕНТЫ ========== -->
-    <script src="js/components/ui/DesignSystem.js"></script>
-    <script src="js/components/ui/Documentation.js"></script>
-    <script src="js/components/ui/MyBookings.js"></script>
-    <script src="js/components/ui/CancelBooking.js"></script>
-    <!-- <script src="js/components/ui/WeatherWidget.js"></script> -->
-    <script src="js/components/ui/ClientAuth.js"></script>
-
-    <!-- ========== ПЛАТЕЖНЫЙ МОДУЛЬ ========== -->
-    <script src="js/components/payment/PaymentGateway.js"></script>
-    <script src="js/components/payment/Gateways/DummyGateway.js"></script>
-    <script src="js/services/PaymentService.js"></script>
-    <script src="js/components/payment/PaymentUI.js"></script>
-    <script src="js/components/payment/PaymentConfig.js"></script>
+    <!-- Яндекс.Карты и Навигация -->
+    <script src="/yandex-routing.js" defer></script>
 
     <script>
-        // Инициализация платежного сервиса
-        const paymentService = new PaymentService();
-        window.paymentService = paymentService;
-
-        // Инициализация PaymentUI
-        const paymentUI = new PaymentUI();
-        paymentUI.init(paymentService);
-        window.paymentUI = paymentUI;
-        console.log('✅ Платежный модуль инициализирован');
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+        }
     </script>
 
-    <!-- ========== ЗАГРУЗЧИК ИЗОБРАЖЕНИЙ ========== -->
-    <script src="js/components/ui/ImageLoader.js"></script>
+    <!-- Ядро -->
+    <script src="js/components/core/APIClient.js" defer></script>
+    <script src="js/components/business/TimeService.js" defer></script>
+    <script src="js/components/business/PaymentService.js" defer></script>
+    <script src="js/services/PricingService.js" defer></script>
+
+    <!-- Конфигурация -->
+    <script src="js/config/domains.js" defer></script>
+    <script src="js/config/api_config.js" defer></script>
+    <script src="js/config/yandex_config.js" defer></script>
+    <script src="js/config/app_constants.js" defer></script>
+    <script src="js/utils/api_client.js" defer></script>
+
+    <!-- Утилиты -->
+    <script src="js/utils/fingerprint.js" defer></script>
+    <script src="js/utils/securityLogger.js" defer></script>
     
-    <!-- ========== ГЛАВНЫЙ КЛАСС ========== -->
-    <script src="js/components/ui/core/UnifiedScreens.js"></script>
+    <!-- Сервисы -->
+    <script src="js/services/manager_service.js" defer></script>
+    <script src="js/services/boat_service.js" defer></script>
+    <script src="js/services/booking_service.js" defer></script>
+    <script src="js/services/settings_service.js" defer></script>
+    <script src="js/services/MessengerService.js" defer></script>
+    <script src="js/components/business/AvailabilityService.js" defer></script>
+    <script src="js/components/business/BoatRanking.js" defer></script>
+    <script src="/shared/js/components/NotificationCenter.js" defer></script>
+    
+    <!-- Базовый класс -->
+    <script src="js/components/ui/core/ScreenBase.js" defer></script>
+    
+    <!-- Экраны -->
+    <script src="js/components/ui/screens/WelcomeScreen.js" defer></script>
+    <script src="js/components/ui/screens/DateScreen.js" defer></script>
+    <script src="js/components/ui/screens/TimeScreen.js" defer></script>
+    <script src="js/components/ui/screens/DurationScreen.js" defer></script>
+    <script src="js/components/ui/screens/BoatScreen.js" defer></script>
+    <script src="js/components/ui/screens/ConfirmationScreen.js?v=20260501" defer></script>
+    <script src="js/components/ui/screens/SuccessScreen.js" defer></script>
+    <script src="js/components/ui/TestChecklist.js?v=20260501b" defer></script>
+    <script src="js/components/ui/screens/QuickScreen.js" defer></script>
+    <script src="js/components/ui/screens/MyBookingsScreen.js" defer></script>
+    
+    <!-- UI Компоненты -->
+    <script src="js/components/ui/DesignSystem.js" defer></script>
+    <script src="js/components/ui/Documentation.js" defer></script>
+    <script src="js/components/ui/MyBookings.js" defer></script>
+    <script src="js/components/ui/CancelBooking.js" defer></script>
+    <script src="js/components/ui/ClientAuth.js" defer></script>
 
-    <script>
-        // Показываем приветственный экран
-        setTimeout(() => {
-            if (window.AquaGid?.UnifiedScreens) {
-                window.AquaGid.UnifiedScreens.showWelcomeScreen();
-                console.log('✅ UnifiedScreens инициализирован');
-            } else {
-                console.error('❌ UnifiedScreens не загружен');
-            }
-        }, 100);
-    </script>
+    <!-- Платёжный модуль -->
+    <script src="js/components/payment/PaymentGateway.js" defer></script>
+    <script src="js/components/payment/Gateways/DummyGateway.js" defer></script>
+    <script src="js/services/PaymentService.js" defer></script>
+    <script src="js/components/payment/PaymentUI.js" defer></script>
+    <script src="js/components/payment/PaymentConfig.js" defer></script>
 
-    <script>
-    // Проверка функции
-    setTimeout(() => {
-        console.log('🔍 Проверка showWelcomeScreen:', window.AquaGid?.UnifiedScreens?.showWelcomeScreen);
-    }, 500);
-    </script>
+    <script src="js/components/ui/ImageLoader.js" defer></script>
+    <script src="js/components/ui/core/UnifiedScreens.js" defer></script>
 
-    <!-- ========== ДОКУМЕНТАЦИЯ ========== -->
-    <script>
-        // Инициализация документации после загрузки страницы
+    <!-- Инициализация -->
+    <script defer>
         document.addEventListener('DOMContentLoaded', function() {
+            // Платёжный модуль
+            const paymentService = new PaymentService();
+            window.paymentService = paymentService;
+            const paymentUI = new PaymentUI();
+            paymentUI.init(paymentService);
+            window.paymentUI = paymentUI;
+
+            // Показываем приветственный экран
+            setTimeout(() => {
+                if (window.AquaGid?.UnifiedScreens) {
+                    window.AquaGid.UnifiedScreens.showWelcomeScreen();
+                }
+            }, 100);
+
+            // Документация
             if (window.AquaGid?.Documentation) {
                 window.AquaGid.Documentation.render();
             }
         });
     </script>
-
 </body>
 </html>
