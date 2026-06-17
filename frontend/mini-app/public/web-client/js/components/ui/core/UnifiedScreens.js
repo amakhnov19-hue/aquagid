@@ -289,10 +289,6 @@ class UnifiedScreens {
         };
         this.currentFlow = null;
         
-        // Очищаем данные бронирования (но не авторизацию!)
-        localStorage.removeItem('clientEmail');
-        localStorage.removeItem('clientTelegram');
-        
     }
 
     /**
@@ -490,10 +486,28 @@ class UnifiedScreens {
     }
 
     showMyBookings() {
+        let phone = localStorage.getItem('clientPhone');
+        let name = localStorage.getItem('clientName');
+        
+        if (!phone) {
+            const p = prompt('Введите номер телефона:', '+7');
+            if (!p) return;
+            const n = prompt('Ваше имя:', '');
+            if (n === null) return;
+            
+            phone = p.replace(/\D/g, '');
+            name = n || 'Гость';
+            
+            localStorage.setItem('clientPhone', phone);
+            localStorage.setItem('clientName', name);
+            localStorage.setItem('loginTime', Date.now());
+            location.reload();
+            return;
+        }
+        
         if (history.state?.screen !== 'mybookings') {
             history.pushState({ screen: 'mybookings' }, '', window.location.pathname);
         }
-        console.log('📋 showMyBookings');
         if (!this.myBookingsScreen) {
             this.myBookingsScreen = new MyBookingsScreen(this);
         }

@@ -139,12 +139,12 @@ class ConfirmationScreen extends ScreenBase {
         const email = document.getElementById('client-email')?.value.trim();
         const messengerType = document.getElementById('client-messenger-type')?.value;
         const messengerContact = document.getElementById('client-messenger-contact')?.value.trim();
-        
+        console.log('BEFORE IF name:', name, 'phone:', phone);
         if (name || phone) {
             localStorage.setItem('clientName', name || '');
             localStorage.setItem('clientPhone', phone || '');
-            console.log('SAVING email:', email);
             localStorage.setItem('clientEmail', email || '');
+            console.log('AFTER SAVE clientEmail:', localStorage.getItem('clientEmail'));
             localStorage.setItem('clientMessengerType', messengerType || '');
             localStorage.setItem('clientMessengerContact', messengerContact || '');
         }
@@ -179,6 +179,7 @@ class ConfirmationScreen extends ScreenBase {
     }
 
     async confirmBooking() {
+        console.log('✅ confirmBooking CALLED');
         console.log('✅ Подтверждение бронирования');
 
         // Проверка согласий для неавторизованных
@@ -235,6 +236,7 @@ class ConfirmationScreen extends ScreenBase {
         
         localStorage.setItem('clientName', name);
         localStorage.setItem('clientPhone', phone);
+        console.log('SAVING email:', email);
         localStorage.setItem('clientEmail', email || '');
         localStorage.setItem('clientMessengerType', messengerType || '');
         localStorage.setItem('clientMessengerContact', messengerContact || '');
@@ -261,6 +263,7 @@ class ConfirmationScreen extends ScreenBase {
                 client_messenger_contact: messengerContact,
                 ref_code: localStorage.getItem('aquagid-ref') || null
             };
+            console.log('BOOKING DATA:', JSON.stringify(bookingData));
             
             const response = await fetch('/api/bookings', {
                 method: 'POST',
@@ -281,6 +284,7 @@ class ConfirmationScreen extends ScreenBase {
                 window.AquaGid.UnifiedScreens.booking.client_name = result.client_name;
                 window.AquaGid.UnifiedScreens.booking.client.passengers = passengers;
                 window.AquaGid.UnifiedScreens.booking.client_phone = result.client_phone;
+                window.AquaGid.UnifiedScreens.booking.client_email = result.client_email;
                 window.AquaGid.UnifiedScreens.booking.booking_date = result.booking_date;
                 window.AquaGid.UnifiedScreens.booking.start_time = result.start_time;
                 window.AquaGid.UnifiedScreens.booking.created_at = result.created_at;
@@ -362,6 +366,13 @@ class ConfirmationScreen extends ScreenBase {
                         <span class="detail-label">💬 Мессенджер:</span>
                         <span class="detail-value">${apiResult.client_messenger_type || booking.client?.messengerType || '—'} ${apiResult.client_messenger_contact || booking.client?.messengerContact || ''}</span>
                     </div>
+
+                    <div class="detail-row">
+                        <span class="detail-label">📧 Email:</span>
+                        <span class="detail-value">${apiResult.client_email || booking.client?.email || localStorage.getItem('clientEmail') || '—'}</span>
+                    </div>
+
+                    <div style="margin-top: 12px;">                    
 
                     <div style="margin-top: 12px;">
                         <button onclick="window.currentConfirmationScreen.show()" style="width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; border: none; background: #f97316; color: white; cursor: pointer; font-weight: bold;">

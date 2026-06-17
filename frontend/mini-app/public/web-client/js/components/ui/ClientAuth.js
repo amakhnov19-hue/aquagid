@@ -65,13 +65,26 @@
         document.body.appendChild(modal);
 
         document.getElementById('prof-save').onclick = () => {
-            localStorage.setItem('clientName', document.getElementById('prof-name').value);
-            localStorage.setItem('clientPhone', document.getElementById('prof-phone').value.replace(/\D/g, ''));
-            localStorage.setItem('clientEmail', document.getElementById('prof-email').value);
+            const phone = document.getElementById('prof-phone').value.replace(/\D/g, '');
+            const name = document.getElementById('prof-name').value.trim();
+            
+            if (!phone || phone.length < 10) {
+                alert('Введите корректный номер телефона');
+                return;
+            }
+            if (!name) {
+                alert('Введите имя');
+                return;
+            }
+            
+            localStorage.setItem('clientName', name);
+            localStorage.setItem('clientPhone', phone);
+            localStorage.setItem('clientEmail', document.getElementById('prof-email').value.trim());
             localStorage.setItem('clientMessengerType', document.getElementById('prof-messenger-type').value);
-            localStorage.setItem('clientMessengerContact', document.getElementById('prof-messenger-contact').value);
+            localStorage.setItem('clientMessengerContact', document.getElementById('prof-messenger-contact').value.trim());
             modal.remove();
             alert('✅ Данные сохранены');
+            location.reload();
         };
 
         document.getElementById('prof-logout').onclick = () => {

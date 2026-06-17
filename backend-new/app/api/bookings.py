@@ -130,8 +130,9 @@ async def create_booking(
         client_telegram=booking.client_telegram,
         client_messenger_type=booking.client_messenger_type,
         client_messenger_contact=booking.client_messenger_contact,
+        client_email=booking.client_email,
         client_user_id=booking.client_user_id,
-        status=booking.status if booking.status else "active",
+        status=booking.status if booking.status else "pending",
         total_price=result["total_price"],
         prepayment_amount=result["prepayment_amount"],
         source="client"
@@ -141,25 +142,6 @@ async def create_booking(
     await db.commit()
     await db.refresh(db_booking)
 
-    # Автоматический экспорт в Google Calendar через sync_manager
-    if sync_manager.enabled:
-        try:
-            booking_data = {
-                "id": db_booking.id,
-                "manager_id": boat.manager_id,
-                "source": "client",
-                "client_name": db_booking.client_name,
-                "client_phone": db_booking.client_phone,
-                "boat_name": boat.name,
-                "booking_date": str(db_booking.booking_date),
-                "start_time": str(db_booking.start_time),
-                "duration_minutes": db_booking.duration_minutes
-            }
-            await sync_manager.on_booking_created(booking_data)
-            print(f"✅ Экспорт в календарь для бронирования #{db_booking.id} выполнен")
-        except Exception as e:
-            print(f"⚠️ Ошибка экспорта в календарь: {e}")
-    
     # Отправляем WebSocket уведомление менеджеру
     try:
         from app.services.sync.websocket import ws_manager
@@ -223,6 +205,7 @@ async def create_booking(
         "created_at": str(db_booking.created_at),
         "client_name": db_booking.client_name,
         "client_phone": db_booking.client_phone,
+        "client_email": db_booking.client_email or "",
         "cancellation_requested": db_booking.cancellation_requested,
         "google_event_id": db_booking.google_event_id,
         "source": db_booking.source,
@@ -306,6 +289,9 @@ async def get_client_bookings(
     
     # Убираем плюс из телефона, если он есть
     clean_phone = phone.lstrip('+')
+    
+    # Завершаем истёкшие бронирования (включая удаление из Google Calendar)
+    await complete_expired_bookings(db)
     
     # Ищем по разным форматам
     result = await db.execute(
@@ -423,6 +409,31 @@ async def confirm_payment(
             )
     except Exception as e:
         print(f"⚠️ Ошибка push клиенту: {e}")
+
+    # Экспорт в Google Calendar после подтверждения оплаты
+    if sync_manager.enabled:
+        try:
+            boat_info = await db.execute(
+                text("SELECT bo.name, bo.manager_id FROM boats bo WHERE bo.id = :bid"),
+                {"bid": booking.boat_id}
+            )
+            boat_row = boat_info.fetchone()
+            if boat_row:
+                booking_data = {
+                    "id": booking.id,
+                    "manager_id": boat_row[1],
+                    "source": "client",
+                    "client_name": booking.client_name,
+                    "client_phone": booking.client_phone,
+                    "boat_name": boat_row[0],
+                    "booking_date": str(booking.booking_date),
+                    "start_time": str(booking.start_time),
+                    "duration_minutes": booking.duration_minutes
+                }
+                await sync_manager.on_booking_created(booking_data)
+                print(f"✅ Экспорт в календарь для брони #{booking.id} выполнен")
+        except Exception as e:
+            print(f"⚠️ Ошибка экспорта в календарь: {e}")
     
     return {"message": "Бронирование активировано", "id": booking_id, "status": "active"}
 

@@ -32,6 +32,7 @@ class Booking(Base):
     client_telegram = Column(String(100), nullable=True)
     client_messenger_type = Column(String(10), nullable=True)
     client_messenger_contact = Column(String(100), nullable=True)
+    client_email = Column(String(255), nullable=True)
     
     # Отмена бронирования
     cancellation_requested = Column(Boolean, default=False)

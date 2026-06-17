@@ -25,10 +25,10 @@
             
             try {
                 console.log('🚀 loadBookings START');
-                console.log('📱 phone from localStorage:', localStorage.getItem('clientPhone') || localStorage.getItem('userPhone'));
+                console.log('📱 phone from localStorage:', localStorage.getItem('clientPhone'));
                 console.log('🖨️ saved fingerprint:', localStorage.getItem('userFingerprint'));
                 
-                let phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
+                let phone = localStorage.getItem('clientPhone');
                 const savedFingerprint = localStorage.getItem('userFingerprint');
                 const expires = localStorage.getItem('userExpires');
                 
@@ -54,7 +54,7 @@
                             current: currentFingerprint.substring(0, 8)
                         });
                         
-                        localStorage.removeItem('userPhone');
+                        localStorage.removeItem('clientPhone');
                         localStorage.removeItem('userFingerprint');
                         localStorage.removeItem('userExpires');
                         phone = null;
@@ -198,7 +198,7 @@
             }
             
             // ПОКАЗЫВАЕМ ФОРМУ ВВОДА ТЕЛЕФОНА (если нет номера)
-            const phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
+            const phone = localStorage.getItem('clientPhone');
             // Если телефон уже есть в аккаунте — не показываем форму ввода
             if (!phone) {
                 container.innerHTML = `
@@ -246,7 +246,7 @@
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
                     const bookingId = parseInt(btn.getAttribute('data-booking-id'));
-                    const phone = localStorage.getItem('userPhone');
+                    const phone = localStorage.getItem('clientPhone');
                     
                     if (!phone) {
                         alert('Не найден номер телефона');
@@ -308,7 +308,6 @@
             }
             
             // Сохраняем телефон и fingerprint
-            localStorage.setItem('userPhone', phone);
             localStorage.setItem('clientPhone', phone);            
             const fingerprint = await window.BrowserFingerprint.generate();
             localStorage.setItem('userFingerprint', fingerprint);

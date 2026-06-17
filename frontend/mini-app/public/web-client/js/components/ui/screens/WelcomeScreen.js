@@ -68,9 +68,8 @@ class WelcomeScreen extends ScreenBase {
                         </button>
                     </div>
 
-                    ${localStorage.getItem('clientPhone') ? `
                     <!-- Кнопка Уведомления -->
-                    <div class="notifications-client" style="background: #6b7280; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="new NotificationCenter({userType:'client', userId: localStorage.getItem('clientPhone')}).open()">
+                    <div class="notifications-client" style="background: #6b7280; border-radius: 10px; padding: 12px 14px; margin: 15px 0; cursor: pointer; text-align: center;" onclick="(() => { const phone = localStorage.getItem('clientPhone'); if (!phone) { const p = prompt('Введите номер телефона:'); if (p) { localStorage.setItem('clientPhone', p.replace(/\D/g, '')); location.reload(); } return; } new NotificationCenter({userType:'client', userId: phone}).open(); })()">
                         <span style="color: #fff; font-size: 15px; font-weight: 600;">🔔 Уведомления <span id="client-notif-badge" style="background:#dc3545;color:#fff;border-radius:10px;padding:2px 7px;font-size:12px;margin-left:6px;display:none;"></span></span>
                     </div>
                     
@@ -81,7 +80,6 @@ class WelcomeScreen extends ScreenBase {
                     <p style="font-size: 11px; color: #888; text-align: center; margin-top: 8px;">
                         Просмотр, отмена и управление бронированиями
                     </p>
-                    ` : ''}
 
                     <!-- Информационный блок -->
                     <div class="info-block">
@@ -116,7 +114,7 @@ class WelcomeScreen extends ScreenBase {
     }
 
     async loadClientNotifications() {
-        const phone = localStorage.getItem('clientPhone') || localStorage.getItem('userPhone');
+        const phone = localStorage.getItem('clientPhone');
         if (!phone) return;
         
         try {
@@ -225,7 +223,7 @@ class WelcomeScreen extends ScreenBase {
     
     async clearHistoryClient() {
         if (!confirm('Удалить все прочитанные уведомления?')) return;
-        const phone = localStorage.getItem('userPhone') || localStorage.getItem('clientPhone');
+        const phone = localStorage.getItem('userPhone');
         if (!phone) return;
         
         try {

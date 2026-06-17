@@ -14,6 +14,7 @@ class BookingBase(BaseModel):
     client_telegram: Optional[str] = None
     client_messenger_type: Optional[str] = None
     client_messenger_contact: Optional[str] = None
+    client_email: Optional[str] = None
 
 # Для создания бронирования (то, что приходит с фронтенда)
 class BookingCreate(BookingBase):
@@ -40,6 +41,7 @@ class BookingResponse(BaseModel):
     client_telegram: Optional[str] = None
     client_messenger_type: Optional[str] = None
     client_messenger_contact: Optional[str] = None
+    client_email: Optional[str] = None
     cancellation_requested: bool = False
     google_event_id: Optional[str] = None
     source: Optional[str] = None  # ← добавить
