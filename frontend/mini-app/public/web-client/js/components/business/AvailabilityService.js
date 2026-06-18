@@ -100,7 +100,8 @@ class AvailabilityService {
         const currentMinutes = hours * 60 + minutes;
         
         const [endH, endM] = (this.constants.TIME.work_end || '24:00').split(':').map(Number);
-        const endMinutes = endH * 60 + endM;
+        let endMinutes = endH * 60 + endM;
+        if (endMinutes === 0) endMinutes = 24 * 60; // 00:00 = конец дня
         
         // Максимум по рабочему дню
         let maxMinutes = endMinutes - currentMinutes;
