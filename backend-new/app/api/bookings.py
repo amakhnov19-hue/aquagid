@@ -167,20 +167,6 @@ async def create_booking(
                         db=db
                     )
 
-                    # Push-уведомление менеджеру
-                    try:
-                        from app.api.push_api import send_push_internal
-                        await send_push_internal(
-                            db=db,
-                            title=f"🆕 Новая бронь #{booking_id}",
-                            body=f"{info[2] or 'Клиент'}, {info[0]}, {info[3]} {info[4]}",
-                            url=f"/bookings/{booking_id}",
-                            user_type="manager",
-                            user_id=str(info[1])
-                        )
-                    except Exception as e:
-                        print(f"⚠️ Ошибка push-уведомления: {e}")
-
             except Exception as e:
                 print(f"⚠️ Ошибка Telegram-уведомления: {e}")
             print(f"📡 WebSocket уведомление отправлено менеджеру {boat.manager_id}")
@@ -395,9 +381,11 @@ async def confirm_payment(
     except Exception as e:
         print(f"⚠️ Ошибка WebSocket при confirm_payment: {e}")
         
-    # Push-уведомление клиенту о подтверждении
+    # Push-уведомления
     try:
         from app.api.push_api import send_push_internal
+        
+        # Клиенту
         if booking.client_phone:
             await send_push_internal(
                 db=db,
@@ -407,8 +395,25 @@ async def confirm_payment(
                 user_type="client",
                 user_id=booking.client_phone.replace('+', '').replace(' ', '').replace('-', '')
             )
+        
+        # Менеджеру
+        from sqlalchemy import text
+        manager_result = await db.execute(
+            text("SELECT bo.manager_id FROM boats bo WHERE bo.id = :bid"),
+            {"bid": booking.boat_id}
+        )
+        manager_row = manager_result.fetchone()
+        if manager_row and manager_row[0]:
+            await send_push_internal(
+                db=db,
+                title=f"✅ Бронь #{booking_id} оплачена",
+                body=f"{booking.client_name or 'Клиент'}",
+                url=f"/bookings/{booking_id}",
+                user_type="manager",
+                user_id=str(manager_row[0])
+            )
     except Exception as e:
-        print(f"⚠️ Ошибка push клиенту: {e}")
+        print(f"⚠️ Ошибка push: {e}")
 
     # Экспорт в Google Calendar после подтверждения оплаты
     if sync_manager.enabled:
