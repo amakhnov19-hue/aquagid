@@ -7,6 +7,8 @@
         API_URL = 'https://admin.beta.24aquabooking.ru';
     } else if (hostname.includes('localhost')) {
         API_URL = 'http://localhost:8082';
+    } else {
+        API_URL = 'https://admin.24aquabooking.ru';
     }
     
     window.AQUAGID_DOMAINS = {

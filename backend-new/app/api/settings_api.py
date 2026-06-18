@@ -103,14 +103,20 @@ async def update_settings(
             new_start = data.work_start if data.work_start is not None else settings.work_start
             
             from datetime import datetime, timedelta
-            end_time = datetime.strptime(new_end, "%H:%M").time()
-            start_time = datetime.strptime(new_start, "%H:%M").time()
             
             conflicts = []
+            
+            # Проверка work_end (только если не 24:00)
+            if new_end != "24:00":
+                end_time = datetime.strptime(new_end, "%H:%M").time()
+                for b in active_bookings:
+                    b_end = (datetime.combine(datetime.today(), b.start_time) + timedelta(minutes=b.duration_minutes)).time()
+                    if b_end > end_time:
+                        conflicts.append(f"Бронь #{b.id} заканчивается в {b_end} позже {new_end}")
+            
+            # Проверка work_start
+            start_time = datetime.strptime(new_start, "%H:%M").time()
             for b in active_bookings:
-                b_end = (datetime.combine(datetime.today(), b.start_time) + timedelta(minutes=b.duration_minutes)).time()
-                if b_end > end_time:
-                    conflicts.append(f"Бронь #{b.id} заканчивается в {b_end} позже {new_end}")
                 if b.start_time < start_time:
                     conflicts.append(f"Бронь #{b.id} начинается в {b.start_time} раньше {new_start}")
             

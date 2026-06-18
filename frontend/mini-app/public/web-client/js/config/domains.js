@@ -13,6 +13,10 @@
         API_URL = 'http://localhost:8082';
         MANAGER_URL = 'http://localhost:8082';
         ADMIN_URL = 'http://localhost:8082';
+    } else {
+        API_URL = 'https://app.24aquabooking.ru';
+        MANAGER_URL = 'https://manager.24aquabooking.ru';
+        ADMIN_URL = 'https://admin.24aquabooking.ru';
     }
     
     window.AQUAGID_DOMAINS = {

@@ -106,7 +106,7 @@
         <p style="text-align:center;font-size:1rem;margin-bottom:4px;">Ждут вас на причале по адресу:</p>
         <p id="quick-pier" style="text-align:center;font-size:1.2rem;font-weight:600;margin-bottom:16px;">выберите катер</p>
         <div class="boats-grid" id="boats-grid">Загрузка...</div>
-        <button class="btn-book" id="btn-quick-book" onclick="goToApp('quick')">Забронировать сейчас</button>
+        <button class="btn-book" onclick="goToApp('welcome')">Забронировать сейчас</button>
     </div>
 
     <div class="footer">
@@ -117,13 +117,20 @@
 </div>
 
 <script>
-    const APP_URL = 'https://beta.24aquabooking.ru';
+    const hostname = window.location.hostname;
+    const APP_URL = hostname.includes('beta') 
+        ? 'https://beta.24aquabooking.ru' 
+        : 'https://app.24aquabooking.ru';
     let boatsData = [];
     let carouselIndex = 0;
     let carouselTimer = null;
 
     function goToApp(mode) {
-        window.location.href = APP_URL;
+        if (mode === 'welcome') {
+            window.location.href = APP_URL;
+        } else {
+            window.location.href = APP_URL + '?mode=' + mode;
+        }
     }
 
     async function loadBoats() {

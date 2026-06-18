@@ -5,6 +5,8 @@
     
     if (hostname.includes('beta')) {
         API_URL = 'https://manager.beta.24aquabooking.ru';
+    } else {
+        API_URL = 'https://manager.24aquabooking.ru';
     }
     
     window.AQUAGID_DOMAINS = {
