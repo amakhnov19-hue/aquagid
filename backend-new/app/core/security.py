@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+import jwt
 from datetime import datetime, timedelta
 import os
 
@@ -22,11 +22,10 @@ def verify_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
-    except JWTError:
+    except jwt.PyJWTError:
         return None
 
 def get_current_admin(token: str = Depends(oauth2_scheme)):
-    from jose import JWTError
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -38,7 +37,7 @@ def get_current_admin(token: str = Depends(oauth2_scheme)):
         if role != "admin":
             raise HTTPException(status_code=403, detail="Not enough permissions")
         return payload
-    except JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
 
 def get_current_manager(token: str = Depends(oauth2_scheme)):
@@ -55,7 +54,7 @@ def get_current_manager(token: str = Depends(oauth2_scheme)):
         if role not in ["manager", "admin"]:
             raise HTTPException(status_code=403, detail="Not enough permissions")
         return payload
-    except JWTError as e:
+    except jwt.PyJWTError as e:
         print(f"DEBUG: JWTError: {e}")
         raise credentials_exception
 

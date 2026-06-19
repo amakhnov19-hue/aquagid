@@ -28,7 +28,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Настройка CORS
+# Middleware — порядок: RateLimit → GoogleToken → CORS
+app.add_middleware(RateLimitMiddleware, requests_per_minute=300)
+app.add_middleware(GoogleTokenRefreshMiddleware)
+
+# CORS — последним, отрабатывает первым
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -36,17 +40,17 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:5000",
         "https://experimental.24aquabooking.ru",
-        "http://experimental.24aquabooking.ru",
         "https://beta.24aquabooking.ru",
-        "http://beta.24aquabooking.ru",
         "https://admin.experimental.24aquabooking.ru",
         "https://admin.beta.24aquabooking.ru",
         "https://24aquabooking.ru",
-        "http://24aquabooking.ru",
+        "https://app.24aquabooking.ru",
+        "https://manager.24aquabooking.ru",
+        "https://admin.24aquabooking.ru",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Middleware
