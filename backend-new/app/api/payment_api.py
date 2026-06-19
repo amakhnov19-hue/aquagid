@@ -9,7 +9,6 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
-from app.services.modulbank import ModulBankService
 from app.services import tbank
 
 router = APIRouter(tags=["payments"])
@@ -52,7 +51,7 @@ async def create_payment(
         bank = "test"
 
     base_url = str(request.base_url).rstrip("/")
-    callback_url = f"{base_url}/api/webhook/modulbank"
+    callback_url = ""
     order_id = f"{booking_id}_{int(datetime.now().timestamp())}"
 
     if bank == "tbank" and merchant_id and secret_key:
@@ -64,18 +63,6 @@ async def create_payment(
             return result
         return {"success": False, "error": result.get("error", "TBank error")}
         
-    elif bank == "modulbank" and merchant_id and secret_key:
-        service = ModulBankService(merchant_id, secret_key, test_mode if test_mode is not None else True)
-        payment = await service.create_payment(
-            amount=amount,
-            order_id=order_id,
-            description=description,
-            client_name=client_name,
-            client_phone=client_phone,
-            client_email=client_email,
-            callback_url=callback_url,
-            redirect_url=f"{base_url}/booking/{booking_id}/success"
-        )
     else:
         # Тестовый режим — сразу подтверждаем
         booking_id_int = int(booking_id)
