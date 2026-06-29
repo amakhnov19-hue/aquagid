@@ -44,7 +44,7 @@ async def create_manager_invite(
     })
     await db.commit()
 
-    base_url = os.getenv("BASE_URL", "https://manager.beta.24aquabooking.ru")
+    base_url = os.getenv("MANAGER_FRONTEND_URL", "https://manager.beta.24aquabooking.ru")
     invite_url = f"{base_url}/register/{token}"
     
     return InviteResponse(
@@ -140,6 +140,18 @@ async def register_manager(
         "password_hash": hashed_password
     })
     manager_id = result.fetchone()[0]
+
+    # Создаём настройки менеджера из глобальных
+    await db.execute(
+        text("""
+            INSERT INTO manager_settings (manager_id, work_start, work_end, season_start, season_end, max_duration)
+            SELECT :mid, gs.work_start, gs.work_end, gs.season_start, gs.season_end, gs.max_duration
+            FROM global_settings gs
+            WHERE NOT EXISTS (SELECT 1 FROM manager_settings WHERE manager_id = :mid2)
+        """),
+        {"mid": manager_id, "mid2": manager_id}
+    )
+    await db.commit()
 
     # Логируем согласия менеджера
     if request.consent_terms and request.consent_pd:

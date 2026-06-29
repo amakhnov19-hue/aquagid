@@ -107,6 +107,12 @@ async def delete_manager(
         text("DELETE FROM boats WHERE manager_id = :mid"),
         {"mid": manager_id}
     )
+
+    # Удаляем связанные данные менеджера
+    await db.execute(text("DELETE FROM manager_settings WHERE manager_id = :mid"), {"mid": manager_id})
+    await db.execute(text("DELETE FROM manager_calendar WHERE manager_id = :mid"), {"mid": manager_id})
+    await db.execute(text("DELETE FROM manager_telegram WHERE manager_id = :mid"), {"mid": manager_id})
+    await db.execute(text("DELETE FROM user_consents WHERE user_type = 'manager' AND user_id = :mid"), {"mid": str(manager_id)})
     
     # Удаляем менеджера
     result = await db.execute(

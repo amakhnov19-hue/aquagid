@@ -251,7 +251,9 @@
                     body: JSON.stringify({ login: managerPhone, password })
                 });
                 const loginResult = await login.json();
-                localStorage.setItem('token', loginResult.token);
+                localStorage.clear();
+                localStorage.setItem('managerToken', loginResult.token);
+                localStorage.setItem('access_token', loginResult.token);
                 localStorage.setItem('managerId', loginResult.id);
                 localStorage.setItem('managerName', fullName);
                 

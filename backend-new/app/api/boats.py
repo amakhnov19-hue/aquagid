@@ -322,7 +322,7 @@ async def create_boat(
     db_boat = BoatModel(**boat_data)
     db.add(db_boat)
     await db.commit()
-    await db.refresh(db_boat)
+    await db.refresh(db_boat, ['photos'])
     return db_boat
 
 @router.put("/{boat_id}", response_model=Boat)
