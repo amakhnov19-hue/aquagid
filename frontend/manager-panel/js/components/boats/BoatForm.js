@@ -81,9 +81,9 @@
                         </div>
                         
                         <div class="form-group">
-                            <label>Описание (макс 250 символов)</label>
-                            <textarea id="boatDescription" class="form-control" rows="3" maxlength="250" oninput="document.getElementById('descCounter').textContent = this.value.length">${isEdit ? this.boat.description_short || '' : ''}</textarea>
-                            <div class="counter"><span id="descCounter">0</span>/250</div>
+                            <label>Описание (макс 400 символов)</label>
+                            <textarea id="boatDescription" class="form-control" rows="3" maxlength="400" oninput="document.getElementById('descCounter').textContent = this.value.length">${isEdit ? this.boat.description_short || '' : ''}</textarea>
+                            <div class="counter"><span id="descCounter">0</span>/400</div>
                         </div>
 
                         <!-- Чекбокс скрыт до реализации логики подтверждения -->
@@ -305,11 +305,24 @@
             if (!this.boat || !this.boat.photos || this.boat.photos.length === 0) return '';
             return this.boat.photos.map((photo, i) => `
                 <div class="photo-thumb" style="${i === 0 ? 'border: 3px solid #4caf50;' : ''}">
-                    ${i === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#4caf50;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1;">⭐</span>' : ''}
+                    ${i === 0 ? '<span style="position:absolute;top:4px;left:4px;background:#4caf50;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;z-index:1;pointer-events:none;">⭐</span>' : ''}
                     <img src="${photo}" alt="preview">
-                    <button class="remove-photo" onclick="this.parentElement.remove(); AquaGid.BoatForm.updatePhotoCounter()">✕</button>
+                    <button class="remove-photo" onclick="AquaGid.BoatForm.removePhoto(${i})">✕</button>
                 </div>
             `).join('');
+        }
+
+        removePhoto(index) {
+            if (!this.boat || !this.boat.photos) return;
+            
+            // Удаляем из массива
+            this.boat.photos.splice(index, 1);
+            this.photoOrderChanged = true;
+            
+            // Обновляем DOM
+            const preview = document.getElementById('photoPreview');
+            if (preview) preview.innerHTML = this.renderPhotoPreviews();
+            this.updatePhotoCounter();
         }
         
         async handlePhotoUpload(event) {
@@ -486,19 +499,6 @@
                 const newPhotos = photos.filter(p => p.startsWith('data:'));
                 const existingUrls = photos.filter(p => !p.startsWith('data:'));
                 
-                // Обновляем main_photo_url из первого фото (существующего или нового)
-                const mainPhotoUrl = existingUrls[0] || (photos[0]?.startsWith('data:') ? null : photos[0]);
-                if (mainPhotoUrl && boatId) {
-                    await fetch(`/api/boats/${boatId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${token}`
-                        },
-                        body: JSON.stringify({ main_photo_url: mainPhotoUrl })
-                    });
-                }
-                
                 // Загружаем только новые фото
                 if (newPhotos.length > 0 && boatId) {
                     if (existingUrls.length === 0) {
@@ -509,7 +509,7 @@
                     }
                     for (let i = 0; i < newPhotos.length; i++) {
                         const displayOrder = existingUrls.length + i;
-                        await fetch(`/api/boats/${boatId}/photos`, {
+                        const resp = await fetch(`/api/boats/${boatId}/photos`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -517,12 +517,18 @@
                             },
                             body: JSON.stringify({ photo_url: newPhotos[i], display_order: displayOrder })
                         });
+                        if (resp.ok) {
+                            const result = await resp.json();
+                            if (!this.boat) this.boat = {};
+                            if (!this.boat.photos) this.boat.photos = [];
+                            this.boat.photos.push(result.photo_url);
+                        }
                     }
                 }
 
                 // Отправляем финальный порядок на сервер
-                const allUrls = this.boat?.photos?.filter(p => !p.startsWith('data:')) || [];
-                if (allUrls.length > 0 && boatId) {
+                const allUrls = (this.boat && this.boat.photos ? this.boat.photos.filter(p => !p.startsWith('data:')) : []);
+                if (this.photoOrderChanged && boatId) {
                     await fetch(`/api/boats/${boatId}/photos/reorder`, {
                         method: 'PUT',
                         headers: {
@@ -530,6 +536,19 @@
                             'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify({ photo_urls: allUrls })
+                    });
+                }
+
+                // Обновляем main_photo_url после всех изменений
+                const finalUrls = (this.boat && this.boat.photos ? this.boat.photos.filter(p => !p.startsWith('data:')) : []);
+                if (boatId) {
+                    await fetch(`/api/boats/${boatId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ main_photo_url: finalUrls[0] || null })
                     });
                 }
                 

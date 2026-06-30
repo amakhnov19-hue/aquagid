@@ -130,19 +130,21 @@ window.calculateDistanceKm = calculateDistanceKm;
  * Упрощенная функция для быстрого использования
  */
 async function calculateRouteTime(fromLat, fromLon, toLat, toLon) {
-  try {
-    const result = await getPreciseTravelTime(fromLat, fromLon, toLat, toLon);
-    return result.travel_time_minutes;
-  } catch (error) {
-    routingLog("⚠️ Используем fallback расчет");
-
-    // Fallback на наш коэффициентный метод
-    const distance = window.calculateDistanceKm(fromLat, fromLon, toLat, toLon);
-    if (!distance) return 60;
-
-    // Коэффициент для СПб
-    return Math.round(((distance * 1.7) / 35) * 60) + 10;
+  const distance = calculateDistanceKm(fromLat, fromLon, toLat, toLon);
+  if (!distance) return 30;
+  
+  // Коэффициент извилистости зависит от расстояния
+  let coefficient;
+  if (distance < 0.5) {
+    coefficient = 1.1;
+  } else if (distance < 2) {
+    coefficient = 1.3;
+  } else {
+    coefficient = 1.5;
   }
+  
+  // Пешком ~5 км/ч + 5 минут на переходы
+  return Math.round((distance * coefficient / 5) * 60) + 5;
 }
 
 // Экспорт функций в глобальную область видимости
@@ -245,3 +247,14 @@ window.calculateQuickBookingTime = calculateQuickBookingTime;
 
 routingLog("✅ Функция быстрого бронирования добавлена");
 routingLog("✅ Модуль точной маршрутизации загружен");
+
+// Самодиагностика при загрузке
+(function() {
+    if (typeof window.calculateDistanceKm !== 'function') {
+        console.error('❌ calculateDistanceKm не экспортирована!');
+    }
+    if (typeof window.calculateRouteTime !== 'function') {
+        console.error('❌ calculateRouteTime не экспортирована!');
+    }
+    console.log('✅ Маршрутизация загружена');
+})();

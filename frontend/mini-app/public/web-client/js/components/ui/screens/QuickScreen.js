@@ -171,6 +171,14 @@ class QuickScreen extends ScreenBase {
      */
     async findNearestBoats() {
         console.log('⚡ findNearestBoats');
+
+        // Проверка что маршрутизация работает
+        if (typeof window.calculateRouteTime !== 'function') {
+            console.error('Маршрутизация не загружена');
+            document.getElementById('quick-content').innerHTML = 
+                '<p style="text-align:center;padding:40px;">Сервис временно недоступен.<br>Пожалуйста, обновите страницу.</p>';
+            return;
+        }
         
         const content = document.getElementById('quick-content');
         content.innerHTML = '<div class="loading">Поиск ближайших катеров...</div>';
@@ -205,6 +213,11 @@ class QuickScreen extends ScreenBase {
             
             // Рассчитываем маршрут для каждого катера
             const boatsWithRoute = [];
+            if (!window.calculateRouteTime) {
+                console.warn('Маршрутизация не загружена');
+                document.getElementById('quick-content').innerHTML = '<p style="text-align:center;padding:20px;">Не удалось рассчитать маршруты. Попробуйте позже.</p>';
+                return;
+            }
             
             for (let boat of boatsWithCoords) {
                 try {

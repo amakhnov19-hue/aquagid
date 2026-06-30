@@ -47,7 +47,8 @@ async function loadView(view) {
             await new PaymentSettings(content).render();
             break;
         case 'diagnostics':
-            content.innerHTML = `<iframe src="/diagnostics" style="width:100%;height:calc(100vh - 120px);border:none;border-radius:8px;"></iframe>`;
+            content.innerHTML = '<div class="card"><h2>🩺 Диагностика</h2><div id="diag-content">⏳ Проверка...</div></div>';
+            loadDiagnostics();
             break;
         case 'documents':
             await renderDocuments(content);
@@ -109,6 +110,37 @@ async function renderDashboard(container) {
             </div>
         </div>
     `;
+}
+
+
+async function loadDiagnostics() {
+    const el = document.getElementById('diag-content');
+    if (!el) return;
+    try {
+        const resp = await fetch('/api/admin/diagnostics');
+        const data = await resp.json();
+        el.innerHTML = `
+            <div style="margin-top:16px;">
+                ${data.checks.map(c => `<div style="padding:8px 0;font-size:15px;">${c.ok ? '🟢' : '🔴'} ${c.name}: ${c.message}</div>`).join('')}
+            </div>
+            <button onclick="loadDiagnostics()" style="margin-top:16px;padding:8px 16px;background:#0066CC;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 Проверить</button>
+            <button onclick="restartBackendDiag()" style="margin-top:16px;padding:8px 16px;background:#dc3545;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;">🔁 Перезапустить бэкенд</button>
+        `;
+    } catch(e) {
+        el.innerHTML = '🔴 Ошибка проверки';
+    }
+}
+
+async function restartBackendDiag() {
+    if (!confirm('Перезапустить бэкенд?')) return;
+    try {
+        const resp = await fetch('/api/admin/restart-backend', { method: 'POST' });
+        const data = await resp.json();
+        alert(data.message);
+        loadDiagnostics();
+    } catch(e) {
+        alert('Ошибка перезапуска');
+    }
 }
 
 async function renderManagers(container) {

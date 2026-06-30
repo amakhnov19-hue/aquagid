@@ -1,64 +1,72 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from app.core.database import get_db
+from fastapi import APIRouter
 import subprocess
+import shutil
 import os
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+def check_disk():
+    """Проверка места на диске"""
+    try:
+        usage = shutil.disk_usage("/")
+        free_percent = (usage.free / usage.total) * 100
+        return {
+            "ok": free_percent > 10,
+            "message": f"Свободно {free_percent:.0f}% ({usage.free // (1024**3)} ГБ из {usage.total // (1024**3)} ГБ)"
+        }
+    except:
+        return {"ok": False, "message": "Ошибка проверки диска"}
+
+
+def check_memory():
+    """Проверка памяти"""
+    try:
+        result = subprocess.run(["free", "-m"], capture_output=True, text=True)
+        lines = result.stdout.split("\n")
+        mem_line = [l for l in lines if "Mem:" in l][0].split()
+        total = int(mem_line[1])
+        used = int(mem_line[2])
+        used_percent = (used / total) * 100
+        return {
+            "ok": used_percent < 90,
+            "message": f"Использовано {used_percent:.0f}% ({used} МБ из {total} МБ)"
+        }
+    except:
+        return {"ok": False, "message": "Ошибка проверки памяти"}
+
+
+def check_port(port):
+    """Проверка что порт слушается"""
+    try:
+        result = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True)
+        return str(port) in result.stdout
+    except:
+        return False
+
+
 @router.get("/diagnostics")
-async def diagnostics(db: AsyncSession = Depends(get_db)):
-    try:
-        await db.execute(text("SELECT 1"))
-        db_ok = True
-    except:
-        db_ok = False
-
-    backend = "✅ Работает"
-    database = "✅ Подключена" if db_ok else "❌ Ошибка подключения"
-
-    try:
-        result = subprocess.run(["/usr/bin/pgrep", "-f", "uvicorn.*8082"], capture_output=True)
-        uvicorn = "✅ Запущен" if result.returncode == 0 else "❌ Не найден"
-    except:
-        uvicorn = "❌ Не найден"
-
-    logs_text = "Нет логов"
-    try:
-        if os.path.exists("/var/log/aquagid-backend.log"):
-            with open("/var/log/aquagid-backend.log", "r") as f:
-                lines = f.readlines()
-                last_lines = lines[-30:] if len(lines) >= 30 else lines
-                logs_text = "".join(last_lines)
-    except:
-        pass
-
-    errors_text = "Нет ошибок"
-    try:
-        if os.path.exists("/var/log/aquagid-backend-error.log"):
-            with open("/var/log/aquagid-backend-error.log", "r") as f:
-                lines = f.readlines()
-                last_lines = lines[-30:] if len(lines) >= 30 else lines
-                errors_text = "".join(last_lines)
-    except:
-        pass
-
+async def diagnostics():
+    disk = check_disk()
+    memory = check_memory()
+    backend = check_port(8084)
+    beta = check_port(8083)
+    
     return {
-        "success": True,
-        "backend": backend,
-        "database": database,
-        "uvicorn": uvicorn,
-        "logs": logs_text[-2000:],
-        "errors": errors_text[-2000:]
+        "status": "ok" if all([disk["ok"], memory["ok"], backend]) else "error",
+        "checks": [
+            {"name": "Бэкенд (порт 8084)", "ok": backend, "message": "Работает" if backend else "❌ Не отвечает"},
+            {"name": "Бета (порт 8083)", "ok": beta, "message": "Работает" if beta else "❌ Не отвечает"},
+            {"name": "Диск", "ok": disk["ok"], "message": disk["message"]},
+            {"name": "Память", "ok": memory["ok"], "message": memory["message"]},
+        ]
     }
 
 
 @router.post("/restart-backend")
 async def restart_backend():
     try:
-        subprocess.run(["sudo", "systemctl", "restart", "aquagid-backend"], capture_output=True)
-        return {"success": True, "message": "Бэкенд перезапущен"}
+        subprocess.run(["sudo", "systemctl", "restart", "aquagid-prod"], capture_output=True)
+        return {"success": True, "message": "✅ Продакшен перезапущен"}
     except:
         return {"success": False, "message": "Ошибка перезапуска"}
