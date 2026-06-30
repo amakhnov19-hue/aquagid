@@ -135,23 +135,18 @@
 
     async function loadBoats() {
         try {
-            const today = new Date().toISOString().split('T')[0];
-            const now = new Date();
-            const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
-            
-            const resp = await fetch(`/api/availability/boats?booking_date=${today}&start_time=${time}&duration_minutes=120`);
+            const resp = await fetch('/api/boats/client');
             const data = await resp.json();
-            boatsData = (data.boats || []).slice(0, 4);
+            boatsData = Array.isArray(data) ? data.slice(0, 4) : [];
             
             const grid = document.getElementById('boats-grid');
             if (!boatsData.length) {
-                grid.innerHTML = '<p style="text-align:center;padding:20px;">Нет свободных катеров сейчас</p>';
+                grid.innerHTML = '<p style="text-align:center;padding:20px;">Нет доступных катеров</p>';
                 return;
             }
 
             renderBoats();
             startCarousel();
-
         } catch(e) {
             document.getElementById('boats-grid').innerHTML = '<p>Ошибка загрузки</p>';
         }
