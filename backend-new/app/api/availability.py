@@ -449,7 +449,7 @@ async def get_available_slots(
         work_end = "24:00"
     
     start_dt = datetime.combine(booking_date, datetime.strptime(work_start, "%H:%M").time())
-    if work_end == "24:00":
+    if work_end == "24:00" or work_end == "00:00":
         end_dt = datetime.combine(booking_date + timedelta(days=1), datetime.strptime("00:00", "%H:%M").time())
     else:
         end_dt = datetime.combine(booking_date, datetime.strptime(work_end, "%H:%M").time())
