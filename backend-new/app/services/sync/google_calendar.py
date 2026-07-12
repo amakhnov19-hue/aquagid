@@ -95,6 +95,21 @@ class GoogleCalendarService:
                 await db.commit()
             
             service = build("calendar", "v3", credentials=credentials)
+
+            # Получаем актуальное имя календаря из Google
+            try:
+                calendar_info = service.calendars().get(calendarId=calendar_id).execute()
+                real_calendar_name = calendar_info.get('summary', '')
+                if real_calendar_name and real_calendar_name != calendar_name:
+                    await db.execute(
+                        text("UPDATE manager_calendar SET calendar_name = :name WHERE selected_calendar_id = :cid"),
+                        {"name": real_calendar_name, "cid": calendar_id}
+                    )
+                    await db.commit()
+                    calendar_name = real_calendar_name
+                    print(f"🔄 Обновлено имя календаря: {real_calendar_name}")
+            except Exception as e:
+                print(f"⚠️ Не удалось получить имя календаря: {e}")
             
             try:
                 service.events().delete(calendarId=cal_row[1], eventId=google_event_id).execute()
@@ -451,6 +466,40 @@ def get_google_router() -> APIRouter:
         )
         await db.commit()
         
+        # Получаем имя календаря из Google и сохраняем
+        try:
+            result = await db.execute(
+                text("SELECT credentials FROM manager_calendar WHERE manager_id = :manager_id"),
+                {"manager_id": manager_id}
+            )
+            row = result.fetchone()
+            if row:
+                creds_data = json.loads(row[0])
+                credentials = Credentials(
+                    token=creds_data.get("token"),
+                    refresh_token=creds_data.get("refresh_token"),
+                    token_uri=creds_data.get("token_uri"),
+                    client_id=creds_data.get("client_id"),
+                    client_secret=creds_data.get("client_secret"),
+                    scopes=creds_data.get("scopes")
+                )
+                if credentials.expired and credentials.refresh_token:
+                    credentials.refresh(GoogleRequest())
+                
+                service = build("calendar", "v3", credentials=credentials)
+                calendar_info = service.calendars().get(calendarId=calendar_id).execute()
+                real_calendar_name = calendar_info.get('summary', '')
+                
+                if real_calendar_name:
+                    await db.execute(
+                        text("UPDATE manager_calendar SET calendar_name = :name WHERE manager_id = :manager_id AND selected_calendar_id = :cid"),
+                        {"name": real_calendar_name, "manager_id": manager_id, "cid": calendar_id}
+                    )
+                    await db.commit()
+                    print(f"✅ Имя календаря сохранено: {real_calendar_name}")
+        except Exception as e:
+            print(f"⚠️ Не удалось сохранить имя календаря: {e}")
+        
         # Пересоздаём вебхук для выбранного календаря
         try:
             result = await db.execute(
@@ -682,7 +731,7 @@ def get_google_router() -> APIRouter:
             # Получаем ВСЕ календари менеджера
             cal_result = await db.execute(
                 text("""
-                    SELECT credentials, selected_calendar_id, webhook_expiration, boat_id
+                    SELECT credentials, selected_calendar_id, webhook_expiration, boat_id, calendar_name
                     FROM manager_calendar 
                     WHERE boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id)
                        OR (boat_id IS NULL AND manager_id = :manager_id)
@@ -704,6 +753,7 @@ def get_google_router() -> APIRouter:
                 calendar_id = cal_row[1]
                 webhook_expiration = cal_row[2]
                 boat_id = cal_row[3]
+                calendar_name = cal_row[4] if len(cal_row) > 4 else None
                 print(f"🔍 Processing calendar: {calendar_id} for boat {boat_id}", flush=True)                
                 
                 credentials = Credentials(
@@ -783,25 +833,25 @@ def get_google_router() -> APIRouter:
                     print(f"🔍 DEBUG boats dict: {boats}", flush=True)
                     print(f"🔍 DEBUG boat_id from calendar: {boat_id}", flush=True)                    
                     
-                    # Если календарь привязан к лодке — используем её ID
-                    if boat_id:
-                        boat_id_parsed = boat_id
-                        boat_name = next((name for name, bid in boats.items() if bid == boat_id), None) or f"Катер #{boat_id}"
-                        client_name = summary
-                    else:
-                        # Ищем название катера в тексте события
-                        boat_name = None
-                        client_name = summary
-                        summary_lower = summary.lower()
+                    # Определяем катер по имени календаря
+                    # calendar_name уже получен выше (cal_row[4])
+                    boat_id_parsed = None
+                    boat_name = None
+                    
+                    if calendar_name:
+                        calendar_name_lower = calendar_name.lower()
                         for boat_name_lower, boat_id_val in boats.items():
-                            if boat_name_lower in summary_lower:
-                                boat_name = boat_name_lower
+                            if boat_name_lower in calendar_name_lower:
                                 boat_id_parsed = boat_id_val
-                                idx = summary_lower.find(boat_name_lower)
-                                client_name = summary[idx + len(boat_name_lower):].strip().lstrip('-').strip() or "Из Google Calendar"
+                                boat_name = boat_name_lower
                                 break
-                        else:
-                            boat_id_parsed = None
+                    
+                    if not boat_id_parsed:
+                        print(f"⚠️ Катер не найден для календаря '{calendar_name}'")
+                        continue
+                    
+                    # Имя клиента — название события целиком
+                    client_name = summary.strip() or "Из Google Calendar"
                     
                     # Проверяем, не создана ли уже бронь на это время
                     existing_client = await db.execute(

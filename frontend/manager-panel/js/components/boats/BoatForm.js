@@ -812,7 +812,7 @@
                         list.innerHTML = data.calendars.map(c => 
                             `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
                                 ${c.calendar_name || c.calendar_id}
-                                <button onclick="AquaGid.BoatForm.disconnectCalendar(${c.id})" style="background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;padding:2px 8px;">Отключить</button>
+                                <button type="button" onclick="AquaGid.BoatForm.disconnectCalendar(${c.id}, event)" style="background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;padding:2px 8px;">Отключить</button>
                             </div>`
                         ).join('');
                     }
@@ -837,12 +837,25 @@
             const resp = await fetch(`/api/boat-calendars/auth?boat_id=${this.boat.id}&manager_id=${managerId}`);
             const data = await resp.json();
             if (data.auth_url) {
-                window.open(data.auth_url, '_blank');
-                setTimeout(() => this.loadBoatCalendars(), 5000);
+                const authWindow = window.open(data.auth_url, '_blank');
+                
+                // Обновляем календари при возврате фокуса на страницу
+                const checkWindow = setInterval(() => {
+                    if (authWindow.closed) {
+                        clearInterval(checkWindow);
+                        this.loadBoatCalendars();
+                        // Обновляем список лодок в основном интерфейсе
+                        if (typeof loadBoats === 'function') loadBoats();
+                    }
+                }, 1000);
             }
         }
-        
-        async disconnectCalendar(calendarId) {
+
+        async disconnectCalendar(calendarId, event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             if (!confirm('Отключить календарь?')) return;
             await fetch(`/api/boat-calendars/disconnect/${calendarId}`, { method: 'POST' });
             this.loadBoatCalendars();

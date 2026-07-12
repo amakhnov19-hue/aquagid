@@ -12,6 +12,9 @@ from sqlalchemy import text
 from dotenv import load_dotenv
 
 from app.core.database import get_db
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as GoogleRequest
+from googleapiclient.discovery import build
 
 load_dotenv()
 
@@ -188,30 +191,88 @@ async def save_boat_calendar(
     data: dict,
     db: AsyncSession = Depends(get_db)
 ):
-    """Сохранить выбранный календарь"""
+    """Сохранить или обновить календарь лодки"""
+    boat_id = data["boat_id"]
+    calendar_id = data["calendar_id"]
+    credentials_json = data["credentials"]
+    calendar_name_from_client = data.get("calendar_name", "")
+    
+    # Получаем актуальное имя календаря из Google API
+    real_calendar_name = calendar_name_from_client
+    try:
+        creds_data = json.loads(credentials_json)
+        credentials = Credentials(
+            token=creds_data.get("token"),
+            refresh_token=creds_data.get("refresh_token"),
+            token_uri=creds_data.get("token_uri"),
+            client_id=creds_data.get("client_id"),
+            client_secret=creds_data.get("client_secret"),
+            scopes=creds_data.get("scopes")
+        )
+        if credentials.expired and credentials.refresh_token:
+            credentials.refresh(GoogleRequest())
+        
+        service = build("calendar", "v3", credentials=credentials)
+        calendar_info = service.calendars().get(calendarId=calendar_id).execute()
+        real_calendar_name = calendar_info.get("summary", calendar_name_from_client)
+    except Exception as e:
+        print(f"⚠️ Не удалось получить имя календаря из Google: {e}")
+    
+    # Получаем manager_id лодки
+    boat_result = await db.execute(
+        text("SELECT manager_id FROM boats WHERE id = :bid"),
+        {"bid": boat_id}
+    )
+    boat_row = boat_result.fetchone()
+    if not boat_row:
+        raise HTTPException(status_code=404, detail="Лодка не найдена")
+    manager_id = boat_row[0]
+    
+    # Проверяем, есть ли уже запись для этой лодки
     existing = await db.execute(
         text("SELECT id FROM manager_calendar WHERE boat_id = :bid"),
-        {"bid": data["boat_id"]}
+        {"bid": boat_id}
     )
-    if existing.fetchone():
-        raise HTTPException(status_code=400, detail="У этой лодки уже есть календарь. Сначала удалите старый.")
     
-    await db.execute(
-        text("""
-            INSERT INTO manager_calendar (boat_id, selected_calendar_id, calendar_name, credentials, manager_id)
-            VALUES (:boat_id, :calendar_id, :calendar_name, :credentials, 
-                (SELECT manager_id FROM boats WHERE id = :boat_id))
-        """),
-        {
-            "boat_id": data["boat_id"],
-            "calendar_id": data["calendar_id"],
-            "calendar_name": data["calendar_name"],
-            "credentials": data["credentials"]
-        }
-    )
+    if existing.fetchone():
+        # Обновляем существующую запись
+        await db.execute(
+            text("""
+                UPDATE manager_calendar 
+                SET selected_calendar_id = :calendar_id,
+                    calendar_name = :calendar_name,
+                    credentials = :credentials
+                WHERE boat_id = :boat_id
+            """),
+            {
+                "boat_id": boat_id,
+                "calendar_id": calendar_id,
+                "calendar_name": real_calendar_name,
+                "credentials": credentials_json
+            }
+        )
+        print(f"🔄 Календарь обновлён: лодка {boat_id}, имя '{real_calendar_name}'")
+    else:
+        # Создаём новую запись
+        await db.execute(
+            text("""
+                INSERT INTO manager_calendar (boat_id, selected_calendar_id, calendar_name, credentials, manager_id)
+                VALUES (:boat_id, :calendar_id, :calendar_name, :credentials, :manager_id)
+            """),
+            {
+                "boat_id": boat_id,
+                "calendar_id": calendar_id,
+                "calendar_name": real_calendar_name,
+                "credentials": credentials_json,
+                "manager_id": manager_id
+            }
+        )
+        print(f"✅ Календарь создан: лодка {boat_id}, имя '{real_calendar_name}'")
+    
     await db.commit()
 
+    # Пересоздаём вебхук
     from app.services.google_webhook import webhook_service
-    await webhook_service.create_channel_for_boat(data["boat_id"])
+    await webhook_service.create_channel_for_boat(boat_id)
 
-    return {"success": True}
+    return {"success": True, "calendar_name": real_calendar_name}
