@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /landing
+Sitemap: https://24aquabooking.ru/sitemap.xml
