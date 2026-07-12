@@ -100,7 +100,7 @@ class ManagerBookings {
             this.bookings = data.map(b => ({
                 id: b.id,
                 boatId: b.boat_id,
-                boatName: b.boat?.name || `Катер #${b.boat_id}`,
+                boatName: b.boat_name || `Катер #${b.boat_id}`,
                 boat: b.boat,
                 date: b.booking_date,
                 time: b.start_time ? b.start_time.slice(0, 5) : '',

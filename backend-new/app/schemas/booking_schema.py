@@ -47,6 +47,9 @@ class BookingResponse(BaseModel):
     source: Optional[str] = None  # ← добавить
     boat: Optional[dict] = None 
     viewed_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+        extra = "allow"
 
 # Для проверки доступности
 class AvailabilityCheck(BaseModel):

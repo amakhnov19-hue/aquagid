@@ -41,6 +41,7 @@ async def create_booking(
     booking: BookingCreate,
     db: AsyncSession = Depends(get_db)
 ):
+    print(f"🔍 CREATE BOOKING: {booking}", flush=True)
     print(f"Received status: {booking.status}")
     print(f"Received prepayment_amount: {booking.prepayment_amount}")
     import sys
@@ -206,63 +207,115 @@ async def create_booking(
         }
     }
 
-@router.get("", response_model=List[BookingResponse])
+@router.get("")
 async def get_bookings(
     manager_id: int = None,
     db: AsyncSession = Depends(get_db)
 ):
-    """Получить список бронирований (только активные)"""
-    
-    boat_ids_result = await db.execute(
-        select(BoatModel.id).where(BoatModel.manager_id == manager_id)
-    )
-    boat_ids = [row[0] for row in boat_ids_result.all()]
-    
-    result = await db.execute(
-        select(BookingModel)
-        .where(BookingModel.boat_id.in_(boat_ids))
-        .where(BookingModel.status == 'active')
-        .order_by(BookingModel.booking_date.asc())
-    )
+    """Получить список бронирований"""
+    if manager_id:
+        result = await db.execute(
+            select(BookingModel).where(
+                BookingModel.boat_id.in_(
+                    select(BoatModel.id).where(BoatModel.manager_id == manager_id)
+                )
+            ).order_by(BookingModel.booking_date.asc())
+        )
+    else:
+        result = await db.execute(
+            select(BookingModel).order_by(BookingModel.booking_date.asc())
+        )
     bookings = result.scalars().all()
-    
-    boats_result = await db.execute(
-        select(BoatModel).where(BoatModel.id.in_([b.boat_id for b in bookings]))
-    )
-    boats = {b.id: b for b in boats_result.scalars().all()}
-    
-    result_list = []
+    # Добавляем названия катеров
+    boat_ids = list(set(b.boat_id for b in bookings))
+    if boat_ids:
+        boats_res = await db.execute(
+            text("SELECT id, name FROM boats WHERE id = ANY(:ids)"),
+            {"ids": boat_ids}
+        )
+        boat_names = {row[0]: row[1] for row in boats_res.fetchall()}
+    else:
+        boat_names = {}
     for b in bookings:
-        boat = boats.get(b.boat_id)
-        result_list.append({
-            "id": b.id,
-            "boat_id": b.boat_id,
-            "booking_date": b.booking_date,
-            "start_time": b.start_time,
-            "duration_minutes": b.duration_minutes,
-            "status": b.status,
-            "total_price": b.total_price,
-            "prepayment_amount": b.prepayment_amount,
-            "created_at": b.created_at,
-            "client_name": b.client_name,
-            "client_phone": b.client_phone,
-            "client_telegram": b.client_telegram,
-            "client_messenger_type": b.client_messenger_type,
-            "client_messenger_contact": b.client_messenger_contact,
-            "google_event_id": b.google_event_id,
-            "source": b.source,
-            "cancellation_requested": b.cancellation_requested,
-            "viewed_at": b.viewed_at.isoformat() if b.viewed_at else None,
-            "boat": {
-                "id": boat.id,
-                "name": boat.name,
-                "capacity": boat.capacity,
-                "boarding_address": boat.boarding_address,
-                "is_breakdown": boat.is_breakdown
-            } if boat else None
-        })
+        b.boat_name = boat_names.get(b.boat_id, f"Катер #{b.boat_id}")
+    return bookings
+
+@router.get("/stats")
+async def get_bookings_stats(
+    db: AsyncSession = Depends(get_db)
+):
+    """Статистика броней для админ-дашборда"""
+    result = await db.execute(
+        text("""
+            SELECT 
+                COUNT(*) FILTER (WHERE status = 'active') as active,
+                COUNT(*) FILTER (WHERE status = 'active' AND booking_date = CURRENT_DATE) as today,
+                COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as week
+            FROM bookings
+        """)
+    )
+    row = result.fetchone()
+    return {
+        "active": row[0] or 0,
+        "today": row[1] or 0,
+        "cancelled": row[2] or 0,
+        "week": row[3] or 0
+    }
+
+@router.get("/{booking_id}")
+async def get_booking(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """Получить бронирование по ID с данными катера и менеджера"""
+    result = await db.execute(
+        select(BookingModel).where(BookingModel.id == booking_id)
+    )
+    booking = result.scalars().first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
     
-    return result_list
+    # Загружаем катер
+    boat_result = await db.execute(
+        select(BoatModel).where(BoatModel.id == booking.boat_id)
+    )
+    boat = boat_result.scalars().first()
+    
+    # Загружаем менеджера
+    if boat:
+        manager_result = await db.execute(
+            select(ManagerModel).where(ManagerModel.id == boat.manager_id)
+        )
+        manager = manager_result.scalars().first()
+        
+        # Добавляем данные менеджера в boat
+        booking.boat = {
+            "id": boat.id,
+            "name": boat.name,
+            "manager_name": manager.full_name if manager else None,
+            "manager_company": manager.company_name if manager else None,
+            "manager_phone": manager.phone if manager else None,
+            "manager_messengers": manager.messengers if manager else {}
+        }
+    
+    return {
+        "id": booking.id,
+        "boat_id": booking.boat_id,
+        "booking_date": str(booking.booking_date),
+        "start_time": str(booking.start_time),
+        "duration_minutes": booking.duration_minutes,
+        "status": booking.status,
+        "total_price": float(booking.total_price) if booking.total_price else None,
+        "prepayment_amount": float(booking.prepayment_amount) if booking.prepayment_amount else None,
+        "created_at": str(booking.created_at),
+        "client_name": booking.client_name,
+        "client_passengers": booking.client_passengers,
+        "client_phone": booking.client_phone,
+        "client_email": booking.client_email,
+        "cancellation_requested": booking.cancellation_requested,
+        "boat": booking.boat
+    }
 
 @router.get("/client/{phone}", response_model=List[BookingResponse])
 async def get_client_bookings(
@@ -344,7 +397,11 @@ async def confirm_payment(
     booking_id: int,
     db: AsyncSession = Depends(get_db)
 ):
+    import traceback
+    print(f"🔍 CONFIRM PAYMENT CALLED for {booking_id}", flush=True)
+    traceback.print_stack()
     """Подтвердить оплату и активировать бронирование"""
+    from sqlalchemy import text
     
     result = await db.execute(
         select(BookingModel).where(BookingModel.id == booking_id)
@@ -353,8 +410,26 @@ async def confirm_payment(
     
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
+
+    if booking.status == "active":
+        print(f"🔍 Booking {booking_id} already active, skipping", flush=True)
+        return {"message": "Already active", "id": booking_id, "status": "active"}    
     
     booking.status = "active"
+
+    # Push-уведомления
+    try:
+        from app.api.push_api import send_push_internal
+        info = await db.execute(
+            text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time, b.client_phone FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
+            {"bid": booking_id}
+        )
+        row = info.fetchone()
+        if row:
+            await send_push_internal(db=db, title=f"🆕 Новая бронь #{booking_id}", body=f"{row[2] or 'Клиент'}, {row[0]}, {row[3]} {row[4]}", url=f"/bookings/{booking_id}", user_type="manager", user_id=str(row[1]))
+    except Exception as e:
+        print(f"🔍 PUSH ERROR: {e}", flush=True)
+
     await db.commit()
     
     # Отправляем WebSocket уведомление менеджеру
@@ -921,26 +996,3 @@ async def mark_booking_viewed(
     booking.viewed_at = datetime.utcnow()
     await db.commit()
     return {"message": "OK"}
-
-@router.get("/stats")
-async def get_bookings_stats(
-    db: AsyncSession = Depends(get_db)
-):
-    """Статистика броней для админ-дашборда"""
-    result = await db.execute(
-        text("""
-            SELECT 
-                COUNT(*) FILTER (WHERE status = 'active') as active,
-                COUNT(*) FILTER (WHERE status = 'active' AND booking_date = CURRENT_DATE) as today,
-                COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled,
-                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') as week
-            FROM bookings
-        """)
-    )
-    row = result.fetchone()
-    return {
-        "active": row[0] or 0,
-        "today": row[1] or 0,
-        "cancelled": row[2] or 0,
-        "week": row[3] or 0
-    }

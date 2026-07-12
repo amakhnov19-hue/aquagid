@@ -53,6 +53,32 @@ class UnifiedScreens {
             console.log('🔗 Реферальный код удалён (заход без ref)');
         }
 
+        // Обработка возврата после оплаты
+        const paymentStatus = urlParams.get('payment');
+        const bookingIdFromUrl = urlParams.get('booking');
+        if (paymentStatus === 'success' && bookingIdFromUrl) {
+            console.log('✅ Оплата успешна, бронирование:', bookingIdFromUrl);
+            if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'payment_success');            
+            // Показываем успех сразу с ID, данные загрузим потом
+            window.history.replaceState({}, '', window.location.pathname);
+            // Откладываем показ, чтобы initScreens успел отработать
+            setTimeout(async () => {
+                try {
+                    const resp = await fetch(`/api/bookings/${bookingIdFromUrl}`);
+                    const booking = await resp.json();
+                    this.booking = booking;
+                    this.navigateToScreen('success', { booking: booking });
+                } catch(e) {
+                    this.navigateToScreen('mybookings');
+                }
+            }, 100);
+        } else if (paymentStatus === 'fail' && bookingIdFromUrl) {
+            console.log('❌ Оплата не прошла, бронирование:', bookingIdFromUrl);
+            if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'payment_fail');            
+            alert('Оплата не прошла. Попробуйте снова.');
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+
         // Обработка кнопки "Назад" браузера
         window.addEventListener('popstate', (e) => {
             if (e.state?.screen) {
@@ -89,6 +115,7 @@ class UnifiedScreens {
             case 'boat': this.showBoatSelection(); break;
             case 'quick': this.showQuickScreen(); break;
             case 'confirmation': this.showConfirmationScreen(); break;
+            case 'success': this.showSuccessScreen(); break;
             case 'mybookings': this.showMyBookings(); break;
             case 'notifications':
                 if (window.PushNotifications) {
@@ -107,10 +134,6 @@ class UnifiedScreens {
             case 'bookingdetail':
                 this.showMyBookings();
                 break;
-            case 'success':
-                // Если пришли из Моих бронирований — возвращаемся в список
-                this.showMyBookings();
-                break;                       
             default: this.showWelcomeScreen(); break;
         }
     }
@@ -185,6 +208,7 @@ class UnifiedScreens {
             history.pushState({ screen: 'date' }, '', window.location.pathname);
         }
         console.log('📅 showDateSelection');
+        if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'date_select');        
         
         if (this.currentFlow === 'bridges') {
             this.dateScreen.showBridgesMode();
@@ -201,6 +225,7 @@ class UnifiedScreens {
             history.pushState({ screen: 'boat' }, '', window.location.pathname);
         }
         console.log('🚤 showBoatSelection, flow:', this.currentFlow);
+        if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'boat_select');
         
         if (!this.boatScreen) {
             this.boatScreen = new BoatScreen(this);

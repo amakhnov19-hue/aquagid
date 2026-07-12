@@ -209,7 +209,6 @@
                             <div class="map-hint" style="font-size: 12px; color: #666; margin-top: 8px;">
                                 📍 Если метка стоит неверно, перетащите её на нужное место
                             </div>
-                            <button type="button" class="btn-save-coords" onclick="AquaGid.BoatForm.saveCoordinates()" style="margin-top: 10px; width: 100%;">💾 Сохранить координаты</button>
                         </div>
                         
                         <div class="form-group">
@@ -238,6 +237,14 @@
                                 </div>
                             </div>
                         </div>
+
+                        ${isEdit ? `
+                        <div class="form-group calendar-group" style="margin-top:16px;padding:12px;background:#f0f4ff;border-radius:8px;">
+                            <label style="font-weight:600;">📅 Google Calendar</label>
+                            <div id="boatCalendarList" style="margin:8px 0;font-size:13px;">Загрузка...</div>
+                            <button type="button" id="btnConnectCalendar" class="btn-save-coords" onclick="AquaGid.BoatForm.connectGoogleCalendar()" style="width:100%;">Подключить Google Calendar</button>
+                        </div>
+                        ` : ''}                       
                         
                         <div class="form-actions">
                             <button type="button" class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Отмена</button>
@@ -289,6 +296,7 @@
             }); 
             */
             this.updatePhotoCounter();
+            if (isEdit) setTimeout(() => this.loadBoatCalendars(), 100);            
         }
 
         renderHourOptions(selectedHour) {
@@ -788,6 +796,56 @@
                 
                 reader.onerror = reject;
             });
+        }
+
+        async loadBoatCalendars() {
+            console.log('🔍 loadBoatCalendars called');
+            if (!this.boat?.id) return;
+            try {
+                const resp = await fetch(`/api/boat-calendars/calendars/${this.boat.id}`);
+                const data = await resp.json();
+                const list = document.getElementById('boatCalendarList');
+                if (list) {
+                    if (data.calendars.length === 0) {
+                        list.innerHTML = '<span style="color:#999;">Нет подключенных календарей</span>';
+                    } else {
+                        list.innerHTML = data.calendars.map(c => 
+                            `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+                                ${c.calendar_name || c.calendar_id}
+                                <button onclick="AquaGid.BoatForm.disconnectCalendar(${c.id})" style="background:#c62828;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;padding:2px 8px;">Отключить</button>
+                            </div>`
+                        ).join('');
+                    }
+                }
+
+                console.log('🔍 calendars data:', data);
+                console.log('🔍 calendars length:', data.calendars.length);                
+
+                const btn = document.getElementById('btnConnectCalendar');
+                console.log('🔍 btn element:', btn);                
+                if (btn) btn.style.setProperty('display', data.calendars.length > 0 ? 'none' : 'block', 'important');
+
+            } catch(e) {
+                console.error('Ошибка загрузки календарей:', e);
+            }
+        }
+        
+        async connectGoogleCalendar() {
+            if (!this.boat?.id) return;
+            const managerId = window.managerId || localStorage.getItem('managerId');
+            if (!managerId) { alert('Не найден ID менеджера'); return; }
+            const resp = await fetch(`/api/boat-calendars/auth?boat_id=${this.boat.id}&manager_id=${managerId}`);
+            const data = await resp.json();
+            if (data.auth_url) {
+                window.open(data.auth_url, '_blank');
+                setTimeout(() => this.loadBoatCalendars(), 5000);
+            }
+        }
+        
+        async disconnectCalendar(calendarId) {
+            if (!confirm('Отключить календарь?')) return;
+            await fetch(`/api/boat-calendars/disconnect/${calendarId}`, { method: 'POST' });
+            this.loadBoatCalendars();
         }
 
         collectPhotos() {

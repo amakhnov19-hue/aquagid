@@ -12,6 +12,7 @@ from app.api import admin_diagnostics
 from app.api import admin_payments
 from app.api.payment_api import router as payment_router
 from app.api.push_api import router as push_router
+from app.api.boat_calendars import router as boat_calendars_router
 
 # Синхронизация с внешними сервисами
 from app.services.sync import sync_manager
@@ -59,6 +60,7 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=300)
 
 # Роутеры API
 app.include_router(boats.router, prefix="/api")
+app.include_router(boat_calendars_router, prefix="/api")
 app.include_router(availability.router, prefix="/api")
 app.include_router(bookings.router, prefix="/api")
 app.include_router(geocode.router, prefix="/api/geocode")

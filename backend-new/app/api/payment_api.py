@@ -54,97 +54,54 @@ async def create_payment(
     callback_url = ""
     order_id = f"{booking_id}_{int(datetime.now().timestamp())}"
 
+    print(f"🔍 PAYMENT CHECK: bank={bank}, merchant={merchant_id}, secret={secret_key[:10] if secret_key else 'None'}", flush=True)
+    print(f"🔍 PAYMENT: bank={bank}, merchant={merchant_id}, secret_len={len(secret_key) if secret_key else 0}", flush=True)    
+
     if bank == "tbank" and merchant_id and secret_key:
         amount_kopecks = int(amount)
         success_url = f"{base_url}?payment=success&booking={booking_id}"
         fail_url = f"{base_url}?payment=fail&booking={booking_id}"
-        result = await tbank.init_payment(amount_kopecks, order_id, description, success_url, fail_url)
+        result = await tbank.init_payment(amount_kopecks, order_id, description, success_url, fail_url, client_email, merchant_id, secret_key)
         if result.get("success"):
             return result
         return {"success": False, "error": result.get("error", "TBank error")}
-        
     else:
-        # Тестовый режим — сразу подтверждаем
-        booking_id_int = int(booking_id)
-        await db.execute(
-            text("UPDATE bookings SET status = 'active' WHERE id = :id"),
-            {"id": booking_id_int}
-        )
-        await db.commit()
-        
-        # Push-уведомление менеджеру
-        try:
-            from app.api.push_api import send_push_internal
-            info = await db.execute(
-                text("SELECT bo.name, bo.manager_id, b.client_name, b.booking_date, b.start_time, b.client_phone FROM boats bo JOIN bookings b ON b.boat_id = bo.id WHERE b.id = :bid"),
-                {"bid": booking_id_int}
-            )
-            row = info.fetchone()
-            if row:
-                # Менеджеру
-                await send_push_internal(
-                    db=db,
-                    title=f"🆕 Новая бронь #{booking_id_int}",
-                    body=f"{row[2] or 'Клиент'}, {row[0]}, {row[3]} {row[4]}",
-                    url=f"/bookings/{booking_id_int}",
-                    user_type="manager",
-                    user_id=str(row[1])
-                )
-                # Клиенту
-                await send_push_internal(
-                    db=db,
-                    title="✅ Бронирование подтверждено",
-                    body=f"{row[0]}, {row[3]} в {row[4]}",
-                    url=f"/booking/{booking_id_int}",
-                    user_type="client",
-                    user_id=(row[5] or "guest").replace('+', '').replace(' ', '').replace('-', '')
-                )
-        except Exception as e:
-            print(f"⚠️ Ошибка push: {e}")
+        return {"success": False, "error": "Payment method not configured"}
 
-        payment = {
-            "payment_id": f"test_{order_id}",
-            "payment_url": None,
-            "status": "success"
-        }
-
-    return {"success": True, **payment}
-
-
-@router.get("/test-payment-page/{order_id}")
-async def test_payment_page(order_id: str, amount: float = 0):
-    return HTMLResponse(f"""
-    <html><head><meta charset="utf-8"><title>Тестовый платёж</title>
-    <style>body{{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f5;}}
-    .card{{background:white;padding:40px;border-radius:16px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.1);}}
-    button{{padding:12px 30px;font-size:18px;border:none;border-radius:8px;cursor:pointer;margin:10px;}}
-    .ok{{background:#10b981;color:white;}}.fail{{background:#ef4444;color:white;}}</style></head>
-    <body><div class="card"><h2>🧪 Тестовый платёж</h2>
-    <p>Заказ: {order_id}</p><p>Сумма: {amount} ₽</p>
-    <button class="ok" onclick="pay('success')">✅ Оплатить</button>
-    <button class="fail" onclick="pay('failed')">❌ Отмена</button>
-    </div><script>
-        async function pay(r){{
-        await fetch('/api/test-payment/confirm?order_id={order_id}&result='+r, {{method:'POST'}});
-        alert(r==='success'?'Оплачено!':'Отменено');
-    }}
-    </script></body></html>""")
-
-
-@router.post("/test-payment/confirm")
-async def confirm_test_payment(
-    order_id: str,
-    result: str = "success",
+@router.post("/test-booking")
+async def create_test_booking(
     db: AsyncSession = Depends(get_db)
 ):
-    booking_id = order_id.split("_")[0]
+    """Создать тестовое бронирование с имитацией оплаты"""
+    from datetime import date, time
+    import random
     
-    if result == "success":
-        await db.execute(
-            text("UPDATE bookings SET status = 'active' WHERE id = :id"),
-            {"id": int(booking_id)}
-        )
-        await db.commit()
-        return {"success": True, "message": "Оплата подтверждена"}
+    # Создаём бронь напрямую
+    result = await db.execute(
+        text("""
+            INSERT INTO bookings (boat_id, booking_date, start_time, duration_minutes, 
+                client_name, client_phone, client_email, status, total_price, prepayment_amount)
+            VALUES (:boat_id, :booking_date, :start_time, :duration, 
+                :client_name, :client_phone, :client_email, 'active', 1000, 150)
+            RETURNING id
+        """),
+        {
+            "boat_id": 18,
+            "booking_date": date.today(),
+            "start_time": time(random.randint(15, 21), 0),
+            "duration": 60,
+            "client_name": "Тест",
+            "client_phone": "+79999999999",
+            "client_email": "test@test.com"
+        }
+    )
+    booking_id = result.scalar()
+    await db.commit()
     
-    return {"success": False, "message": "Оплата отменена"}
+    # Экспорт в Google Calendar
+    from app.services.sync.google_calendar import google_service
+    try:
+        export_result = await google_service.export_booking(booking_id)
+        return {"success": True, "booking_id": booking_id, "export": export_result}
+    except Exception as e:
+        return {"success": True, "booking_id": booking_id, "export_error": str(e)}

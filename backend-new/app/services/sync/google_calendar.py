@@ -62,7 +62,13 @@ class GoogleCalendarService:
         """Удалить событие из Google Calendar"""
         async with AsyncSessionLocal() as db:
             cal_result = await db.execute(
-                text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE manager_id = :manager_id"),
+                text("""
+                    SELECT credentials, selected_calendar_id 
+                    FROM manager_calendar 
+                    WHERE (boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id))
+                       OR (boat_id IS NULL AND manager_id = :manager_id)
+                    LIMIT 1
+                """),
                 {"manager_id": manager_id}
             )
             cal_row = cal_result.fetchone()
@@ -99,6 +105,9 @@ class GoogleCalendarService:
                 return {"success": False, "error": str(e)}
     
     async def export_booking(self, booking_id: int) -> Dict:
+        import traceback
+        print(f"🔍 EXPORT BOOKING CALLED for {booking_id}", flush=True)
+        traceback.print_stack()        
         """Экспорт бронирования в Google Calendar"""
         async with AsyncSessionLocal() as db:
             booking_result = await db.execute(
@@ -119,7 +128,13 @@ class GoogleCalendarService:
             manager_id = booking[7]
             
             cal_result = await db.execute(
-                text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE manager_id = :manager_id"),
+                text("""
+                    SELECT credentials, selected_calendar_id 
+                    FROM manager_calendar 
+                    WHERE (boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id))
+                       OR (boat_id IS NULL AND manager_id = :manager_id)
+                    LIMIT 1
+                """),
                 {"manager_id": manager_id}
             )
             cal_row = cal_result.fetchone()
@@ -152,10 +167,12 @@ class GoogleCalendarService:
             
             event = {
                 "summary": f"🔒 🚤 {booking[6]} - {booking[4]}🔒",
-                "description": f"Клиент: {booking[4]}\nТелефон: {booking[5]}\nКатер: {booking[6]}\nДлительность: {booking[3]} мин\nID: {booking[0]}",
+                "description": f"Клиент: {booking[4]}\nТелефон: {booking[5]}\nКатер: {booking[6]}\nДлительность: {booking[3]} мин\nК выплате: {(booking[8] or 0) - (booking[9] or 0)} ₽\nID: {booking[0]}",
                 "start": {"dateTime": start_datetime.isoformat(), "timeZone": "Europe/Moscow"},
                 "end": {"dateTime": end_datetime.isoformat(), "timeZone": "Europe/Moscow"},
             }
+
+            print(f"🔍 CREATING GOOGLE EVENT for booking {booking_id}", flush=True)
             
             created_event = service.events().insert(calendarId=cal_row[1], body=event).execute()
             
@@ -656,173 +673,188 @@ def get_google_router() -> APIRouter:
         return {"success": True, "bookings": bookings}
 
     async def do_import_from_calendar(manager_id: int, days: int = 7):
+        print(f"🔍 IMPORT STARTED for manager {manager_id}", flush=True)
         """Внутренняя функция импорта из Google Calendar"""
         import re
         from app.api.availability import check_availability_internal
         
         async with AsyncSessionLocal() as db:
+            # Получаем ВСЕ календари менеджера
             cal_result = await db.execute(
-                text("SELECT credentials, selected_calendar_id, webhook_expiration FROM manager_calendar WHERE manager_id = :manager_id"),
-                {"manager_id": manager_id}
-            )
-            cal_row = cal_result.fetchone()
-            
-            if not cal_row or not cal_row[0] or not cal_row[1]:
-                print(f"❌ Calendar not connected for manager {manager_id}")
-                return {"success": False, "imported": 0}
-            
-            creds_data = json.loads(cal_row[0])
-            credentials = Credentials(
-                token=creds_data.get("token"),
-                refresh_token=creds_data.get("refresh_token"),
-                token_uri=creds_data.get("token_uri"),
-                client_id=creds_data.get("client_id"),
-                client_secret=creds_data.get("client_secret"),
-                scopes=creds_data.get("scopes")
-            )
-            
-            # === Проверка webhook и пересоздание при необходимости ===
-            webhook_expiration = cal_row[2]  # datetime или None
-            needs_new_webhook = False
-            
-            if not webhook_expiration:
-                needs_new_webhook = True
-                print(f"⚠️ No webhook expiration found, will recreate")
-            elif webhook_expiration < datetime.utcnow() + timedelta(hours=1):
-                needs_new_webhook = True
-                print(f"⚠️ Webhook expires soon ({webhook_expiration}), recreating...")
-            
-            if needs_new_webhook:
-                try:
-                    from app.services.google_webhook import webhook_service
-                    success = await webhook_service.create_channel(manager_id, creds_data)
-                    if success:
-                        print(f"✅ Webhook recreated for manager {manager_id}")
-                    else:
-                        print(f"⚠️ Failed to recreate webhook for manager {manager_id}")
-                except Exception as e:
-                    print(f"⚠️ Error recreating webhook: {e}")
-            # === Конец проверки webhook ===
-
-            if credentials.expired and credentials.refresh_token:
-                credentials.refresh(GoogleRequest())
-                await db.execute(
-                    text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
-                    {"creds": credentials.to_json(), "manager_id": manager_id}
-                )
-                await db.commit()
-            
-            service = build("calendar", "v3", credentials=credentials)
-            
-            now = datetime.utcnow()
-            time_min = now.isoformat() + "Z"
-            time_max = (now + timedelta(days=days)).isoformat() + "Z"
-            
-            events_result = service.events().list(
-                calendarId=cal_row[1],
-                timeMin=time_min,
-                timeMax=time_max,
-                maxResults=100,
-                singleEvents=True,
-                orderBy="startTime"
-            ).execute()
-            
-            events = events_result.get("items", [])
-            
-            boats_result = await db.execute(
-                text("SELECT id, name FROM boats WHERE manager_id = :manager_id"),
-                {"manager_id": manager_id}
-            )
-            boats = {boat[1].lower(): boat[0] for boat in boats_result.fetchall()}
-            
-            imported = 0
-            deleted_count = 0
-            
-            for event in events:
-                event_id = event.get("id")
-                summary = event.get("summary", "")
-                start = event.get("start", {}).get("dateTime")
-                end = event.get("end", {}).get("dateTime")
-                
-                if not start:
-                    continue
-                
-                # Проверяем и активные, и архив
-                existing = await db.execute(
-                    text("SELECT id FROM bookings WHERE google_event_id = :event_id UNION ALL SELECT id FROM bookings_archive WHERE google_event_id = :event_id"),
-                    {"event_id": event_id}
-                )
-                if existing.fetchone():
-                    continue
-                
-                start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
-                end_dt = datetime.fromisoformat(end.replace('Z', '+00:00')) if end else start_dt + timedelta(hours=1)
-                duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
-                
-                # Парсим название катера и клиента (ИСПРАВЛЕННЫЙ Regex)
-                boat_name = None
-                client_name = summary
-                match = re.search(r'(?:🔒\s+)?(?:🚤\s+)?([\w\s\-]+?)\s*-\s*(.+?)(?:\s*🔒)?$', summary)
-                if match:
-                    boat_name = match.group(1).strip()
-                    client_name = match.group(2).strip()
-                
-                boat_id = boats.get(boat_name.lower()) if boat_name else None
-                
-                if not boat_id:
-                    continue
-
-                # Проверяем, не создана ли уже клиентская бронь на это время
-                existing_client = await db.execute(
-                    text("SELECT id FROM bookings WHERE boat_id = :boat_id AND booking_date = :date AND start_time = :time AND source = 'client'"),
-                    {"boat_id": boat_id, "date": start_dt.date(), "time": start_dt.time()}
-                )
-                if existing_client.fetchone():
-                    continue
-
-                print(f"  📅 Importing: {summary} | Boat: {boat_name} | Time: {start_dt}")
-                
-                result = await db.execute(
-                    text("""
-                        INSERT INTO bookings (boat_id, booking_date, start_time, duration_minutes, 
-                                            client_name, status, source, google_event_id)
-                        VALUES (:boat_id, :date, :start_time, :duration, :client_name, 'active', 'google', :event_id)
-                        ON CONFLICT (google_event_id) DO NOTHING
-                    """),
-                    {
-                        "boat_id": boat_id,
-                        "date": start_dt.date(),
-                        "start_time": start_dt.time(),
-                        "duration": duration_minutes,
-                        "client_name": client_name or "Из Google Calendar",
-                        "event_id": event_id
-                    }
-                )
-                if result.rowcount > 0:
-                    imported += 1
-            
-            # === Сверка удалённых Google-броней ===
-            google_event_ids = {event.get("id") for event in events}
-            existing_google = await db.execute(
                 text("""
-                    SELECT b.id, b.google_event_id 
-                    FROM bookings b 
-                    JOIN boats bt ON b.boat_id = bt.id 
-                    WHERE bt.manager_id = :manager_id 
-                    AND b.google_event_id IS NOT NULL 
-                    AND b.source = 'google'
+                    SELECT credentials, selected_calendar_id, webhook_expiration, boat_id
+                    FROM manager_calendar 
+                    WHERE boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id)
+                       OR (boat_id IS NULL AND manager_id = :manager_id)
                 """),
                 {"manager_id": manager_id}
             )
+            cal_rows = cal_result.fetchall()
+            cal_rows = [row for row in cal_rows if row[1]]  # только с calendar_id
             
-            for row in existing_google.fetchall():
-                if row[1] not in google_event_ids:
-                    await db.execute(text("DELETE FROM bookings WHERE id = :id"), {"id": row[0]})
-                    deleted_count += 1
+            if not cal_rows:
+                print(f"❌ Calendar not connected for manager {manager_id}")
+                return {"success": False, "imported": 0}
+            
+            imported_total = 0
+            deleted_total = 0
+            
+            for cal_row in cal_rows:
+                creds_data = json.loads(cal_row[0])
+                calendar_id = cal_row[1]
+                webhook_expiration = cal_row[2]
+                boat_id = cal_row[3]
+                print(f"🔍 Processing calendar: {calendar_id} for boat {boat_id}", flush=True)                
+                
+                credentials = Credentials(
+                    token=creds_data.get("token"),
+                    refresh_token=creds_data.get("refresh_token"),
+                    token_uri=creds_data.get("token_uri"),
+                    client_id=creds_data.get("client_id"),
+                    client_secret=creds_data.get("client_secret"),
+                    scopes=creds_data.get("scopes")
+                )
+                
+                if credentials.expired and credentials.refresh_token:
+                    credentials.refresh(GoogleRequest())
+                    await db.execute(
+                        text("UPDATE manager_calendar SET credentials = :creds WHERE selected_calendar_id = :cid"),
+                        {"creds": credentials.to_json(), "cid": calendar_id}
+                    )
+                    await db.commit()
+                
+                service = build("calendar", "v3", credentials=credentials)
+                
+                now = datetime.utcnow()
+                time_min = now.isoformat() + "Z"
+                time_max = (now + timedelta(days=days)).isoformat() + "Z"
+                
+                events_result = service.events().list(
+                    calendarId=calendar_id,
+                    timeMin=time_min,
+                    timeMax=time_max,
+                    maxResults=100,
+                    singleEvents=True,
+                    orderBy="startTime"
+                ).execute()
+                print(f"🔍 GOOGLE EVENTS FOUND: {len(events_result.get('items', []))}", flush=True)
+                
+                events = events_result.get("items", [])
+                
+                # Словарь лодок менеджера
+                boats_result = await db.execute(
+                    text("SELECT id, name FROM boats WHERE manager_id = :manager_id"),
+                    {"manager_id": manager_id}
+                )
+                boats = {boat[1].lower(): boat[0] for boat in boats_result.fetchall()}
+                boat_id_parsed = None
+                
+                imported = 0
+                
+                for event in events:
+                    event_id = event.get("id")
+                    summary = event.get("summary", "")
+                    start = event.get("start", {}).get("dateTime")
+                    end = event.get("end", {}).get("dateTime")
+                    
+                    if not start:
+                        continue
+                    
+                    print(f"🔍 IMPORT EVENT: {summary} (id={event_id})", flush=True)
+                    
+                    # Пропускаем события созданные нашей системой
+                    if '🔒' in summary:
+                        continue
+                    
+                    # Проверяем, не импортировано ли уже
+                    existing = await db.execute(
+                        text("SELECT id FROM bookings WHERE google_event_id = :event_id UNION ALL SELECT id FROM bookings_archive WHERE google_event_id = :event_id"),
+                        {"event_id": event_id}
+                    )
+                    
+                    if existing.fetchone():
+                        print(f"🔍 SKIP: already exists {event_id}", flush=True)
+                        continue
+                    
+                    start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
+                    end_dt = datetime.fromisoformat(end.replace('Z', '+00:00')) if end else start_dt + timedelta(hours=1)
+                    duration_minutes = int((end_dt - start_dt).total_seconds() / 60)
+                    
+                    print(f"🔍 DEBUG boats dict: {boats}", flush=True)
+                    print(f"🔍 DEBUG boat_id from calendar: {boat_id}", flush=True)                    
+                    
+                    # Если календарь привязан к лодке — используем её ID
+                    if boat_id:
+                        boat_id_parsed = boat_id
+                        boat_name = next((name for name, bid in boats.items() if bid == boat_id), None) or f"Катер #{boat_id}"
+                        client_name = summary
+                    else:
+                        # Ищем название катера в тексте события
+                        boat_name = None
+                        client_name = summary
+                        summary_lower = summary.lower()
+                        for boat_name_lower, boat_id_val in boats.items():
+                            if boat_name_lower in summary_lower:
+                                boat_name = boat_name_lower
+                                boat_id_parsed = boat_id_val
+                                idx = summary_lower.find(boat_name_lower)
+                                client_name = summary[idx + len(boat_name_lower):].strip().lstrip('-').strip() or "Из Google Calendar"
+                                break
+                        else:
+                            boat_id_parsed = None
+                    
+                    # Проверяем, не создана ли уже бронь на это время
+                    existing_client = await db.execute(
+                        text("SELECT id FROM bookings WHERE boat_id = :boat_id AND booking_date = :date AND start_time = :time AND source = 'client'"),
+                        {"boat_id": boat_id_parsed, "date": start_dt.date(), "time": start_dt.time()}
+                    )
+                    if existing_client.fetchone():
+                        continue
+                    
+                    print(f"🔍 CREATING: boat_id={boat_id_parsed}, boat_name={boat_name}, calendar_id={calendar_id}", flush=True)                    
+                    print(f"  📅 Importing: {summary} | Boat: {boat_name} | Time: {start_dt}")
+                    
+                    result = await db.execute(
+                        text("""
+                            INSERT INTO bookings (boat_id, booking_date, start_time, duration_minutes, 
+                                                client_name, status, source, google_event_id)
+                            VALUES (:boat_id, :date, :start_time, :duration, :client_name, 'active', 'google', :event_id)
+                            ON CONFLICT (google_event_id) DO NOTHING
+                        """),
+                        {
+                            "boat_id": boat_id_parsed,
+                            "date": start_dt.date(),
+                            "start_time": start_dt.time(),
+                            "duration": duration_minutes,
+                            "client_name": client_name or "Из Google Calendar",
+                            "event_id": event_id
+                        }
+                    )
+                    if result.rowcount > 0:
+                        imported += 1
+
+                print(f"🔍 CHECKING DELETIONS for boat_id={boat_id}, calendar_id={calendar_id}", flush=True)                
+                
+                # Сверка удалённых Google-броней
+                google_event_ids = {event.get("id") for event in events}
+                existing_google = await db.execute(
+                    text("SELECT id, google_event_id FROM bookings WHERE boat_id = :boat_id AND source = 'google' AND google_event_id IS NOT NULL"),
+                    {"boat_id": boat_id}
+                )
+                for row in existing_google.fetchall():
+                    if row[1] not in google_event_ids:
+                        print(f"🔍 DELETING booking {row[0]} (google_event_id={row[1]})", flush=True)
+                        await db.execute(
+                            text("DELETE FROM bookings WHERE id = :id"),
+                            {"id": row[0]}
+                        )
+                        deleted_total += 1
+                
+                imported_total += imported
             
             await db.commit()
-            print(f"✅ Imported {imported} events, deleted {deleted_count} for manager {manager_id}")
-            return {"success": True, "imported": imported, "deleted": deleted_count}
+            print(f"✅ Imported {imported_total} events, deleted {deleted_total} for manager {manager_id}")
+            return {"success": True, "imported": imported_total, "deleted": deleted_total}
 
     # ========== Импорт из Google Calendar ==========
     @router.post("/import/{manager_id}")
@@ -831,7 +863,7 @@ def get_google_router() -> APIRouter:
         
         # Отправляем WebSocket уведомление
         from app.services.sync.websocket import ws_manager
-        await ws_manager.send_update(manager_id)
+        await ws_manager.send_update(manager_id, "bookings_updated")
         
         return result
 
@@ -839,118 +871,25 @@ def get_google_router() -> APIRouter:
     @router.post("/webhook")
     async def google_webhook(request: Request):
         headers = dict(request.headers)
-        
-        import logging
-        logging.warning(f"🔔 ALL HEADERS: {headers}")
-        
+        print(f"🔔 GOOGLE WEBHOOK RAW HEADERS: {headers}", flush=True)
         resource_id = headers.get('x-goog-resource-id')
         resource_state = headers.get('x-goog-resource-state')
-        channel_id_header = headers.get('x-goog-channel-id')
-        
-        # === Защита от лавины webhook (не чаще раза в 10 секунд) ===
-        now = time.time()
-        last_import_time = getattr(google_webhook, '_last_import_time', 0)
-        if resource_state == 'exists' and (now - last_import_time) < 10:
-            print(f"⏭️ Webhook skipped (rate limit): last import was {now - last_import_time:.1f}s ago")
-            return {"success": True, "skipped": True}
-        google_webhook._last_import_time = now
-        # === Конец защиты ===
-        
-        logging.warning(f"Webhook received: resource_id={resource_id}, state={resource_state}")
-        logging.warning(f"🔔 FULL WEBHOOK DATA: resource_state={resource_state}, resource_id={resource_id}, channel_id_header={channel_id_header}")
-        logging.warning(f"🔔 X-Goog-Resource-URI: {headers.get('x-goog-resource-uri')}")        
-        
-        # Подтверждение синхронизации (обязательно для активации вебхука)
-        if resource_state == 'sync':
-            logging.warning("✅ Webhook sync received, confirming...")
-            async with AsyncSessionLocal() as db:
-                result = await db.execute(
-                    text("SELECT webhook_channel_id FROM manager_calendar WHERE webhook_resource_id = :resource_id"),
-                    {"resource_id": resource_id}
-                )
-                row = result.fetchone()
-                channel_id = row[0] if row and row[0] else resource_id
-                logging.warning(f"✅ Webhook sync confirmed, channel_id={channel_id}")
-            
-            from fastapi.responses import JSONResponse
-            return JSONResponse(
-                content={"success": True},
-                headers={"X-Goog-Channel-Token": channel_id}
-            )
+        print(f"🔔 GOOGLE WEBHOOK: state={resource_state}, id={resource_id}", flush=True)
         
         if not resource_id:
             return {"success": True}
         
         async with AsyncSessionLocal() as db:
-            logging.warning(f"🔍 Searching for manager with resource_id={resource_id}")
             result = await db.execute(
-                text("SELECT manager_id FROM manager_calendar WHERE webhook_resource_id = :resource_id"),
-                {"resource_id": resource_id}
+                text("SELECT manager_id FROM manager_calendar WHERE webhook_resource_id = :rid"),
+                {"rid": resource_id}
             )
             row = result.fetchone()
-            logging.warning(f"🔍 Found row: {row}")
-            
-            if not row:
-                return {"success": True}
-            
-            manager_id = row[0]
-            
-            # Обработка удаления события
-            if resource_state == 'not_exists' and channel_id_header:
-                logging.warning(f"🗑 Webhook: event deleted, channel_id={channel_id_header}")
-                # Находим бронь по google_event_id
-                event_result = await db.execute(
-                    text("SELECT id, source, boat_id, booking_date, start_time, duration_minutes, client_name, google_event_id FROM bookings WHERE google_event_id = :event_id"),
-                    {"event_id": channel_id_header}
-                )
-                booking = event_result.fetchone()
-                
-                if booking:
-                    booking_id, source, boat_id, b_date, b_time, b_dur, b_client, b_gevent_id = booking
-                    
-                    if source == 'client':
-                        # Элегантное решение: восстанавливаем событие в Google Calendar
-                        logging.warning(f"🔄 Восстановление клиентской брони в Google Calendar...")
-                        
-                        # Находим название катера
-                        boat_result = await db.execute(
-                            text("SELECT name FROM boats WHERE id = :boat_id"),
-                            {"boat_id": boat_id}
-                        )
-                        boat_name = boat_result.scalar()
-                        
-                        # Получаем сервис Google
-                        from app.services.sync.google_calendar import google_service
-                        await google_service.export_booking(booking_id)
-                        
-                        # Отправляем уведомление
-                        from app.services.sync.websocket import ws_manager
-                        await ws_manager.send_update(manager_id)
-                        
-                    else:
-                        # Удаляем Google-бронь
-                        logging.warning(f"🗑 Deleting Google booking {booking_id}")
-                        # Переносим в архив
-                        await db.execute(text("INSERT INTO bookings_archive SELECT * FROM bookings WHERE id = :id"), {"id": booking_id})
-                        await db.execute(text("UPDATE bookings_archive SET status = 'cancelled_google' WHERE id = :id"), {"id": booking_id})
-                        await db.execute(text("DELETE FROM bookings WHERE id = :id"), {"id": booking_id})
-                        await db.commit()
-                        from app.services.sync.websocket import ws_manager
-                        await ws_manager.send_update(manager_id)
-                return {"success": True}
-
-            # Обработка изменения/создания
-            if resource_state == 'exists':
-                try:
-                    logging.warning(f"🔄 Webhook: starting import for manager {manager_id}")
-                    await do_import_from_calendar(manager_id, days=7)
-                    logging.warning(f"✅ Webhook: import completed for manager {manager_id}")
-                    from app.services.sync.websocket import ws_manager
-                    await ws_manager.send_update(manager_id)
-                except Exception as e:
-                    logging.error(f"❌ Webhook: import failed for manager {manager_id}: {e}")
-                    import traceback
-                    traceback.print_exc()
+            if row:
+                manager_id = row[0]
+                await do_import_from_calendar(manager_id, days=90)
+                from app.services.sync.websocket import ws_manager
+                await ws_manager.send_update(str(manager_id), "bookings_updated")
         
         return {"success": True}
 

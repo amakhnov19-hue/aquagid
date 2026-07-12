@@ -121,6 +121,21 @@ class SyncManager:
             if manager_id:
                 await self._ws_manager.send_update(manager_id)
 
+    async def handle_google_webhook(self, manager_id: int):
+        """Обработка webhook от Google Calendar"""
+        if not self.google_enabled:
+            return
+        
+        from app.services.sync.google_calendar import do_import_from_calendar
+        result = await do_import_from_calendar(manager_id, days=90)
+        
+        # Отправляем уведомление через WebSocket
+        if self.websocket_enabled:
+            from app.services.sync.websocket import ws_manager
+            await ws_manager.send_update(str(manager_id), "bookings_updated")
+        
+        return result    
+
 
 # Глобальный экземпляр
 sync_manager = SyncManager()

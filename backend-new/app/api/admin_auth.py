@@ -12,7 +12,7 @@ class AdminLoginResponse(BaseModel):
     token: str
     admin_id: int
 
-@router.post("/login", response_model=AdminLoginResponse)
+@router.post("/auth/login", response_model=AdminLoginResponse)
 async def admin_login(request: AdminLoginRequest):
     if request.username == "admin" and request.password == "admin123":
         token = create_access_token({"sub": "admin", "role": "admin"})

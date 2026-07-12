@@ -27,8 +27,9 @@ class NotificationCenter {
                 <div class="notif-center-body" id="notif-center-list">
                     ⏳ Загрузка...
                 </div>
-                <div class="notif-center-footer">
+                <div class="notif-center-footer" style="display:flex;gap:8px;">
                     <button id="notif-center-subscribe">🔔 Включить push-уведомления</button>
+                    <button id="notif-center-clear" style="background:#c62828;color:#fff;">🗑 Очистить все</button>
                 </div>
             </div>
         `;
@@ -36,6 +37,7 @@ class NotificationCenter {
 
         document.getElementById('notif-center-close').onclick = () => modal.remove();
         document.getElementById('notif-center-subscribe').onclick = () => this.subscribe();
+        document.getElementById('notif-center-clear').onclick = () => this.clearAll();
 
         await this.loadList();
     }
@@ -71,6 +73,19 @@ class NotificationCenter {
             subBtn.style.background = subbed ? '#10b981' : '#0066CC';
         } catch(e) {
             list.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Ошибка загрузки</div>';
+        }
+    }
+
+    async clearAll() {
+        if (!confirm('Удалить ВСЕ уведомления?')) return;
+        await fetch(`/api/notifications?user_type=${this.userType}&user_id=${this.userId}`, { method: 'DELETE' });
+        this.loadList();
+        this.updateBadge();
+        // Обновляем клиентский badge
+        const clientBadge = document.getElementById('client-notif-badge');
+        if (clientBadge) {
+            clientBadge.textContent = '0';
+            clientBadge.style.display = 'none';
         }
     }
 

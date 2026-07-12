@@ -47,7 +47,14 @@ async function loadView(view) {
             await new PaymentSettings(content).render();
             break;
         case 'diagnostics':
-            content.innerHTML = '<div class="card"><h2>🩺 Диагностика</h2><div id="diag-content">⏳ Проверка...</div></div>';
+            content.innerHTML = `
+                <div class="card">
+                    <h2>🩺 Диагностика</h2>
+                    <div id="diag-checks" style="margin-top:16px;font-size:15px;">⏳ Проверка...</div>
+                    <div style="margin-top:16px;">
+                        <button onclick="loadDiagnostics()" style="padding:8px 16px;background:#0066CC;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 Проверить</button>
+                    </div>
+                </div>`;
             loadDiagnostics();
             break;
         case 'documents':
@@ -114,18 +121,15 @@ async function renderDashboard(container) {
 
 
 async function loadDiagnostics() {
-    const el = document.getElementById('diag-content');
+    const el = document.getElementById('diag-checks');
     if (!el) return;
+    el.innerHTML = '⏳ Проверка...';
     try {
         const resp = await fetch('/api/admin/diagnostics');
         const data = await resp.json();
-        el.innerHTML = `
-            <div style="margin-top:16px;">
-                ${data.checks.map(c => `<div style="padding:8px 0;font-size:15px;">${c.ok ? '🟢' : '🔴'} ${c.name}: ${c.message}</div>`).join('')}
-            </div>
-            <button onclick="loadDiagnostics()" style="margin-top:16px;padding:8px 16px;background:#0066CC;color:#fff;border:none;border-radius:8px;cursor:pointer;">🔄 Проверить</button>
-            <button onclick="restartBackendDiag()" style="margin-top:16px;padding:8px 16px;background:#dc3545;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-left:8px;">🔁 Перезапустить бэкенд</button>
-        `;
+        el.innerHTML = data.checks.map(c => 
+            `<div style="padding:8px 0;">${c.ok ? '🟢' : '🔴'} ${c.name}: ${c.message}</div>`
+        ).join('');
     } catch(e) {
         el.innerHTML = '🔴 Ошибка проверки';
     }

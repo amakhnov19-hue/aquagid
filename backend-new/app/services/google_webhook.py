@@ -50,7 +50,7 @@ class GoogleWebhookService:
         channel = {
             "id": channel_id,
             "type": "web_hook",
-            "address": f"{os.getenv('BASE_URL', 'https://manager.experimental.24aquabooking.ru')}/api/sync/google/webhook",
+            "address": f"{os.getenv('BASE_URL', 'https://manager.24aquabooking.ru')}/api/sync/google/webhook",
             "params": {
                 "ttl": "86400"
             },
@@ -90,6 +90,70 @@ class GoogleWebhookService:
         except Exception as e:
             print(f"Error creating webhook channel for manager {manager_id}: {e}")
             return False
+
+    async def create_channel_for_boat(self, boat_id: int):
+        """Создать канал уведомлений для календаря лодки"""
+        import json
+        from sqlalchemy import text
+        from app.core.database import AsyncSessionLocal
+        
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE boat_id = :bid"),
+                {"bid": boat_id}
+            )
+            row = result.fetchone()
+            if not row or not row[0] or not row[1]:
+                print(f"❌ No calendar for boat {boat_id}")
+                return False
+            
+            creds_data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+            calendar_id = row[1]
+            
+            credentials = Credentials(
+                token=creds_data.get("token"),
+                refresh_token=creds_data.get("refresh_token"),
+                token_uri=creds_data.get("token_uri"),
+                client_id=creds_data.get("client_id"),
+                client_secret=creds_data.get("client_secret"),
+                scopes=creds_data.get("scopes")
+            )
+            
+            if credentials.expired and credentials.refresh_token:
+                credentials.refresh(GoogleRequest())
+            
+            service = build("calendar", "v3", credentials=credentials)
+            
+            channel_id = f"channel_boat_{boat_id}_{uuid.uuid4().hex[:8]}"
+            body = {
+                "id": channel_id,
+                "type": "web_hook",
+                "address": f"{os.getenv('BASE_URL', 'https://manager.24aquabooking.ru')}/api/sync/google/webhook",
+                "params": {"ttl": "86400"}
+            }
+            
+            watch = service.events().watch(calendarId=calendar_id, body=body).execute()
+            resource_id = watch.get("resourceId")
+            expiration = watch.get("expiration")
+            
+            await db.execute(
+                text("""
+                    UPDATE manager_calendar 
+                    SET webhook_channel_id = :channel_id,
+                        webhook_resource_id = :resource_id,
+                        webhook_expiration = :expiration
+                    WHERE boat_id = :boat_id
+                """),
+                {
+                    "channel_id": channel_id,
+                    "resource_id": resource_id,
+                    "expiration": datetime.fromtimestamp(int(expiration)/1000) if expiration else None,
+                    "boat_id": boat_id
+                }
+            )
+            await db.commit()
+            print(f"✅ Webhook created for boat {boat_id}: {resource_id}")
+            return True    
 
 # Глобальный экземпляр
 webhook_service = GoogleWebhookService()

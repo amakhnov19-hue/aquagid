@@ -22,15 +22,15 @@ def check_disk():
 def check_memory():
     """Проверка памяти"""
     try:
-        result = subprocess.run(["free", "-m"], capture_output=True, text=True)
-        lines = result.stdout.split("\n")
-        mem_line = [l for l in lines if "Mem:" in l][0].split()
-        total = int(mem_line[1])
-        used = int(mem_line[2])
+        with open('/proc/meminfo', 'r') as f:
+            lines = f.readlines()
+        total = int([l for l in lines if 'MemTotal' in l][0].split()[1])
+        available = int([l for l in lines if 'MemAvailable' in l][0].split()[1])
+        used = total - available
         used_percent = (used / total) * 100
         return {
             "ok": used_percent < 90,
-            "message": f"Использовано {used_percent:.0f}% ({used} МБ из {total} МБ)"
+            "message": f"Использовано {used_percent:.0f}% ({used//1024} МБ из {total//1024} МБ)"
         }
     except:
         return {"ok": False, "message": "Ошибка проверки памяти"}
@@ -39,8 +39,12 @@ def check_memory():
 def check_port(port):
     """Проверка что порт слушается"""
     try:
-        result = subprocess.run(["ss", "-tlnp"], capture_output=True, text=True)
-        return str(port) in result.stdout
+        import socket
+        s = socket.socket()
+        s.settimeout(2)
+        s.connect(('127.0.0.1', port))
+        s.close()
+        return True
     except:
         return False
 
@@ -61,12 +65,3 @@ async def diagnostics():
             {"name": "Память", "ok": memory["ok"], "message": memory["message"]},
         ]
     }
-
-
-@router.post("/restart-backend")
-async def restart_backend():
-    try:
-        subprocess.run(["sudo", "systemctl", "restart", "aquagid-prod"], capture_output=True)
-        return {"success": True, "message": "✅ Продакшен перезапущен"}
-    except:
-        return {"success": False, "message": "Ошибка перезапуска"}

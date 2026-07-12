@@ -216,17 +216,17 @@ async def delete_notification(notif_id: int, db: AsyncSession = Depends(get_db))
     await db.commit()
     return {"success": True}
 
-@router.delete("/notifications/clear")
+@router.delete("/notifications")
 async def clear_notifications(
     user_type: str,
     user_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Удалить все уведомления пользователя"""
+    """Очистить все уведомления пользователя"""
     await db.execute(
         text("DELETE FROM push_notifications WHERE user_type = :ut AND user_id = :uid"),
         {"ut": user_type, "uid": user_id}
     )
     await db.commit()
-    return {"success": True}
+    return {"success": True, "message": "Уведомления очищены"}
 

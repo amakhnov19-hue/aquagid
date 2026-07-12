@@ -149,78 +149,10 @@
             container.innerHTML = this.renderSettings();
             this.updateFormFields();
             
-            // Рендерим Google Calendar прямо здесь
+                        // Google Calendar теперь подключается через карточку катера
             const googleContainer = document.getElementById('google-calendar-settings');
             if (googleContainer) {
-                googleContainer.innerHTML = this.renderGoogleCalendar();
-            }
-
-            // Проверяем, вернулись ли мы после подключения календаря
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('calendar_connected') === 'true') {
-                console.log('🔄 Обнаружен параметр calendar_connected=true, загружаем статус...');
-                
-                // Убираем параметр из URL сразу, чтобы не мешал при перезагрузке
-                const newUrl = window.location.pathname + '?section=settings';
-                window.history.replaceState({}, document.title, newUrl);
-                
-                // Принудительно устанавливаем флаг и загружаем календари
-                this.googleCalendar.connected = true;
-                
-                // Загружаем статус и календари
-                const managerId = window.managerId;
-                if (managerId) {
-                    const token = localStorage.getItem('access_token') || localStorage.getItem('token');
-                    
-                    // Сначала получаем статус
-                    fetch(`/api/sync/google/status/${managerId}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    })
-                    .then(r => r.json())
-                    .then(async (statusData) => {
-                        console.log('📅 Статус календаря после OAuth:', statusData);
-                        this.googleCalendar.connected = statusData.connected;
-                        this.googleCalendar.selectedCalendarId = statusData.calendar_id;
-                        
-                        // Затем загружаем список календарей
-                        if (statusData.connected) {
-                            const calResponse = await fetch(`/api/sync/google/calendars/${managerId}`, {
-                                headers: { 'Authorization': `Bearer ${token}` }
-                            });
-                            const calData = await calResponse.json();
-                            console.log('📋 Список календарей получен:', calData);
-                            
-                            this.googleCalendar.calendars = calData.calendars || [];
-                            
-                            // Если календари загрузились, но selectedCalendarId не установлен
-                            if (!this.googleCalendar.selectedCalendarId && this.googleCalendar.calendars.length > 0) {
-                                // Ищем primary календарь
-                                const primaryCal = this.googleCalendar.calendars.find(cal => cal.primary);
-                                if (primaryCal) {
-                                    this.googleCalendar.selectedCalendarId = primaryCal.id;
-                                    // Сохраняем выбор на бэкенде
-                                    await fetch(`/api/sync/google/select/${managerId}?calendar_id=${primaryCal.id}`, {
-                                        method: 'POST',
-                                        headers: { 'Authorization': `Bearer ${token}` }
-                                    });
-                                    console.log('✅ Автоматически выбран primary календарь:', primaryCal.id);
-                                }
-                            }
-                            
-                            // Перерисовываем интерфейс
-                            this.render();
-
-                            // Принудительно обновляем дашборд
-                            if (window.AquaGid?.ManagerDashboard) {
-                                console.log('🔄 Принудительно обновляем дашборд');
-                                await window.AquaGid.ManagerDashboard.loadDashboardData();
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('❌ Ошибка загрузки статуса после OAuth:', error);
-                    });
-                }
+                googleContainer.innerHTML = '<p style="color:#888;padding:10px;">Google Calendar подключается в карточке катера. Откройте раздел "Катера", выберите катер и нажмите "Подключить Google Calendar".</p>';
             }
         }
 
@@ -301,11 +233,6 @@
                         </div>
                     </div>
                     
-                    <div class="settings-card">
-                        <h2>📅 Google Calendar</h2>
-                        <div id="google-calendar-settings"></div>
-                    </div>
-
                     <div class="settings-card">
                         <h2>🔔 Telegram-уведомления</h2>
                         <p style="color:#6b7280;font-size:13px;margin-bottom:8px;">

@@ -37,3 +37,5 @@ class Manager(Base):
     referral_code = Column(String(50), unique=True, nullable=True)
     referral_discount_percent = Column(Integer, default=10)
     referral_mode = Column(String(20), default='all_boats')  # 'own_only' или 'all_boats'
+    
+    payment_account_id = Column(Integer, nullable=True)

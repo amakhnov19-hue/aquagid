@@ -249,6 +249,7 @@
                             <span class="panel-title">Уведомления</span>
                             ${realUnreadCount > 0 ? `<span style="position: absolute; top: -4px; right: -4px; background: #4caf50; color: white; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">${realUnreadCount}</span>` : ''}
                         </div>
+                        <button onclick="event.stopPropagation(); fetch('/api/notifications?user_type=manager&user_id=' + window.managerId, {method:'DELETE'}).then(() => location.reload())" style="margin-top:8px;padding:6px 12px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">🗑 Очистить все</button>
                     </div>
                     
                     <!-- Панель Бронирования -->

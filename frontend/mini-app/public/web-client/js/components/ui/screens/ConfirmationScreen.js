@@ -417,13 +417,15 @@ class ConfirmationScreen extends ScreenBase {
         const amountKopecks = Math.round(amount * 100);
         
         try {
+            if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'booking_confirm');
             const resp = await fetch('/api/create-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     booking_id: parseInt(bookingId),
                     amount: amountKopecks,
-                    description: `Бронирование катера #${bookingId}`
+                    description: `Бронирование катера #${bookingId}`,
+                    client_email: localStorage.getItem('clientEmail') || ''
                 })
             });
             const data = await resp.json();

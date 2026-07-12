@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" href="/shared/favicon.png">    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Мгновенная аренда катеров | Без звонков</title>
     <style>
@@ -113,6 +114,7 @@
         <p>🕒 Ежедневно с 09:00 до 24:00</p>
         <p>По вопросам бронирования:</p>
         <p class="email"><a href="mailto:bronirovania.servis@yandex.ru" style="color:#FF8C00;text-decoration:underline;">bronirovania.servis@yandex.ru</a></p>
+        <a href="tel:+79523621201" onclick="if(typeof ym!=='undefined') ym(109409407,'reachGoal','support_call');" style="color:#aaa;text-decoration:none;">+7 952 362-12-01</a> | <a href="tel:+79022023435" onclick="if(typeof ym!=='undefined') ym(109409407,'reachGoal','support_call');" style="color:#aaa;text-decoration:none;">+7 902 202-34-35</a>
     </div>
 </div>
 
@@ -126,6 +128,7 @@
     let carouselTimer = null;
 
     function goToApp(mode) {
+        if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'app_open');
         if (mode === 'welcome') {
             window.location.href = APP_URL;
         } else {

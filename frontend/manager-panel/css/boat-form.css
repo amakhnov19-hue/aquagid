@@ -412,6 +412,10 @@ textarea.form-control {
     content: none;
 }
 
+.form-group.calendar-group label::before {
+    content: none;
+}
+
 .form-group.half input[type="checkbox"] {
     width: 18px;
     height: 18px;

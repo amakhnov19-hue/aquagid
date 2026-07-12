@@ -24,7 +24,7 @@ function isAuthenticated() {
 }
 
 async function login(username, password, remember) {
-    const response = await fetch('/api/admin/login', {
+    const response = await fetch('/api/admin/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })

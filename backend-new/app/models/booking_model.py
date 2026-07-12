@@ -47,3 +47,4 @@ class Booking(Base):
     ref_code = Column(String(50), nullable=True)
     google_event_id = Column(String(255), nullable=True)
     viewed_at = Column(DateTime, nullable=True)
+    boat = None  # Вычисляемое поле

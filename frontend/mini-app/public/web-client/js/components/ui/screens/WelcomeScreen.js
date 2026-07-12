@@ -48,7 +48,7 @@ class WelcomeScreen extends ScreenBase {
         const html = `
             <div class="screen welcome-screen">
                 <div class="container">
-                    <h1>🚤 Аква Гид СПб</h1>
+                    <h1>Сервис мгновенного бронирования</h1>
                     <p style="text-align: center; margin-bottom: 25px; color: #666">
                         Прогулки на катерах по рекам и каналам Санкт-Петербурга
                     </p>
@@ -123,6 +123,7 @@ class WelcomeScreen extends ScreenBase {
     }
 
     async loadClientNotifications() {
+        console.log('🔔 loadClientNotifications START');        
         const phone = localStorage.getItem('clientPhone');
         if (!phone) return;
         
@@ -163,6 +164,7 @@ class WelcomeScreen extends ScreenBase {
                     <button onclick="AquaGid.UnifiedScreens.welcomeScreen.toggleHistoryClient(); event.stopPropagation();" style="flex: 1; min-width: 0; padding: 6px 8px; background: #555; color: #ddd; border: 1px solid #777; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: normal; line-height: 1.2; text-align: center;">${showingHistory ? '🆕 Новые' : '📋 История'}</button>
                     <button onclick="AquaGid.UnifiedScreens.welcomeScreen.clearHistoryClient(); event.stopPropagation();" style="flex: 1; min-width: 0; padding: 6px 8px; background: #5c2020; color: #f99; border: 1px solid #944; border-radius: 6px; cursor: pointer; font-size: 12px; white-space: normal; line-height: 1.2; text-align: center;">🗑️ Очистить историю</button>
                 </div>
+                <button onclick="event.stopPropagation(); AquaGid.UnifiedScreens.welcomeScreen.clearAllNotifications();" style="width:100%;padding:8px;background:#c62828;color:#fff;border:none;border-radius:6px;margin-bottom:8px;cursor:pointer;font-size:13px;">🗑 Очистить все уведомления</button>                
                 <div id="client-notif-content">
                     ${items.length === 0 
                         ? '<div style="color: #999; padding: 8px 0;">' + (showingHistory ? 'История пуста' : 'Нет новых уведомлений') + '</div>'
@@ -229,6 +231,16 @@ class WelcomeScreen extends ScreenBase {
             setTimeout(() => this.toggleClientNotifications(), 50);
         }
     }
+
+    async clearAllNotifications() {
+        if (!confirm('Удалить ВСЕ уведомления?')) return;
+        const phone = localStorage.getItem('clientPhone');
+        if (!phone) return;
+        await fetch(`/api/notifications?user_type=client&user_id=${phone}`, { method: 'DELETE' });
+        this.clientNotifications = [];
+        this.toggleClientNotifications();
+        setTimeout(() => this.toggleClientNotifications(), 50);
+    }    
     
     async clearHistoryClient() {
         if (!confirm('Удалить все прочитанные уведомления?')) return;
