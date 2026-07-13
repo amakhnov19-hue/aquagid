@@ -772,6 +772,17 @@ def get_google_router() -> APIRouter:
                         {"creds": credentials.to_json(), "cid": calendar_id}
                     )
                     await db.commit()
+
+                
+                # Проверяем webhook — пересоздаём если просрочен
+                from datetime import datetime as dt
+                if not webhook_expiration or webhook_expiration < dt.now():
+                    try:
+                        from app.services.google_webhook import webhook_service
+                        await webhook_service.create_channel_for_boat(boat_id)
+                        print(f"🔄 Webhook пересоздан для boat {boat_id}")
+                    except Exception as e:
+                        print(f"⚠️ Ошибка пересоздания webhook: {e}")                
                 
                 service = build("calendar", "v3", credentials=credentials)
                 
