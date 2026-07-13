@@ -850,8 +850,9 @@ def get_google_router() -> APIRouter:
                         print(f"⚠️ Катер не найден для календаря '{calendar_name}'")
                         continue
                     
-                    # Имя клиента — название события целиком
-                    client_name = summary.strip() or "Из Google Calendar"
+                    # Берём только первую строку названия события (до 100 символов)
+                    raw_name = summary.strip().split('\n')[0].strip() or "Из Google Calendar"
+                    client_name = raw_name[:100]
                     
                     # Проверяем, не создана ли уже бронь на это время
                     existing_client = await db.execute(
