@@ -25,6 +25,7 @@ class Boat(Base):
     captain_name = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=func.now())
     deleted_at = Column(DateTime, nullable=True)
+    is_test = Column(Boolean, default=False)
     
     # Новые поля для краткой карточки
     has_canopy = Column(Boolean, default=False)

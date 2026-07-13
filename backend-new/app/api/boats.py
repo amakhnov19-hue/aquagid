@@ -169,7 +169,8 @@ async def get_client_boats(
         joinedload(BoatModel.photos)
     ).where(
         BoatModel.is_active == True,
-        BoatModel.deleted_at == None
+        BoatModel.deleted_at == None,
+        BoatModel.is_test == False
     )
     
     # Фильтрация по реферальному режиму
