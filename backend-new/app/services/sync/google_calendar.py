@@ -128,7 +128,7 @@ class GoogleCalendarService:
             booking_result = await db.execute(
                 text("""
                     SELECT b.id, b.booking_date, b.start_time, b.duration_minutes, 
-                           b.client_name, b.client_phone, bt.name as boat_name, bt.manager_id
+                           b.client_name, b.client_phone, bt.name as boat_name, bt.manager_id, b.boat_id
                     FROM bookings b
                     JOIN boats bt ON b.boat_id = bt.id
                     WHERE b.id = :booking_id
@@ -141,16 +141,16 @@ class GoogleCalendarService:
                 return {"success": False, "message": "Booking not found"}
             
             manager_id = booking[7]
+            boat_id = booking[8]
             
             cal_result = await db.execute(
                 text("""
                     SELECT credentials, selected_calendar_id 
                     FROM manager_calendar 
-                    WHERE (boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id))
-                       OR (boat_id IS NULL AND manager_id = :manager_id)
+                    WHERE boat_id = :boat_id
                     LIMIT 1
                 """),
-                {"manager_id": manager_id}
+                {"boat_id": boat_id}
             )
             cal_row = cal_result.fetchone()
             
