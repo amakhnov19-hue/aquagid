@@ -117,6 +117,7 @@ class ManagerBookings {
                 requiresReplacement: false,
                 viewed_at: b.viewed_at,
                 cancellation_requested: b.cancellation_requested,
+                is_breakdown: b.is_breakdown || false,
                 created_at: b.created_at,
             }));
 
@@ -403,16 +404,15 @@ class ManagerBookings {
                 ? `onclick="if(confirm('Удалить эту бронь из AquaGid?')) AquaGid.ManagerBookings.confirmDeleteGoogle(${b.id})"` 
                 : ((isActive && isClient) ? `onclick="AquaGid.ManagerBookings.handleRowClick(${b.id})"` : '');
             
-            // Подсветка только для клиентских
+            // Подсветка броней
             let backgroundColor = '';
-            if (isClient) {
-                if (b.cancellation_requested) {
-                    backgroundColor = '#fff3e0';  // запрошена отмена — приоритет
-                } else if (!b.viewed_at) {
-                    backgroundColor = '#e8f5e9';  // новая, не просмотрена
-                } else if (b.boat?.is_breakdown) {
-                    backgroundColor = '#f3e5f5';  // сломанный катер — фиолетовый
-                }
+            if (b.is_breakdown) console.log('🔍 BREAKDOWN booking:', b.id, b.boat_name, b.source);            
+            if (b.cancellation_requested) {
+                backgroundColor = '#fff3e0';  // запрошена отмена — приоритет
+            } else if (b.is_breakdown) {
+                backgroundColor = '#f3e5f5';  // сломанный катер — фиолетовый (все брони)
+            } else if (isClient && !b.viewed_at) {
+                backgroundColor = '#e8f5e9';  // новая клиентская, не просмотрена
             }
             
             const rowBackground = backgroundColor ? `background-color: ${backgroundColor};` : '';

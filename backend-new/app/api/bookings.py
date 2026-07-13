@@ -117,6 +117,10 @@ async def create_booking(
     print(f"🔍 DEBUG CALC: price_per_hour={price_per_hour}, hours={hours}, prepayment_percent={prepayment_percent}, referral_discount={referral_discount_percent}", flush=True)
     
     result = calculate(price_per_hour, hours, prepayment_percent, referral_discount_percent)
+
+    # Для тестовых катеров — сразу active, без оплаты
+    if boat.is_test:
+        booking.status = "active"
     
     # Создаем бронирование
     db_booking = BookingModel(
@@ -230,14 +234,15 @@ async def get_bookings(
     boat_ids = list(set(b.boat_id for b in bookings))
     if boat_ids:
         boats_res = await db.execute(
-            text("SELECT id, name FROM boats WHERE id = ANY(:ids)"),
+            text("SELECT id, name, is_breakdown FROM boats WHERE id = ANY(:ids)"),
             {"ids": boat_ids}
         )
-        boat_names = {row[0]: row[1] for row in boats_res.fetchall()}
+        boat_info = {row[0]: {"name": row[1], "is_breakdown": row[2]} for row in boats_res.fetchall()}
     else:
-        boat_names = {}
+        boat_info = {}
     for b in bookings:
-        b.boat_name = boat_names.get(b.boat_id, f"Катер #{b.boat_id}")
+        b.boat_name = boat_info.get(b.boat_id, {}).get("name", f"Катер #{b.boat_id}")
+        b.is_breakdown = boat_info.get(b.boat_id, {}).get("is_breakdown", False)
     return bookings
 
 @router.get("/stats")

@@ -968,4 +968,40 @@ def get_google_router() -> APIRouter:
         await db.commit()
         return {"success": True, "message": "Calendar disconnected"}
 
+
+    @router.post("/refresh-all/{manager_id}")
+    async def refresh_all_calendars(manager_id: int, db: AsyncSession = Depends(get_db)):
+        """Обновить все календари менеджера: пересоздать webhook и импортировать"""
+        result = await db.execute(
+            text("""
+                SELECT boat_id, calendar_name, selected_calendar_id 
+                FROM manager_calendar 
+                WHERE manager_id = :mid AND selected_calendar_id IS NOT NULL
+            """),
+            {"mid": manager_id}
+        )
+        calendars = result.fetchall()
+        
+        refreshed = []
+        errors = []
+        
+        for cal in calendars:
+            boat_id, cal_name, cal_id = cal
+            try:
+                from app.services.google_webhook import webhook_service
+                await webhook_service.create_channel_for_boat(boat_id)
+                refreshed.append({"boat_id": boat_id, "name": cal_name, "status": "ok"})
+            except Exception as e:
+                errors.append({"boat_id": boat_id, "name": cal_name, "error": str(e)})
+        
+        # Запускаем импорт
+        import_result = await do_import_from_calendar(manager_id, days=90)
+        
+        return {
+            "success": True,
+            "refreshed": refreshed,
+            "errors": errors,
+            "imported": import_result.get("imported", 0)
+        }    
+
     return router

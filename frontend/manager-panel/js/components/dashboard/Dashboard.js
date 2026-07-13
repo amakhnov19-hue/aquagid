@@ -177,6 +177,32 @@
             }
         }
 
+        async refreshAllCalendars() {
+            const managerId = window.managerId || localStorage.getItem('managerId');
+            try {
+                const resp = await fetch(`/api/sync/google/refresh-all/${managerId}`, { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    alert(`✅ Календари обновлены!\nОбновлено: ${data.refreshed.length}\nИмпортировано броней: ${data.imported}`);
+                    await this.loadCalendarStatus();
+                }
+            } catch(e) {
+                alert('❌ Ошибка обновления календарей');
+            }
+        }
+
+        renderCalendarList() {
+            if (!this.calendarList || this.calendarList.length === 0) {
+                return '<div style="padding:8px;color:#9ca3af;font-size:13px;">Нет подключенных календарей</div>';
+            }
+            return this.calendarList.map(c => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;font-size:13px;">
+                    <span>🚤 ${c.name || 'Катер #' + c.boat_id}</span>
+                    <span style="color:${c.connected ? '#10b981' : '#ef4444'};font-weight:500;">${c.connected ? 'подключен' : 'отключен'}</span>
+                </div>
+            `).join('');
+        }        
+
         async loadCalendarStatus() {
             const managerId = window.managerId;
             if (!managerId) return;
@@ -184,40 +210,35 @@
             const token = localStorage.getItem('access_token') || localStorage.getItem('token');
             
             try {
-                // Получаем статус календаря
-                const statusResponse = await fetch(`/api/sync/google/status/${managerId}`, {
+                // Получаем список всех календарей лодок
+                const boatsResp = await fetch(`/api/boats?manager_id=${managerId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
-                const statusData = await statusResponse.json();
+                const boats = await boatsResp.json();
                 
-                console.log('📅 Dashboard: статус календаря:', statusData);
-                
-                this.calendarConnected = statusData.connected === true && statusData.calendar_id !== null;
-                this.calendarId = statusData.calendar_id;
-                this.calendarName = null;
-                
-                // Если календарь подключен, получаем его название
-                if (this.calendarConnected && this.calendarId) {
+                // Загружаем статус для каждого катера
+                this.calendarList = [];
+                for (const boat of boats) {
                     try {
-                        const calResponse = await fetch(`/api/sync/google/calendars/${managerId}`, {
+                        const calResp = await fetch(`/api/boat-calendars/calendars/${boat.id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
-                        const calData = await calResponse.json();
-                        
-                        // Ищем выбранный календарь в списке
-                        const selectedCalendar = calData.calendars?.find(cal => cal.id === this.calendarId);
-                        if (selectedCalendar) {
-                            this.calendarName = selectedCalendar.summary || selectedCalendar.name || 'Календарь';
-                        } else {
-                            this.calendarName = this.calendarId; // fallback
-                        }
-                    } catch (error) {
-                        console.error('❌ Ошибка загрузки названия календаря:', error);
-                        this.calendarName = this.calendarId;
+                        const calData = await calResp.json();
+                        this.calendarList.push({
+                            boat_id: boat.id,
+                            name: boat.name,
+                            connected: calData.calendars && calData.calendars.length > 0
+                        });
+                    } catch(e) {
+                        this.calendarList.push({
+                            boat_id: boat.id,
+                            name: boat.name,
+                            connected: false
+                        });
                     }
                 }
                 
-                console.log('📅 Dashboard: calendarConnected =', this.calendarConnected, 'calendarName =', this.calendarName);
+                this.calendarConnected = this.calendarList.some(c => c.connected);
                 
                 this.render();
             } catch (error) {
@@ -300,23 +321,18 @@
                     </div>
                     
                     <!-- Статус Google Calendar -->
-                    <div class="dashboard-panel calendar-panel" onclick="AquaGid.ManagerApp.switchSection('settings')">
+                    <div class="dashboard-panel calendar-panel">
                         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="panel-icon">📅</span>
-                                <span class="panel-title">Google Календарь${this.calendarConnected && this.calendarName ? ': ' + this.calendarName : ''}</span>
+                                <span class="panel-title">Google Календари</span>
                             </div>
-                            <span class="calendar-status-badge ${this.calendarConnected ? 'connected' : 'disconnected'}">
-                                ${this.calendarConnected ? 'подключен ✅' : '❌'}
-                            </span>
                         </div>
-                        ${!this.calendarConnected ? `
-                            <div class="calendar-info">
-                                <span>Подключите для авто-экспорта броней</span>
-                            </div>
-                        ` : ''}
-                        <div class="panel-footer">
-                            <span>⚙️ ${this.calendarConnected ? 'Настройки календаря' : 'Подключить календарь'} →</span>
+                        <div id="calendarList" style="padding:8px 0;">
+                            ${this.renderCalendarList()}
+                        </div>
+                        <div class="panel-footer" onclick="event.stopPropagation(); AquaGid.Dashboard.refreshAllCalendars()" style="cursor: pointer;">
+                            <span>🔄 Обновить календари →</span>
                         </div>
                     </div>
                     <div style="text-align:center;margin-top:16px;">
