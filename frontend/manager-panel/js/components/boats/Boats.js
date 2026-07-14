@@ -501,11 +501,48 @@
             const boat = this.boats.find(b => b.id === boatId);
             if (!boat) return;
             
+            if (boat.is_breakdown) {
+                // Снимаем поломку
+                if (!confirm('✅ Устранить поломку? Катер станет доступен.')) return;
+                await this.setBreakdown(boatId, 'end');
+                return;
+            }
+            
+            // Показываем модалку с датами
+            const now = new Date();
+            // Корректируем на московское время (UTC+3)
+            const msk = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+            const nowStr = msk.toISOString().slice(0, 16);
+            const weekMsk = new Date(msk.getTime() + 7*24*60*60*1000);
+            const weekStr = weekMsk.toISOString().slice(0, 16);
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:400px;">
+                    <h3>🔧 Поломка катера "${boat.name}"</h3>
+                    <label>Начало ремонта:</label>
+                    <input type="datetime-local" id="breakdown-start" value="${nowStr}" style="width:100%;margin:8px 0;padding:8px;">
+                    <label>Окончание (необязательно):</label>
+                    <input type="datetime-local" id="breakdown-end" value="${weekStr}" style="width:100%;margin:8px 0;padding:8px;">
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button id="btn-breakdown-confirm" style="flex:1;background:#9c27b0;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;">🔧 Подтвердить</button>
+                        <button onclick="this.closest('.modal-overlay').remove()" style="flex:1;background:#666;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer;">Отмена</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            document.getElementById('btn-breakdown-confirm').onclick = async () => {
+                const start = document.getElementById('breakdown-start').value;
+                const end = document.getElementById('breakdown-end').value || null;
+                modal.remove();
+                await this.setBreakdown(boatId, 'start', start, end);
+            };
+        }
+        
+        async setBreakdown(boatId, action, startDate = null, endDate = null) {
             const token = localStorage.getItem('managerToken') || localStorage.getItem('access_token') || localStorage.getItem('token');
-            const action = boat.is_breakdown ? 'end' : 'start';
-            
-            if (action === 'start' && !confirm('🔧 Пометить катер как сломанный? Все будущие брони будут помечены как "требуют внимания".')) return;
-            
             try {
                 const response = await fetch(`/api/boats/${boatId}/breakdown`, {
                     method: 'POST',
@@ -513,23 +550,17 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ action })
+                    body: JSON.stringify({ 
+                        action, 
+                        maintenance_start: startDate, 
+                        maintenance_end: endDate 
+                    })
                 });
-                
                 if (!response.ok) throw new Error('Ошибка');
-                
                 await this.loadBoatsFromAPI();
                 this.render('boats-container');
-                
-                if (action === 'start') {
-                    alert('🔧 Поломка зафиксирована. Будущие брони помечены как "требуют внимания".');
-                } else {
-                    alert('✅ Поломка устранена. Катер снова доступен.');
-                }
-            } catch (error) {
-                console.error('Ошибка:', error);
-                alert('❌ Ошибка');
-            }
+                alert(action === 'start' ? '🔧 Поломка зафиксирована.' : '✅ Поломка устранена.');
+            } catch(e) { alert('Ошибка'); }
         }
     }
     

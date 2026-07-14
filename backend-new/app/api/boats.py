@@ -721,30 +721,97 @@ async def toggle_breakdown(
     action = data.get('action')
     
     if action == 'start':
-
         # Уведомление менеджеру
         from app.api.push_api import send_push_internal
-        boat_info = await db.execute(
-            select(BoatModel).where(BoatModel.id == boat_id)
-        )
+        boat_info = await db.execute(select(BoatModel).where(BoatModel.id == boat_id))
         boat_data = boat_info.scalar_one_or_none()
         if boat_data:
             await send_push_internal(
-                db=db,
-                title="⚠️ Поломка катера",
+                db=db, title="⚠️ Поломка катера",
                 body=f"{boat_data.name} — требуется внимание",
-                url=f"/boats",
-                user_type="manager",
-                user_id=str(boat_data.manager_id)
-            )
+                url=f"/boats", user_type="manager", user_id=str(boat_data.manager_id))
 
         boat.is_breakdown = True
         boat.is_active = False
-        # Помечаем будущие брони как требующие внимания
         
+        # Сохраняем даты ремонта
+        maint_start = data.get('maintenance_start')
+        maint_end = data.get('maintenance_end')
+        if maint_start:
+            boat.maintenance_start = datetime.fromisoformat(maint_start)
+        else:
+            boat.maintenance_start = datetime.now()
+        if maint_end:
+            boat.maintenance_end = datetime.fromisoformat(maint_end)
+        else:
+            boat.maintenance_end = None  # до отмены
+        
+        # Экспорт в Google Calendar
+        try:
+            from app.services.sync.google_calendar import GoogleCalendarService, AsyncSessionLocal
+            gcal = GoogleCalendarService()
+            async with AsyncSessionLocal() as cal_db:
+                cal_result = await cal_db.execute(
+                    text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE boat_id = :bid LIMIT 1"),
+                    {"bid": boat_id})
+                cal_row = cal_result.fetchone()
+                if cal_row:
+                    import json
+                    creds_data = json.loads(cal_row[0])
+                    from google.oauth2.credentials import Credentials
+                    from googleapiclient.discovery import build
+                    credentials = Credentials(
+                        token=creds_data.get("token"), refresh_token=creds_data.get("refresh_token"),
+                        token_uri=creds_data.get("token_uri"), client_id=creds_data.get("client_id"),
+                        client_secret=creds_data.get("client_secret"), scopes=creds_data.get("scopes"))
+                    service = build("calendar", "v3", credentials=credentials)
+                    event = {
+                        "summary": f"🔧 РЕМОНТ: {boat.name}",
+                        "description": f"Катер на ремонте с {boat.maintenance_start.strftime('%d.%m.%Y %H:%M')}" + 
+                                      (f" до {boat.maintenance_end.strftime('%d.%m.%Y %H:%M')}" if boat.maintenance_end else " до отмены"),
+                        "start": {"dateTime": boat.maintenance_start.isoformat(), "timeZone": "Europe/Moscow"},
+                        "end": {"dateTime": (boat.maintenance_end or boat.maintenance_start + timedelta(hours=1)).isoformat(), "timeZone": "Europe/Moscow"},
+                        "colorId": "11"}
+                    service.events().insert(calendarId=cal_row[1], body=event).execute()
+                    print(f"🔧 Событие ремонта создано в Google Calendar для {boat.name}")
+        except Exception as e:
+            print(f"⚠️ Ошибка экспорта ремонта: {e}")
     else:
         boat.is_breakdown = False
         boat.is_active = True
+        boat.maintenance_start = None
+        boat.maintenance_end = None
+        
+        # Удаляем событие ремонта из Google Calendar
+        try:
+            from app.services.sync.google_calendar import GoogleCalendarService, AsyncSessionLocal
+            async with AsyncSessionLocal() as cal_db:
+                cal_result = await cal_db.execute(
+                    text("SELECT credentials, selected_calendar_id FROM manager_calendar WHERE boat_id = :bid LIMIT 1"),
+                    {"bid": boat_id})
+                cal_row = cal_result.fetchone()
+                if cal_row:
+                    import json
+                    creds_data = json.loads(cal_row[0])
+                    from google.oauth2.credentials import Credentials
+                    from googleapiclient.discovery import build
+                    credentials = Credentials(
+                        token=creds_data.get("token"), refresh_token=creds_data.get("refresh_token"),
+                        token_uri=creds_data.get("token_uri"), client_id=creds_data.get("client_id"),
+                        client_secret=creds_data.get("client_secret"), scopes=creds_data.get("scopes"))
+                    service = build("calendar", "v3", credentials=credentials)
+                    # Ищем событие ремонта по названию
+                    now = datetime.utcnow()
+                    events = service.events().list(
+                        calendarId=cal_row[1],
+                        q=f"🔧 РЕМОНТ: {boat.name}",
+                        timeMin=(now - timedelta(days=30)).isoformat() + "Z"
+                    ).execute()
+                    for event in events.get("items", []):
+                        service.events().delete(calendarId=cal_row[1], eventId=event["id"]).execute()
+                        print(f"🗑 Событие ремонта удалено: {event['id']}")
+        except Exception as e:
+            print(f"⚠️ Ошибка удаления ремонта: {e}")
     
     await db.commit()
     return {"message": "OK", "is_breakdown": boat.is_breakdown}
