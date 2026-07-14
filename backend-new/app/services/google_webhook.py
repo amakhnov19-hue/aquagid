@@ -52,7 +52,7 @@ class GoogleWebhookService:
             "type": "web_hook",
             "address": f"{os.getenv('BASE_URL', 'https://manager.24aquabooking.ru')}/api/sync/google/webhook",
             "params": {
-                "ttl": "86400"
+                "ttl": "2592000"
             },
             "eventTypes": [
                 "created",   # Создание
@@ -129,7 +129,7 @@ class GoogleWebhookService:
                 "id": channel_id,
                 "type": "web_hook",
                 "address": f"{os.getenv('BASE_URL', 'https://manager.24aquabooking.ru')}/api/sync/google/webhook",
-                "params": {"ttl": "86400"}
+                "params": {"ttl": "2592000"}
             }
             
             watch = service.events().watch(calendarId=calendar_id, body=body).execute()
