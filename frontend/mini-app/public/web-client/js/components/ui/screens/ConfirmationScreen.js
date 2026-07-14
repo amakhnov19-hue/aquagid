@@ -413,26 +413,23 @@ class ConfirmationScreen extends ScreenBase {
     }
 
     async payWithTBank(amount, bookingId) {
-        const orderId = `booking_${bookingId}`;
-        const amountKopecks = Math.round(amount * 100);
-        
         try {
             if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'booking_confirm');
-            const resp = await fetch('/api/create-payment', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    booking_id: parseInt(bookingId),
-                    amount: amountKopecks,
-                    description: `Бронирование катера #${bookingId}`,
-                    client_email: localStorage.getItem('clientEmail') || ''
-                })
-            });
-            const data = await resp.json();
-            if (data.success && data.payment_url) {
-                window.location.href = data.payment_url;
+            
+            const paymentService = new PaymentService();
+            const result = await paymentService.processPayment(amount, { bookingId }, {});
+            
+            if (result.success && result.payment_url) {
+                window.location.href = result.payment_url;
+            } else if (result.success) {
+                // Показываем экран успеха
+                if (window.AquaGid?.UnifiedScreens?.showSuccessScreen) {
+                    window.AquaGid.UnifiedScreens.showSuccessScreen();
+                } else {
+                    window.location.href = '/?payment=success';
+                }
             } else {
-                alert('Ошибка создания платежа: ' + (data.error || 'Неизвестная ошибка'));
+                alert('Ошибка создания платежа: ' + (result.error || 'Неизвестная ошибка'));
             }
         } catch(e) {
             alert('Ошибка соединения с банком');

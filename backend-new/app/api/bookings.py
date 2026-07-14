@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, union_all, cast, Numeric, String, TIMESTAMP, text
 from sqlalchemy import Boolean
 from datetime import datetime, timedelta
+import os
 from typing import List
 from app.core.database import get_db
 from app.models.booking_model import Booking as BookingModel
@@ -579,7 +580,12 @@ async def cancel_booking(
 
     # Удаляем из Google Calendar в фоне
     if google_event_id:
-        asyncio.ensure_future(_delete_google_event_async(google_event_id, booking.boat_id))
+        try:
+            from app.services.sync.google_calendar import google_service
+            await google_service.delete_event(google_event_id, booking.boat_id)
+            print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
+        except Exception as e:
+            print(f"⚠️ Ошибка удаления из Google Calendar: {e}")
     
     return {"message": "Бронирование отменено", "id": booking_id}
 
@@ -823,13 +829,9 @@ async def confirm_booking_cancellation(
     # Удаляем из Google Calendar
     if google_event_id:
         try:
-            from app.services.sync.sync_service import sync_service
-            from app.models.boat_model import Boat
-            boat_result = await db.execute(select(Boat).where(Boat.id == boat_id))
-            boat = boat_result.scalar_one_or_none()
-            manager_id = boat.manager_id if boat else None
-            if manager_id:
-                await sync_service.delete_event(google_event_id, manager_id)
+            from app.services.sync.google_calendar import google_service
+            if boat_id:
+                await google_service.delete_event(google_event_id, boat_id)
                 print(f"🗑 Событие удалено из Google Calendar: {google_event_id}")
         except Exception as e:
             print(f"⚠️ Ошибка удаления из Google Calendar: {e}")

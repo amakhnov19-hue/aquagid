@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -170,7 +171,6 @@ async def get_client_boats(
     ).where(
         BoatModel.is_active == True,
         BoatModel.deleted_at == None,
-        BoatModel.is_test == False
     )
     
     # Фильтрация по реферальному режиму

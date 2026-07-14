@@ -25,7 +25,22 @@ class PaymentService {
         
         try {
             const bookingId = bookingData.bookingId || (window.AquaGid?.UnifiedScreens?.booking?.bookingId);
-
+            const isBeta = window.location.hostname.includes('beta');
+            
+            // На бете — имитация платежа
+            if (isBeta) {
+                const dummyResult = await this.gateway.processPayment(amount, clientData, bookingData);
+                console.log('🧪 Тестовый платёж:', dummyResult);
+                
+                // Дёргаем вебхук для подтверждения
+                try {
+                    await fetch(`/api/test/webhook/tbank?order_id=${bookingId}`, { method: 'POST' });
+                } catch(e) {}
+                
+                return { success: true, bookingId, paymentId: dummyResult.paymentId };
+            }
+            
+            // Продакшен — реальный платёж
             const response = await fetch('/api/create-payment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

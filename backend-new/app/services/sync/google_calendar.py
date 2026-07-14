@@ -58,18 +58,17 @@ class GoogleCalendarService:
         self.client_secret = CLIENT_SECRET
         self.redirect_uri = REDIRECT_URI
 
-    async def delete_event(self, google_event_id: str, manager_id: int) -> Dict:
+    async def delete_event(self, google_event_id: str, boat_id: int) -> Dict:
         """Удалить событие из Google Calendar"""
         async with AsyncSessionLocal() as db:
             cal_result = await db.execute(
                 text("""
                     SELECT credentials, selected_calendar_id 
                     FROM manager_calendar 
-                    WHERE (boat_id IN (SELECT id FROM boats WHERE manager_id = :manager_id))
-                       OR (boat_id IS NULL AND manager_id = :manager_id)
+                    WHERE boat_id = :boat_id
                     LIMIT 1
                 """),
-                {"manager_id": manager_id}
+                {"boat_id": boat_id}
             )
             cal_row = cal_result.fetchone()
             
@@ -89,27 +88,12 @@ class GoogleCalendarService:
             if credentials.expired and credentials.refresh_token:
                 credentials.refresh(GoogleRequest())
                 await db.execute(
-                    text("UPDATE manager_calendar SET credentials = :creds WHERE manager_id = :manager_id"),
-                    {"creds": credentials.to_json(), "manager_id": manager_id}
+                    text("UPDATE manager_calendar SET credentials = :creds WHERE boat_id = :boat_id"),
+                    {"creds": credentials.to_json(), "boat_id": boat_id}
                 )
                 await db.commit()
             
             service = build("calendar", "v3", credentials=credentials)
-
-            # Получаем актуальное имя календаря из Google
-            try:
-                calendar_info = service.calendars().get(calendarId=calendar_id).execute()
-                real_calendar_name = calendar_info.get('summary', '')
-                if real_calendar_name and real_calendar_name != calendar_name:
-                    await db.execute(
-                        text("UPDATE manager_calendar SET calendar_name = :name WHERE selected_calendar_id = :cid"),
-                        {"name": real_calendar_name, "cid": calendar_id}
-                    )
-                    await db.commit()
-                    calendar_name = real_calendar_name
-                    print(f"🔄 Обновлено имя календаря: {real_calendar_name}")
-            except Exception as e:
-                print(f"⚠️ Не удалось получить имя календаря: {e}")
             
             try:
                 service.events().delete(calendarId=cal_row[1], eventId=google_event_id).execute()
@@ -182,7 +166,7 @@ class GoogleCalendarService:
             
             event = {
                 "summary": f"🔒 🚤 {booking[6]} - {booking[4]}🔒",
-                "description": f"Клиент: {booking[4]}\nТелефон: {booking[5]}\nКатер: {booking[6]}\nДлительность: {booking[3]} мин\nК выплате: {(booking[8] or 0) - (booking[9] or 0)} ₽\nID: {booking[0]}",
+                "description": f"Клиент: {booking[4]}\nТелефон: {booking[5]}\nКатер: {booking[6]}\nДлительность: {booking[3]} мин\nID: {booking[0]}",
                 "start": {"dateTime": start_datetime.isoformat(), "timeZone": "Europe/Moscow"},
                 "end": {"dateTime": end_datetime.isoformat(), "timeZone": "Europe/Moscow"},
             }
