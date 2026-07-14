@@ -45,6 +45,16 @@ class BoatScreen extends ScreenBase {
         }
         
         this.updateSelectionInfo();
+
+        
+        // Если передан preselectedBoatId — сразу открыть карточку катера
+        if (this.app?.preselectedBoatId) {
+            const boatId = parseInt(this.app.preselectedBoatId);
+            this.app.preselectedBoatId = null;
+            if (boatId) {
+                setTimeout(() => this.showBoatDetails(boatId), 300);
+            }
+        }        
         
         // Настраиваем автообновление при возвращении
         this.setupAutoRefresh();

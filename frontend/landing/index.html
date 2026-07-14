@@ -178,9 +178,10 @@
     }
 
     function selectBoatManual(index) {
-        carouselIndex = index;
-        renderBoats();
-        resetCarousel();
+        const boat = boatsData[index];
+        if (boat && boat.id) {
+            window.location.href = APP_URL + '?mode=fromBoat&boat=' + boat.id;
+        }
     }
 
     function startCarousel() {

@@ -138,11 +138,11 @@ class UnifiedScreens {
         }
     }
 
-        startBooking(mode = 'quick') {
-        console.log('🚀 startBooking', mode);
-
+    startBooking(mode = 'quick', options = {}) {
+        console.log('🚀 startBooking', mode, options);
         this.resetBooking();
         this.currentFlow = mode;
+        this.preselectedBoatId = options.boatId || null;
         
         // Пушим welcome как базовое состояние
         history.pushState({ screen: 'welcome' }, '', window.location.pathname);
@@ -183,7 +183,7 @@ class UnifiedScreens {
         }
         if (mode === 'fromBoat') {
             window.history.replaceState({}, '', window.location.pathname);
-            this.startBooking('fromBoat');
+            this.startBooking('fromBoat', { boatId: boatId });
             return;
         }
         if (mode === 'fromDate') {
