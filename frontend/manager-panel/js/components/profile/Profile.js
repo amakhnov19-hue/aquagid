@@ -1,4 +1,4 @@
-// manager-panel/js/components/profile/Profile.js правильный файл
+// manager-panel/js/components/profile/Profile.js
 if (!window.AquaGid) window.AquaGid = {};
 
 AquaGid.Profile = class {

@@ -10,7 +10,7 @@ const MessengerService = {
             label: 'Telegram',
             icon: '✈️',
             color: '#0088cc',
-            urlTemplate: 'https://t.me/{contact}'
+            urlTemplate: 'tg://resolve?domain={contact}',
         },
         max: {
             label: 'Макс',
@@ -30,7 +30,12 @@ const MessengerService = {
         if (!type || !contact) return null;
         const cfg = this.config[type];
         if (!cfg) return null;
-        return cfg.urlTemplate.replace('{contact}', contact);
+        // Убираем @ для Telegram
+        let cleanContact = contact;
+        if (type === 'telegram') {
+            cleanContact = contact.replace(/^@/, '');
+        }
+        return cfg.urlTemplate.replace('{contact}', cleanContact);
     },
 
     /**

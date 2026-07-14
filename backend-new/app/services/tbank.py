@@ -175,38 +175,3 @@ async def tbank_webhook(data: dict, db: AsyncSession = Depends(get_db)):
         await db.commit()
     
     return PlainTextResponse("OK")
-
-
-# ========== ТЕСТОВЫЙ ВЕБХУК (только для беты) ==========
-@router.post("/test-webhook/tbank")
-async def test_tbank_webhook(
-    order_id: str,
-    db: AsyncSession = Depends(get_db)
-):
-    """Имитация успешного вебхука Т-банка для тестирования"""
-    import os
-    if os.getenv("ENVIRONMENT") != "beta":
-        raise HTTPException(status_code=403, detail="Только для тестовой среды")
-    
-    booking_id = int(order_id.split("_")[0]) if "_" in order_id else int(order_id)
-    
-    # Имитируем успешную оплату
-    await db.execute(
-        text("""
-            UPDATE bookings 
-            SET status = 'active', payment_status = 'paid' 
-            WHERE id = :booking_id
-        """),
-        {"booking_id": booking_id}
-    )
-    await db.commit()
-    
-    # Экспорт в Google Calendar
-    try:
-        from app.services.sync.google_calendar import google_service
-        export_result = await google_service.export_booking(booking_id)
-        print(f"🧪 Тестовый экспорт: {export_result}")
-    except Exception as e:
-        print(f"⚠️ Ошибка экспорта: {e}")
-    
-    return {"success": True, "booking_id": booking_id, "status": "active"}

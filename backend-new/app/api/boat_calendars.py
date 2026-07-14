@@ -20,7 +20,7 @@ load_dotenv()
 
 CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("BOAT_CALENDAR_REDIRECT_URI", "https://manager.24aquabooking.ru/api/boat-calendars/callback")
+REDIRECT_URI = "https://manager.24aquabooking.ru/api/boat-calendars/callback"
 
 router = APIRouter(prefix="/boat-calendars", tags=["boat_calendars"])
 

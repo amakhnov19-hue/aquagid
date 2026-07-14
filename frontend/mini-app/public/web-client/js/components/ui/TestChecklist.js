@@ -74,17 +74,17 @@ class TestChecklist {
 
     async submit() {
         const comment = document.getElementById('tcl-comment')?.value || '';
-        const steps = ['date','time','boat','payment','success','messengers'];
-        const labels = { date:'Дата', time:'Время', boat:'Катер', payment:'Оплата', success:'Экран успеха', messengers:'Мессенджеры' };
         
-        const details = steps.map(s => {
-            const v = this.results[s];
-            return `${v === 'ok' ? '✅' : v === 'error' ? '❌' : '⬜'} ${labels[s]}`;
-        }).join(', ');
-        
+        // Собираем результаты
         const allOk = Object.values(this.results).every(v => v === 'ok');
-        const description = `${details}${comment ? '. Комментарий: ' + comment : ''}`;
-        
+        const errors = Object.entries(this.results)
+            .filter(([, v]) => v === 'error')
+            .map(([k]) => k);
+
+        const description = allOk && !comment
+            ? 'Всё работает отлично'
+            : `Ошибки: ${errors.join(', ') || 'нет'}. ${comment}`;
+
         try {
             await fetch('/api/test-logs', {
                 method: 'POST',
@@ -100,6 +100,7 @@ class TestChecklist {
         } catch (e) {
             console.error('Ошибка отправки чек-листа:', e);
         }
+
         this.close();
     }
 }

@@ -1,5 +1,5 @@
 // Service Worker для PWA-уведомлений AquaGid
-var CACHE_NAME = 'aquagid-v7';
+var CACHE_NAME = 'aquagid-v6';
 
 self.addEventListener('push', function(event) {
     if (!event.data) return;

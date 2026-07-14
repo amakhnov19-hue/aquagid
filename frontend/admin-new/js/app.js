@@ -343,6 +343,22 @@ async function renderInvites(container) {
     }
 }
 
+function renderTimeOptions(selected, includeEnd = false) {
+    let options = '';
+    for (let h = 0; h < 24; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            const sel = time === selected ? ' selected' : '';
+            options += `<option value="${time}"${sel}>${time}</option>`;
+        }
+    }
+    if (includeEnd) {
+        const sel = '24:00' === selected ? ' selected' : '';
+        options += `<option value="24:00"${sel}>24:00</option>`;
+    }
+    return options;
+}
+
 async function renderSettings(container) {
     const token = localStorage.getItem('admin_token');
     
@@ -376,11 +392,11 @@ async function renderSettings(container) {
                     </div>
                     <div class="form-group">
                         <label>Начало работы:</label>
-                        <input type="time" id="work_start" value="${settings.work_start || '11:00'}" class="form-input">
+                        <select id="work_start" class="form-input">${renderTimeOptions(settings.work_start || '11:00')}</select>
                     </div>
                     <div class="form-group">
                         <label>Конец работы:</label>
-                        <input type="time" id="work_end" value="${settings.work_end || '23:30'}" class="form-input">
+                        <select id="work_end" class="form-input">${renderTimeOptions(settings.work_end || '23:30', true)}</select>
                     </div>
                     <div class="form-group">
                         <label>Макс. длительность (часы):</label>

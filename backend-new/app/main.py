@@ -129,6 +129,13 @@ async def health_check():
         "database": "connected"
     }
 
+# Тестовый платёжный модуль (только для beta)
+import os
+if os.getenv("ENVIRONMENT") == "beta":
+    from app.api.test_payment import router as test_router
+    app.include_router(test_router, prefix="/api")
+    print("🧪 Тестовый платёж подключён")
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     return JSONResponse(

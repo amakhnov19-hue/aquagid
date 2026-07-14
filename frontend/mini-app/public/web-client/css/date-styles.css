@@ -1,0 +1,117 @@
+/* Стили только для экрана дат */
+.date-screen {
+    background: #f5f5f5 !important;
+    min-height: 100vh !important;
+    padding-bottom: 80px !important;
+}
+
+.date-screen h2 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    padding: 16px !important;
+    margin: 0 !important;
+    background: white !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.dates-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+    padding: 16px !important;
+    background: #f5f5f5 !important;
+}
+
+.date-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 4px !important;
+    background: white !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+}
+
+.date-day {
+    font-size: 13px !important;
+    color: #666 !important;
+    margin-bottom: 2px !important;
+}
+
+.date-number {
+    font-size: 22px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+}
+
+.date-month {
+    font-size: 13px !important;
+    color: #666 !important;
+    margin-top: 2px !important;
+}
+
+.date-item.selected {
+    background: #0066CC !important;
+    border-color: #0066CC !important;
+}
+
+.date-item.selected .date-day,
+.date-item.selected .date-number,
+.date-item.selected .date-month {
+    color: white !important;
+}
+
+.selection-container {
+    background: white !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+}
+
+.selection-info {
+    font-size: 14px !important;
+    color: #0066CC !important;
+}
+
+.selection-placeholder {
+    font-size: 14px !important;
+    color: #999 !important;
+}
+
+.nav-buttons {
+    display: flex !important;
+    gap: 12px !important;
+    padding: 16px !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background: white !important;
+    border-top: 1px solid #e0e0e0 !important;
+}
+
+.nav-button {
+    flex: 1 !important;
+    padding: 16px !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    cursor: pointer !important;
+}
+
+.back-button {
+    background: #f0f0f0 !important;
+    color: #333 !important;
+}
+
+.next-button {
+    background: #0066CC !important;
+    color: white !important;
+}
+
+.next-button:disabled {
+    background: #cccccc !important;
+    cursor: not-allowed !important;
+}
