@@ -15,6 +15,7 @@ from app.core.database import get_db
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 from googleapiclient.discovery import build
+from datetime import datetime
 
 load_dotenv()
 
@@ -199,6 +200,8 @@ async def save_boat_calendar(
     
     # Получаем актуальное имя календаря из Google API
     real_calendar_name = calendar_name_from_client
+        
+   
     try:
         creds_data = json.loads(credentials_json)
         credentials = Credentials(
@@ -211,6 +214,13 @@ async def save_boat_calendar(
         )
         if credentials.expired and credentials.refresh_token:
             credentials.refresh(GoogleRequest())
+
+        # Получаем token_expiry из credentials
+        token_expiry = creds_data.get("expiry")
+        if token_expiry:
+            from datetime import timezone
+            dt = datetime.fromisoformat(token_expiry.replace('Z', '+00:00'))
+            token_expiry = dt.replace(tzinfo=None)             
         
         service = build("calendar", "v3", credentials=credentials)
         calendar_info = service.calendars().get(calendarId=calendar_id).execute()
@@ -241,14 +251,16 @@ async def save_boat_calendar(
                 UPDATE manager_calendar 
                 SET selected_calendar_id = :calendar_id,
                     calendar_name = :calendar_name,
-                    credentials = :credentials
+                    credentials = :credentials,
+                    token_expiry = :token_expiry
                 WHERE boat_id = :boat_id
             """),
             {
                 "boat_id": boat_id,
                 "calendar_id": calendar_id,
                 "calendar_name": real_calendar_name,
-                "credentials": credentials_json
+                "credentials": credentials_json,
+                "token_expiry": token_expiry
             }
         )
         print(f"🔄 Календарь обновлён: лодка {boat_id}, имя '{real_calendar_name}'")
@@ -256,15 +268,16 @@ async def save_boat_calendar(
         # Создаём новую запись
         await db.execute(
             text("""
-                INSERT INTO manager_calendar (boat_id, selected_calendar_id, calendar_name, credentials, manager_id)
-                VALUES (:boat_id, :calendar_id, :calendar_name, :credentials, :manager_id)
+                INSERT INTO manager_calendar (boat_id, selected_calendar_id, calendar_name, credentials, manager_id, token_expiry)
+                VALUES (:boat_id, :calendar_id, :calendar_name, :credentials, :manager_id, :token_expiry)
             """),
             {
                 "boat_id": boat_id,
                 "calendar_id": calendar_id,
                 "calendar_name": real_calendar_name,
                 "credentials": credentials_json,
-                "manager_id": manager_id
+                "manager_id": manager_id,
+                "token_expiry": token_expiry
             }
         )
         print(f"✅ Календарь создан: лодка {boat_id}, имя '{real_calendar_name}'")

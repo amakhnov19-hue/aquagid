@@ -810,6 +810,14 @@ def get_google_router() -> APIRouter:
                     # Пропускаем события созданные нашей системой
                     if '🔒' in summary:
                         continue
+
+                    
+                    # Пропускаем служебные события (топливо, ремонт и т.д.)
+                    skip_words = ['доставка', 'топливо', 'заправка', 'ремонт', 'бак', 'то ', 'сервис', 'техосмотр', 'техобслуживание']
+                    summary_lower = summary.lower()
+                    if any(word in summary_lower for word in skip_words):
+                        print(f"🔍 SKIP service event: {summary}")
+                        continue                    
                     
                     # Проверяем, не импортировано ли уже
                     existing = await db.execute(
