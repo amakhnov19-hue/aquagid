@@ -828,6 +828,7 @@ def get_google_router() -> APIRouter:
                     if existing.fetchone():
                         print(f"🔍 SKIP: already exists {event_id}", flush=True)
                         continue
+
                     
                     start_dt = datetime.fromisoformat(start.replace('Z', '+00:00'))
                     end_dt = datetime.fromisoformat(end.replace('Z', '+00:00')) if end else start_dt + timedelta(hours=1)
