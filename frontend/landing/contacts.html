@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контакты — Сервис мгновенного бронирования катеров</title>
+    <meta name="description" content="Контакты сервиса бронирования катеров: телефон, email, реквизиты ИП Махнова Варвара Алексеевна.">
+    <link rel="icon" type="image/png" href="/shared/favicon.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #f5f7fa; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+        h1 { font-size: 1.8rem; color: #004C99; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
+        .card { background: #fff; border-radius: 16px; padding: 30px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h2 { font-size: 1.1rem; color: #004C99; margin-bottom: 15px; }
+        .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .row:last-child { border-bottom: none; }
+        .label { color: #888; font-size: 0.9rem; }
+        .value { font-weight: 500; text-align: right; }
+        .back { display: inline-block; margin-top: 20px; color: #0066CC; text-decoration: none; }
+        @media (max-width: 480px) { h1 { font-size: 1.4rem; } .card { padding: 20px; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>📞 Контакты</h1>
+    <p class="subtitle">Сервис мгновенного бронирования катеров</p>
+    
+    <div class="card">
+        <h2>👤 Владелец</h2>
+        <div class="row"><span class="label">ИП</span><span class="value">Махнова Варвара Алексеевна</span></div>
+        <div class="row"><span class="label">ИНН</span><span class="value">782001036839</span></div>
+        <div class="row"><span class="label">ОГРНИП</span><span class="value">326784700211397</span></div>
+    </div>
+    
+    <div class="card">
+        <h2>📍 Адрес</h2>
+        <div class="row"><span class="label">Город</span><span class="value">Санкт-Петербург, г. Пушкин</span></div>
+        <div class="row"><span class="label">Улица</span><span class="value">ул. Новодеревенская, д. 4, кв. 4</span></div>
+    </div>
+    
+    <div class="card">
+        <h2>📲 Связь</h2>
+        <div class="row"><span class="label">Телефон</span><span class="value"><a href="tel:+79022023435">+7 902 202-34-35</a></span></div>
+        <div class="row"><span class="label">Email</span><span class="value"><a href="mailto:bronirovania.servis@yandex.ru">bronirovania.servis@yandex.ru</a></span></div>
+    </div>
+    
+    <a href="/" class="back">← На главную</a>
+</div>
+</body>
+</html>
