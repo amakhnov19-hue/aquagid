@@ -7,6 +7,8 @@
         }
         
         findTokenKey() {
+            // ✅ ДОБАВЛЯЕМ access_token как приоритетный
+            if (localStorage.getItem('access_token')) return 'access_token';
             if (localStorage.getItem('managerToken')) return 'managerToken';
             if (localStorage.getItem('token')) return 'token';
             if (localStorage.getItem('admin_token')) return 'admin_token';
@@ -15,17 +17,22 @@
         
         setToken(token) {
             if (!token) return;
+            // ✅ Сохраняем во все возможные ключи для совместимости
+            localStorage.setItem('access_token', token);
             localStorage.setItem('managerToken', token);
-            localStorage.setItem('token', token); // для совместимости
+            localStorage.setItem('token', token);
         }
         
         getToken() {
-            return localStorage.getItem('managerToken') || 
+            // ✅ Проверяем все ключи в порядке приоритета
+            return localStorage.getItem('access_token') ||
+                   localStorage.getItem('managerToken') || 
                    localStorage.getItem('token') || 
                    localStorage.getItem('admin_token');
         }
         
         removeToken() {
+            localStorage.removeItem('access_token');
             localStorage.removeItem('managerToken');
             localStorage.removeItem('token');
             localStorage.removeItem('admin_token');

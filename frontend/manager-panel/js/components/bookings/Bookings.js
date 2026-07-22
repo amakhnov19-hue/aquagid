@@ -93,7 +93,17 @@ class ManagerBookings {
         if (!managerId) return;
 
         try {
-            const response = await fetch(`/api/bookings?manager_id=${managerId}`);
+            // ✅ ДОБАВЛЯЕМ ТОКЕН (как в других местах)
+            const token = localStorage.getItem('access_token') || 
+                        localStorage.getItem('managerToken') || 
+                        localStorage.getItem('token');
+            
+            const response = await fetch(`/api/bookings?manager_id=${managerId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
             if (!response.ok) throw new Error('Ошибка загрузки');
             
             const data = await response.json();
@@ -112,7 +122,7 @@ class ManagerBookings {
                 totalAmount: b.total_price,
                 prepaid: b.prepayment_amount || 0,
                 status: b.status,
-                google_event_id: b.google_event_id,  // ← добавить
+                google_event_id: b.google_event_id,
                 source: b.source || (b.google_event_id ? 'google' : 'client'),
                 requiresReplacement: false,
                 viewed_at: b.viewed_at,

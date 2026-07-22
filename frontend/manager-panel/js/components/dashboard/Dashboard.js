@@ -87,11 +87,19 @@
             
             try {
                 // 1. Загружаем бронирования
-                const bookingsRes = await fetch(`/api/bookings?manager_id=${managerId}`);
+                const bookingsRes = await fetch(`/api/bookings?manager_id=${managerId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 const bookings = bookingsRes.ok ? await bookingsRes.json() : [];
-                
+
                 // 2. Загружаем катера (нужны для проверки поломок)
-                const boatsRes = await fetch(`/api/boats?manager_id=${managerId}`);
+                const boatsRes = await fetch(`/api/boats?manager_id=${managerId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
                 const boats = boatsRes.ok ? await boatsRes.json() : [];
                 this.boats = boats;
                 console.log('boats with breakdown:', boats.filter(b => b.is_breakdown));                

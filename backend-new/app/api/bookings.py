@@ -214,36 +214,35 @@ async def create_booking(
 
 @router.get("")
 async def get_bookings(
-    manager_id: int = None,
-    db: AsyncSession = Depends(get_db)
+    manager_id: int = None,  # Оставляем для совместимости с фронтендом
+    db: AsyncSession = Depends(get_db),
+    current_manager = Depends(get_current_manager)  # ✅ Добавляем проверку
 ):
-    """Получить список бронирований"""
-    if manager_id:
-        result = await db.execute(
-            select(BookingModel).where(
-                BookingModel.boat_id.in_(
-                    select(BoatModel.id).where(BoatModel.manager_id == manager_id)
-                )
-            ).order_by(BookingModel.booking_date.asc())
-        )
-    else:
-        result = await db.execute(
-            select(BookingModel).order_by(BookingModel.booking_date.asc())
-        )
+    """Получить список бронирований для текущего менеджера"""
+    # ✅ Берем ID из токена, игнорируем manager_id из параметра
+    manager_id_from_token = current_manager.get("sub")
+    if not manager_id_from_token:
+        raise HTTPException(status_code=401, detail="Не авторизован")
+    
+    # ✅ Используем ID из токена, а не из параметра
+    result = await db.execute(
+        select(BookingModel).where(
+            BookingModel.boat_id.in_(
+                select(BoatModel.id).where(BoatModel.manager_id == int(manager_id_from_token))
+            )
+        ).order_by(BookingModel.booking_date.asc())
+    )
     bookings = result.scalars().all()
-    # Добавляем названия катеров
+    
+    # Добавляем названия катеров (как было в оригинале)
     boat_ids = list(set(b.boat_id for b in bookings))
     if boat_ids:
-        boats_res = await db.execute(
-            text("SELECT id, name, is_breakdown FROM boats WHERE id = ANY(:ids)"),
-            {"ids": boat_ids}
+        boats_result = await db.execute(
+            select(BoatModel.id, BoatModel.name).where(BoatModel.id.in_(boat_ids))
         )
-        boat_info = {row[0]: {"name": row[1], "is_breakdown": row[2]} for row in boats_res.fetchall()}
-    else:
-        boat_info = {}
-    for b in bookings:
-        b.boat_name = boat_info.get(b.boat_id, {}).get("name", f"Катер #{b.boat_id}")
-        b.is_breakdown = boat_info.get(b.boat_id, {}).get("is_breakdown", False)
+        boat_names = {row[0]: row[1] for row in boats_result.all()}
+        for booking in bookings:
+            booking.boat_name = boat_names.get(booking.boat_id)
     return bookings
 
 @router.get("/stats")
