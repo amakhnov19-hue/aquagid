@@ -21,7 +21,7 @@ load_dotenv()
 
 CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "https://manager.24aquabooking.ru/api/boat-calendars/callback"
+REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://manager.beta.24aquabooking.ru/api/boat-calendars/callback")
 
 router = APIRouter(prefix="/boat-calendars", tags=["boat_calendars"])
 
@@ -113,7 +113,10 @@ async def boat_calendar_callback(
     """Обработка callback от Google OAuth"""
     from google_auth_oauthlib.flow import Flow
     from googleapiclient.discovery import build
-    
+
+    # 🔍 ЛОГИРУЕМ state
+    print(f"🔍 ИЩУ state={state} в БД")
+
     result = await db.execute(
         text("SELECT manager_id, code_verifier, boat_id FROM oauth_state WHERE state = :state"),
         {"state": state}
