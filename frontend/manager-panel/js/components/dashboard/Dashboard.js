@@ -444,6 +444,7 @@
     }
     
     if (!global.AquaGid) global.AquaGid = {};
-    global.AquaGid.ManagerDashboard = new ManagerDashboard();
+    global.AquaGid.Dashboard = new ManagerDashboard();
+    global.AquaGid.ManagerDashboard = global.AquaGid.Dashboard; // ← для совместимости
     
 })(typeof window !== 'undefined' ? window : global);
