@@ -21,6 +21,7 @@ from googleapiclient.discovery import build
 
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.security import get_current_manager
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 load_dotenv()
 
@@ -285,10 +286,14 @@ def get_google_router() -> APIRouter:
 
     @router.get("/callback")
     async def google_callback(
+        request: Request,
         code: str,
         state: str,
         db: AsyncSession = Depends(get_db)
     ):
+
+        print(f"🟢 REQUEST URL: {request.url}")
+        print(f"🟢 REQUEST QUERY PARAMS: {dict(request.query_params)}")
         print(f"🟢 CALLBACK STARTED: code={code[:10]}..., state={state}")
         print(f"🟢 /callback called, code={code[:10]}..., state={state}")
         from google_auth_oauthlib.flow import Flow

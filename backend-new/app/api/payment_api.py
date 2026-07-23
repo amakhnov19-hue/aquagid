@@ -58,7 +58,7 @@ async def create_payment(
     print(f"🔍 PAYMENT: bank={bank}, merchant={merchant_id}, secret_len={len(secret_key) if secret_key else 0}", flush=True)    
 
     if bank == "tbank" and merchant_id and secret_key:
-        amount_kopecks = int(amount)
+        amount_kopecks = int(float(amount) * 100)
         success_url = f"{base_url}?payment=success&booking={booking_id}"
         fail_url = f"{base_url}?payment=fail&booking={booking_id}"
         result = await tbank.init_payment(amount_kopecks, order_id, description, success_url, fail_url, client_email, merchant_id, secret_key)

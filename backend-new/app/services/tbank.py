@@ -16,8 +16,12 @@ from fastapi.responses import PlainTextResponse
 router = APIRouter(tags=["tbank"])
 
 # Ключи из .env
-TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY", "178**********DEMO")
-TBANK_PASSWORD = os.getenv("TBANK_PASSWORD", "SGi***********E^")
+TBANK_TERMINAL_KEY = os.getenv("TBANK_TERMINAL_KEY")
+if not TBANK_TERMINAL_KEY:
+    raise ValueError("TBANK_TERMINAL_KEY не задан в переменных окружения!")
+TBANK_PASSWORD = os.getenv("TBANK_PASSWORD")
+if not TBANK_PASSWORD:
+    raise ValueError("TBANK_PASSWORD не задан в переменных окружения!")
 TBANK_API_URL = "https://securepay.tinkoff.ru/v2/Init"
 
 

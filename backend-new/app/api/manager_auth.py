@@ -7,6 +7,8 @@ from app.models.manager_model import Manager
 from passlib.context import CryptContext
 from datetime import datetime
 import logging
+from app.core.security import SECRET_KEY
+from app.core.security import ALGORITHM
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,6 @@ async def register_manager(
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
-SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 дней
 

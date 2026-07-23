@@ -186,13 +186,18 @@
         }
 
         async refreshAllCalendars() {
-            const managerId = window.managerId || localStorage.getItem('managerId');
+            // ✅ Очищаем список перед обновлением
+            this.calendarList = [];
+            
+            const managerId = window.managerId;
+            if (!managerId) return;
+            
             try {
                 const resp = await fetch(`/api/sync/google/refresh-all/${managerId}`, { method: 'POST' });
                 const data = await resp.json();
                 if (data.success) {
                     alert(`✅ Календари обновлены!\nОбновлено: ${data.refreshed.length}\nИмпортировано броней: ${data.imported}`);
-                    await this.loadCalendarStatus();
+                    await this.loadDashboardData();
                 }
             } catch(e) {
                 alert('❌ Ошибка обновления календарей');
@@ -203,7 +208,18 @@
             if (!this.calendarList || this.calendarList.length === 0) {
                 return '<div style="padding:8px;color:#9ca3af;font-size:13px;">Нет подключенных календарей</div>';
             }
-            return this.calendarList.map(c => `
+            
+            // ✅ Убираем дубли по boat_id
+            const unique = [];
+            const seen = new Set();
+            for (const c of this.calendarList) {
+                if (!seen.has(c.boat_id)) {
+                    seen.add(c.boat_id);
+                    unique.push(c);
+                }
+            }
+            
+            return unique.map(c => `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;font-size:13px;">
                     <span>🚤 ${c.name || 'Катер #' + c.boat_id}</span>
                     <span style="color:${c.connected ? '#10b981' : '#ef4444'};font-weight:500;">${c.connected ? 'подключен' : 'отключен'}</span>
@@ -224,9 +240,18 @@
                 });
                 const boats = await boatsResp.json();
                 
-                // Загружаем статус для каждого катера
+               // Загружаем статус для каждого катера
                 this.calendarList = [];
+                const addedBoats = new Set();  // ✅ Отслеживаем уже добавленные катера
+
                 for (const boat of boats) {
+                    // ✅ Если катер уже есть в списке — пропускаем
+                    if (addedBoats.has(boat.id)) {
+                        console.log(`⏭️ Катер ${boat.id} (${boat.name}) уже добавлен, пропускаем`);
+                        continue;
+                    }
+                    addedBoats.add(boat.id);
+
                     try {
                         const calResp = await fetch(`/api/boat-calendars/calendars/${boat.id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }

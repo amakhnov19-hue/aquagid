@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 import os
 
 # Берем настройки из .env
-SECRET_KEY = os.getenv("JWT_SECRET", "aquagid-secret-key-2026")
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET не задан в переменных окружения!")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))
 

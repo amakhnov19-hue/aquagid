@@ -13,6 +13,7 @@ from app.api import admin_payments
 from app.api.payment_api import router as payment_router
 from app.api.push_api import router as push_router
 from app.api.boat_calendars import router as boat_calendars_router
+from app.api import stats_api
 
 # Синхронизация с внешними сервисами
 from app.services.sync import sync_manager
@@ -77,6 +78,7 @@ from app.api import consent_api
 app.include_router(consent_api.router, prefix="/api/consent")
 from app.services import tbank
 app.include_router(tbank.router, prefix="/api")
+app.include_router(stats_api.router, prefix="/api")
 
 # Админские роутеры
 app.include_router(admin_invites.router, prefix="/api", tags=["admin"])

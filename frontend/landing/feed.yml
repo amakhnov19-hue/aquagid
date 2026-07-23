@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" ?>
+<yml_catalog date="2026-07-17 11:26">
+  <shop>
+    <name>Аквагид</name>
+    <company>Аквагид</company>
+    <url>https://24aquabooking.ru</url>
+    <currencies>
+      <currency id="RUB" rate="1"/>
+    </currencies>
+    <categories>
+      <category id="1">Аренда катеров</category>
+    </categories>
+    <offers>
+      <offer id="6" available="true">
+        <url>https://app.24aquabooking.ru/boat/6</url>
+        <price>14000</price>
+        <currencyId>RUB</currencyId>
+        <categoryId>1</categoryId>
+        <name>Эллипс (до 9 чел.)</name>
+        <description>Открытый катер, салон из белой кожи, два умывальника (в туалете и кокпите), на борту имеется туалет, музыка, пледы, тент от дождя, подсветка салона, в носовом кокпите непередаваемые ощущения  свободы, шелест воды и открытый обзор.
+ Комфортная вместимость 9 человек. Стоимость аренды за час от 14 000 р.</description>
+        <picture>https://24aquabooking.ru/uploads/boats/6/5ead848c-99ff-4dd0-9b30-feb952c39b67.jpg</picture>
+        <param name="Адрес">Санкт-Петербург, Пушкин, Софийский бульвар, 5</param>
+        <param name="Вместимость">9 чел.</param>
+      </offer>
+      <offer id="5" available="true">
+        <url>https://app.24aquabooking.ru/boat/5</url>
+        <price>12000</price>
+        <currencyId>RUB</currencyId>
+        <categoryId>1</categoryId>
+        <name>Формула удачи (до 8 чел.)</name>
+        <description>Formula 280ss. Длина катера 9,5 метров. Тёплый, всепогодный  (система отопление Webasto). Каюта, туалет, два умывальника, душ,холодильник, музыка Kicker, все необходимые опции. Элита в классе &quot;Ss&quot;. До 8 пассажиров. Прозрачный тент, даже в холод и дождь, будете в тепле!
+Стоимость аренды за час от 12 000 р. Комфортная вместимость 8 человек.</description>
+        <picture>https://24aquabooking.ruhttps://manager.experimental.24aquabooking.ru/uploads/boats/5/8a5a5d62-ee81-459f-8bee-eba52565db17.jpg</picture>
+        <param name="Адрес">Санкт-Петербург, Пушкин, ул. Ленинградская 10</param>
+        <param name="Вместимость">8 чел.</param>
+      </offer>
+    </offers>
+  </shop>
+</yml_catalog>
