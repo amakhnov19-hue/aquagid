@@ -10,8 +10,15 @@ class BoatScreen extends ScreenBase {
     /**
      * Показывает экран выбора катера
      */
-    async show() {
-        console.log('🚤 BoatScreen.show START, flow:', this.app?.currentFlow);
+    async show(boatId = null) {
+        console.log('🚤 BoatScreen.show START, flow:', this.app?.currentFlow, 'boatId:', boatId);
+
+        // Сохраняем boatId для последующего использования
+        this._pendingBoatId = boatId;
+        
+        if (boatId) {
+            this.preselectedBoatId = boatId;
+        }
         
         if (!this.container) return;
         
@@ -46,15 +53,6 @@ class BoatScreen extends ScreenBase {
         
         this.updateSelectionInfo();
 
-        
-        // Если передан preselectedBoatId — сразу открыть карточку катера
-        if (this.app?.preselectedBoatId) {
-            const boatId = parseInt(this.app.preselectedBoatId);
-            this.app.preselectedBoatId = null;
-            if (boatId) {
-                setTimeout(() => this.showBoatDetails(boatId), 300);
-            }
-        }        
         
         // Настраиваем автообновление при возвращении
         this.setupAutoRefresh();
@@ -132,6 +130,23 @@ class BoatScreen extends ScreenBase {
                 // Случайная сортировка
                 this.boats = this.boats.sort(() => Math.random() - 0.5);
                 console.log('Порядок катеров после сортировки:', this.boats.map(b => b.name));
+
+                // Если есть preselectedBoatId — открываем катер
+                if (this.app?.preselectedBoatId) {
+                    const searchValue = this.app.preselectedBoatId;
+                    this.app.preselectedBoatId = null;
+                    
+                    const boat = this.boats.find(b => 
+                        b.name && b.name.toLowerCase() === searchValue.toLowerCase()
+                    );
+                    if (boat) {
+                        setTimeout(() => this.showBoatDetails(boat.id), 100);
+                    } else {
+                        console.log('⚠️ Катер не найден:', searchValue);
+                    }
+                }
+
+                this.renderBoats();
                 
                 console.log(`✅ Загружено катеров: ${this.boats.length}`);
                 this.renderBoats();
@@ -166,10 +181,27 @@ class BoatScreen extends ScreenBase {
             console.log('📡 Загружено катеров:', boats.length);
             
             this.boats = boats;
-            
+
             // Случайная сортировка
             this.boats = this.boats.sort(() => Math.random() - 0.5);
             console.log('Порядок катеров после сортировки:', this.boats.map(b => b.name));
+
+            // Если есть preselectedBoatId — открываем катер
+            if (this._pendingBoatId) {
+                const searchValue = this._pendingBoatId;
+                this._pendingBoatId = null;
+                
+                const boat = this.boats.find(b => {
+                    if (!b.slug) return false;
+                    const cleanSearch = searchValue.replace(/\s+/g, '').toLowerCase();
+                    return b.slug.toLowerCase() === cleanSearch;
+                });
+                if (boat) {
+                    setTimeout(() => this.showBoatDetails(boat.id), 100);
+                } else {
+                    console.log('⚠️ Катер не найден:', searchValue);
+                }
+            }
             
             this.renderBoats();
         } catch (error) {

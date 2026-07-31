@@ -53,6 +53,24 @@ class UnifiedScreens {
             console.log('🔗 Реферальный код удалён (заход без ref)');
         }
 
+        // Обработка параметров boat и route
+        const boatParam = urlParams.get('boat');
+        const routeParam = urlParams.get('route');
+
+        if (boatParam) {
+            console.log('🚤 Катер из URL:', boatParam);
+            setTimeout(() => {
+                this.navigateToScreen('boat', { boat: boatParam });
+            }, 500);
+        }
+
+        if (routeParam) {
+            console.log('🗺️ Маршрут из URL:', routeParam);
+            setTimeout(() => {
+                this.navigateToScreen('boat', { boat: routeParam });
+            }, 500);
+        }
+
         // Обработка возврата после оплаты
         const paymentStatus = urlParams.get('payment');
         const bookingIdFromUrl = urlParams.get('booking');
@@ -106,13 +124,18 @@ class UnifiedScreens {
         this.myBookingsScreen = new MyBookingsScreen(this);
     }
 
-    navigateToScreen(screen) {
+    navigateToScreen(screen, params = {}) {
         switch(screen) {
             case 'welcome': this.showWelcomeScreen(); break;
             case 'date': this.showDateSelection(); break;
             case 'time': this.showTimeSelection(); break;
             case 'duration': this.showDurationSelection(); break;
-            case 'boat': this.showBoatSelection(); break;
+            case 'boat': 
+                if (params.boat) {
+                    this.preselectedBoatId = params.boat;
+                }
+                this.showBoatSelection(); 
+                break;
             case 'quick': this.showQuickScreen(); break;
             case 'confirmation': this.showConfirmationScreen(); break;
             case 'success': this.showSuccessScreen(); break;
@@ -225,15 +248,18 @@ class UnifiedScreens {
             history.pushState({ screen: 'boat' }, '', window.location.pathname);
         }
         console.log('🚤 showBoatSelection, flow:', this.currentFlow);
+        console.log('🚤 preselectedBoatId:', this.preselectedBoatId);
         if (typeof ym !== 'undefined') ym(109409407, 'reachGoal', 'boat_select');
         
         if (!this.boatScreen) {
             this.boatScreen = new BoatScreen(this);
         }
-        this.boatScreen.show();
+        // Передаём preselectedBoatId в BoatScreen
+        this.boatScreen.show(this.preselectedBoatId);
+        this.preselectedBoatId = null; // сбрасываем после передачи
     }
 
-        /**
+    /**
      * Показать экран выбора времени
      */
     showTimeSelection() {

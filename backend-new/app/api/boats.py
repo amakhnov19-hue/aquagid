@@ -198,6 +198,7 @@ async def get_client_boats(
         {
             "id": b.id,
             "name": b.name,
+            "slug": b.slug,  # <-- ДОБАВИТЬ СЮДА
             "capacity": b.capacity,
             "price_per_hour": float(b.price_per_hour) if b.price_per_hour else None,
             "open_price": float(b.open_price) if b.open_price else None,
@@ -254,6 +255,7 @@ async def get_boat(
         "id": boat.id,
         "manager_id": boat.manager_id,
         "name": boat.name,
+        "slug": boat.slug,  # <-- ДОБАВИТЬ СЮДА
         "capacity": boat.capacity,
         "price_per_hour": float(boat.price_per_hour) if boat.price_per_hour else None,
         "description_full": boat.description_full,
@@ -312,7 +314,52 @@ async def create_boat(
     boat_data = boat.model_dump()
     boat_data["is_active"] = True
     boat_data["deleted_at"] = None
-    boat_data["moderation_status"] = "pending"  # ← новый катер на модерацию
+    boat_data["moderation_status"] = "pending"
+    
+    # ===== АВТОМАТИЧЕСКАЯ ГЕНЕРАЦИЯ SLUG =====
+    import re
+    # Транслитерация русских букв в латиницу
+    translit_map = {
+        'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e',
+        'ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m',
+        'н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u',
+        'ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch',
+        'ы':'y','э':'e','ю':'yu','я':'ya','ь':'','ъ':''
+    }
+    
+    # Приводим к нижнему регистру и заменяем русские буквы
+    base = boat_data['name'].lower()
+    for rus, lat in translit_map.items():
+        base = base.replace(rus, lat)
+    
+    # Убираем всё, кроме букв, цифр и дефисов
+    base = re.sub(r'[^a-z0-9-]', '-', base)
+    base = re.sub(r'-+', '-', base).strip('-')
+    
+    # Если получилось пусто — ставим "boat"
+    if not base:
+        base = "boat"
+    
+    # Проверяем уникальность
+    existing = await db.execute(
+        text("SELECT id FROM boats WHERE slug = :slug"),
+        {"slug": base}
+    )
+    if existing.fetchone():
+        counter = 1
+        while True:
+            new_slug = f"{base}-{counter}"
+            existing = await db.execute(
+                text("SELECT id FROM boats WHERE slug = :new_slug"),
+                {"new_slug": new_slug}
+            )
+            if not existing.fetchone():
+                base = new_slug
+                break
+            counter += 1
+    
+    boat_data['slug'] = base
+    # =========================================
     
     # Берём manager_id из токена
     manager_id = current_manager.get("sub")

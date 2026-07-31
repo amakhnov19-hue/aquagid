@@ -100,6 +100,11 @@ class ManagerCard {
                     <div class="boat-item" data-boat-id="${boat.id}" data-boat-name="${this.escapeHtml(boat.name)}" style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; cursor: pointer;">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                             <div style="font-weight: bold; font-size: 16px;">${this.escapeHtml(boat.name)}</div>
+                            <div style="font-size: 12px; color: #3b82f6; margin: 4px 0;">
+                                🔗 <a href="https://24aquabooking.ru/${boat.slug}" target="_blank" style="color: #3b82f6; text-decoration: underline;">
+                                    https://24aquabooking.ru/${boat.slug}
+                                </a>
+                            </div>
                             <button class="block-boat-btn" data-boat-id="${boat.id}" data-boat-name="${this.escapeHtml(boat.name)}" style="padding: 4px 12px; background: ${isActive ? '#ef4444' : '#10b981'}; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
                                 ${isActive ? '🔒 Деактивировать' : '🟢 Активировать'}
                             </button>

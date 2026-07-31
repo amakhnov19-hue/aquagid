@@ -9,6 +9,7 @@ class Boat(Base):
     id = Column(Integer, primary_key=True, index=True)
     manager_id = Column(Integer, nullable=True)
     name = Column(String(255), nullable=False)
+    slug = Column(String(100), unique=True, nullable=True)
     capacity = Column(Integer, nullable=True)
     price_per_hour = Column(Numeric(10, 2), nullable=True)
     description_full = Column(Text, nullable=True)

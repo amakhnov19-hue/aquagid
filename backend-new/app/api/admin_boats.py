@@ -37,6 +37,7 @@ async def get_manager_boats(
         {
             "id": b.id,
             "name": b.name,
+            "slug": b.slug,
             "pricing_method": b.pricing_method or "percent",
             "price_per_hour": float(b.price_per_hour) if b.price_per_hour else None,
             "open_price": float(b.open_price) if b.open_price else None,

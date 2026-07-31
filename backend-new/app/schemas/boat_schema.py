@@ -7,6 +7,7 @@ from app.schemas.boat_photo_schema import BoatPhoto
 class BoatBase(BaseModel):
     manager_id: Optional[int] = None
     name: str
+    slug: Optional[str] = None  # <-- ДОБАВИТЬ
     capacity: Optional[int] = None
     price_per_hour: Optional[float] = None
     description_full: Optional[str] = None
@@ -118,6 +119,7 @@ class Boat(BoatBase):
 class BoatListItem(BaseModel):
     id: int
     name: str
+    slug: Optional[str] = None  # <-- ДОБАВИТЬ
     capacity: Optional[int] = None
     price_per_hour: Optional[float] = None
     main_photo_url: Optional[str] = None
