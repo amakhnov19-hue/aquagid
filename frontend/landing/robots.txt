@@ -1,13 +1,4 @@
 User-agent: *
-Allow: /
+Disallow: /
 
-# Запрещаем индексацию служебных страниц
-Disallow: /assets/
-Disallow: /static/
-Disallow: /landing
-
-# СКЛЕИВАЕМ UTM-ДУБЛИ (главная страница)
-Clean-param: utm_referer&utm_ya_campaign&yabizcmpgn&utm_candidate&etext&ybaip
-
-# Карта сайта
-Sitemap: https://24aquabooking.ru/sitemap.xml
+# Бета-поддомен полностью закрыт от индексации
